@@ -2,7 +2,7 @@
 Day 1 — From Query to Corpus
 Four guided examples (Health, Social Science, Engineering, Business) + BYOD extension.
 Guided examples load exclusively from pre-cached CSVs — no live API calls required.
-BYOD section makes live API calls on demand.
+All outputs render immediately when the expander is opened — no button click needed.
 No coding required.
 """
 
@@ -110,7 +110,7 @@ def load_cached_corpus(cache_file):
 
 
 def display_corpus(df, source_label, session_key):
-    """Show stats, preview, year chart, download button, and Day 2 handoff."""
+    """Show stats, preview, year chart, and download button."""
     st.success(f"✅ Corpus loaded: **{len(df)} records** from {source_label}.")
 
     col1, col2, col3 = st.columns(3)
@@ -141,8 +141,7 @@ def display_corpus(df, source_label, session_key):
         key=f"dl_{session_key}",
     )
 
-    st.session_state[f"{session_key}_df"] = df
-    st.info("✅ Corpus saved to session. Go to **Day 2 → From Corpus to Included Studies** when ready.")
+    st.info("✅ This corpus is pre-loaded for Day 2 screening. Go to **Day 2 → From Corpus to Included Studies** when ready.")
 
 
 # ── Live API helpers (BYOD only) ───────────────────────────────────────────────
@@ -274,15 +273,15 @@ Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Your Own Qu
     """)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# GUIDED EXAMPLES
+# GUIDED EXAMPLES — all render immediately, no button required
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif section == "📌 Guided Examples":
     st.title("📌 Day 1 — Guided Examples")
     st.markdown("""
-Each example below uses a **pre-loaded corpus** retrieved from a real public API.
-Click **▶ Load this example** to inspect the corpus, explore the year distribution,
-and save it for Day 2. No API call is made — the data is already cached.
+Each example below loads a pre-built corpus of 150 records from OpenAlex.
+**Expand any example** to see the corpus preview, year distribution chart, and download button.
+No button click required — everything renders immediately.
     """)
 
     for ex in GUIDED_EXAMPLES:
@@ -291,13 +290,11 @@ and save it for Day 2. No API call is made — the data is already cached.
             st.markdown(ex["description"])
             st.markdown(f"**API source:** {ex['source']} &nbsp;|&nbsp; **Query:** `{ex['query']}`")
 
-            btn_key = f"load_{ex['session_key']}"
-            if st.button(f"▶ Load Example — {ex['session_key']}", key=btn_key):
-                df, err = load_cached_corpus(ex["cache_file"])
-                if err:
-                    st.error(f"❌ {err}")
-                else:
-                    display_corpus(df, ex["label"], ex["session_key"])
+            df, err = load_cached_corpus(ex["cache_file"])
+            if err:
+                st.error(f"❌ {err}")
+            else:
+                display_corpus(df, ex["label"], ex["session_key"])
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BYOD — BRING YOUR OWN DATA

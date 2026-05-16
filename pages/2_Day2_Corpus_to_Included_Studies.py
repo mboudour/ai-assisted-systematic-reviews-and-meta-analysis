@@ -206,8 +206,8 @@ elif section == "📌 Guided Examples":
     st.title("📌 Day 2 — Guided Examples")
     st.markdown("""
 Each example below loads **pre-computed screening results** for the four case study corpora
-from Day 1. Click **▶ Load Screening Results** to inspect the Active Learning rankings,
-LLM decisions, and Transparency Log. No computation is triggered — results are pre-cached.
+from Day 1. **Expand any example** to see the Active Learning rankings, LLM decisions,
+and Transparency Log. No button click required — results render immediately.
     """)
 
     for ex in GUIDED_EXAMPLES:
@@ -217,14 +217,12 @@ LLM decisions, and Transparency Log. No computation is triggered — results are
             st.markdown("**Key inclusion terms:** " + ", ".join(f"`{t}`" for t in ex["include_terms"][:6]))
             st.markdown("**Key exclusion terms:** " + ", ".join(f"`{t}`" for t in ex["exclude_terms"][:4]))
 
-            btn_key = f"load_screen_{ex['session_key']}"
-            if st.button(f"▶ Load Screening Results — {ex['session_key']}", key=btn_key):
-                df, err = load_screened(ex["screened_file"])
-                if err:
-                    st.error(f"❌ {err}")
-                else:
-                    st.success(f"✅ Screening results loaded: {len(df)} records.")
-                    display_screening_results(df, ex["session_key"])
+            df, err = load_screened(ex["screened_file"])
+            if err:
+                st.error(f"❌ {err}")
+            else:
+                st.success(f"✅ Screening results loaded: {len(df)} records.")
+                display_screening_results(df, ex["session_key"])
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BYOD
