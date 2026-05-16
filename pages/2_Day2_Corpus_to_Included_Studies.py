@@ -1,13 +1,24 @@
 """
 Day 2 — From Corpus to Included Studies
+Four guided examples (Health, Social Science, Engineering, Business) + BYOD extension.
 Guided examples load exclusively from pre-cached screening CSVs.
 No live API calls, no session state dependency from Day 1.
 No coding required.
+
+Covers: PICO/SPIDER criteria, Active Learning (TF-IDF + Logistic Regression),
+LLM zero-shot screening, Transparency Log, recall-oriented metrics,
+inter-rater reliability, PRISMA-S, comparison with Rayyan/Covidence.
 """
 
-import os, pathlib
+import os
+import io
+import pathlib
 import pandas as pd
 import streamlit as st
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
 
 st.set_page_config(
     page_title="Day 2 — From Corpus to Included Studies",
@@ -26,6 +37,11 @@ GUIDED_EXAMPLES = [
         "label": "🏥 Example 1 — Health Sciences: Health Inequalities in Chronic Disease Care",
         "screened_file": "day2_ex1_health_screened.csv",
         "session_key": "ex1_health",
+        "framework": "PICO",
+        "population": "Adults with chronic diseases (diabetes, hypertension, cardiovascular disease)",
+        "intervention": "Standard or enhanced care access",
+        "comparison": "High vs. low socioeconomic status groups",
+        "outcome": "Disease control, mortality, care utilisation",
         "inclusion_criteria": (
             "Include empirical studies (observational, experimental, or mixed-methods) "
             "that measure health outcomes or access to care for patients with chronic diseases "
@@ -46,6 +62,11 @@ GUIDED_EXAMPLES = [
         "label": "🏛️ Example 2 — Social Sciences: Universal Basic Income (UBI) Policy Outcomes",
         "screened_file": "day2_ex2_ubi_screened.csv",
         "session_key": "ex2_ubi",
+        "framework": "SPIDER",
+        "population": "Adults in UBI pilot programmes or policy evaluations",
+        "intervention": "Universal Basic Income / guaranteed income transfer",
+        "comparison": "Control groups or pre-intervention periods",
+        "outcome": "Employment, poverty, well-being, social behaviour",
         "inclusion_criteria": (
             "Include empirical evaluations (quantitative, qualitative, or mixed-methods) "
             "of Universal Basic Income programmes or pilots that report measured outcomes "
@@ -65,6 +86,11 @@ GUIDED_EXAMPLES = [
         "label": "⚗️ Example 3 — Science / Engineering: Microplastic Pollution in Aquatic Environments",
         "screened_file": "day2_ex3_microplastics_screened.csv",
         "session_key": "ex3_microplastics",
+        "framework": "PICO",
+        "population": "Aquatic environments (freshwater, marine, estuarine)",
+        "intervention": "Presence and concentration of microplastic particles",
+        "comparison": "Baseline or reference measurements",
+        "outcome": "Concentration levels (particles/L or mg/kg), ecological impact",
         "inclusion_criteria": (
             "Include experimental or observational studies that measure microplastic "
             "concentrations, distribution, or ecological impact in freshwater or marine "
@@ -84,6 +110,11 @@ GUIDED_EXAMPLES = [
         "label": "💼 Example 4 — Management / Business: CSR and Firm Financial Performance",
         "screened_file": "day2_ex4_csr_screened.csv",
         "session_key": "ex4_csr",
+        "framework": "PICO",
+        "population": "Publicly listed firms across industries and countries",
+        "intervention": "Corporate Social Responsibility (CSR) activities",
+        "comparison": "Low vs. high CSR firms; pre/post CSR adoption",
+        "outcome": "Financial performance (ROA, ROE, Tobin's Q, stock returns)",
         "inclusion_criteria": (
             "Include empirical studies that quantitatively measure the relationship between "
             "Corporate Social Responsibility (CSR) activities and firm financial performance "
@@ -113,36 +144,142 @@ def load_screened(screened_file):
     return None, f"Screened file not found: {screened_file}"
 
 
-def display_screening_results(df, session_key):
+def render_recall_chart(df, session_key):
+    """Render a simulated recall curve showing how Active Learning surfaces relevant papers."""
+    if "Relevance_Score" not in df.columns or "AL_Decision" not in df.columns:
+        return
+    df_sorted = df.sort_values("Relevance_Score", ascending=False).reset_index(drop=True)
+    total_included = max((df_sorted["AL_Decision"] == "Include").sum(), 1)
+    cumulative_included = (df_sorted["AL_Decision"] == "Include").cumsum().values
+    recall_curve = cumulative_included / total_included
+    random_curve = np.linspace(0, 1, len(df_sorted))
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(np.linspace(0, 100, len(recall_curve)), recall_curve * 100,
+            color="#4C72B0", linewidth=2, label="Active Learning")
+    ax.plot([0, 100], [0, 100], color="#aaaaaa", linewidth=1.5,
+            linestyle="--", label="Random screening")
+    ax.set_xlabel("% of corpus screened")
+    ax.set_ylabel("% of relevant papers found (Recall)")
+    ax.set_title("Active Learning — Recall Curve")
+    ax.legend()
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=120)
+    plt.close(fig)
+    buf.seek(0)
+    st.image(buf, use_container_width=True)
+    st.download_button(
+        "⬇️ Download Recall Curve (PNG)",
+        buf.getvalue(),
+        f"{session_key}_recall_curve.png",
+        "image/png",
+        key=f"dl_recall_{session_key}",
+    )
+
+
+def display_screening_results(df, session_key, ex):
     n_include = (df["AL_Decision"] == "Include").sum()
     n_exclude = (df["AL_Decision"] == "Exclude").sum()
     n_uncertain = (df["AL_Decision"] == "Uncertain").sum() if "Uncertain" in df["AL_Decision"].values else 0
 
+    # ── PICO / SPIDER criteria ─────────────────────────────────────────────────
+    st.markdown("#### Screening Framework — " + ex["framework"])
+    framework_data = {
+        "PICO / SPIDER Element": ["Population", "Intervention / Exposure", "Comparison", "Outcome"],
+        "Definition": [ex["population"], ex["intervention"], ex["comparison"], ex["outcome"]],
+    }
+    st.table(pd.DataFrame(framework_data))
+
+    st.markdown(f"**Inclusion criteria:** {ex['inclusion_criteria']}")
+    st.markdown("**Key inclusion terms:** " + ", ".join(f"`{t}`" for t in ex["include_terms"][:6]))
+    st.markdown("**Key exclusion terms:** " + ", ".join(f"`{t}`" for t in ex["exclude_terms"][:4]))
+
+    st.markdown("---")
+
+    # ── Metrics ───────────────────────────────────────────────────────────────
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total screened", len(df))
     col2.metric("✅ Include", int(n_include))
     col3.metric("❌ Exclude", int(n_exclude))
     col4.metric("⚠️ Uncertain", int(n_uncertain))
 
+    # Recall-oriented metrics
+    st.markdown("#### Recall-Oriented Evaluation Metrics")
+    precision = n_include / max(n_include + n_exclude, 1)
+    recall_est = min(1.0, n_include / max(n_include + n_uncertain, 1))
+    f1 = 2 * precision * recall_est / max(precision + recall_est, 1e-9)
+    wss = (n_exclude / len(df)) - (1 - recall_est)
+
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    m_col1.metric("Precision", f"{precision:.3f}")
+    m_col2.metric("Estimated Recall", f"{recall_est:.3f}")
+    m_col3.metric("F1 Score", f"{f1:.3f}")
+    m_col4.metric("WSS@95", f"{max(wss, 0):.3f}", help="Work Saved over Sampling at 95% recall")
+
+    st.info("""
+**WSS@95** (Work Saved over Sampling at 95% recall) measures how much screening effort
+is saved by Active Learning compared to random ordering, while retaining 95% of relevant
+papers. A value of 0.30 means 30% fewer abstracts need to be read to find 95% of
+relevant studies.
+    """)
+
+    # ── Recall Curve ──────────────────────────────────────────────────────────
+    st.markdown("#### Active Learning — Recall Curve")
+    render_recall_chart(df, session_key)
+
+    # ── Results table ─────────────────────────────────────────────────────────
     st.markdown("#### Active Learning — Relevance-Ranked Results (top 30)")
     display_cols = ["Title", "Year", "Relevance_Score", "AL_Decision", "LLM_Decision", "LLM_Justification"]
     available = [c for c in display_cols if c in df.columns]
     st.dataframe(df[available].head(30), use_container_width=True)
 
-    st.markdown("#### Transparency Log — LLM Decisions")
+    # ── Transparency Log ──────────────────────────────────────────────────────
+    st.markdown("#### Transparency Log — LLM Decisions (Audit Trail)")
+    st.markdown("""
+The Transparency Log records every AI decision alongside its one-sentence justification.
+This log forms part of the **audit trail** required by PRISMA 2020 and supports
+inter-rater reliability checks between the AI and a human reviewer.
+    """)
     log_cols = ["Title", "LLM_Decision", "LLM_Justification"]
     available_log = [c for c in log_cols if c in df.columns]
     st.dataframe(df[available_log].head(30), use_container_width=True)
 
+    # ── Inter-rater reliability note ──────────────────────────────────────────
+    agreement = (df["AL_Decision"] == df["LLM_Decision"]).mean() if "LLM_Decision" in df.columns else None
+    if agreement is not None:
+        st.markdown(f"""
+#### Inter-Rater Reliability
+**AL ↔ LLM agreement rate:** {agreement:.1%}
+
+In a real review, this figure would be computed between two human reviewers (or between
+the AI and a human reviewer). A Cohen's κ ≥ 0.61 is generally considered substantial
+agreement. Disagreements are resolved by a third reviewer or by consensus.
+        """)
+
+    # ── Downloads ─────────────────────────────────────────────────────────────
     included_df = df[df["AL_Decision"] == "Include"].copy()
-    csv_bytes = included_df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "⬇️ Download included studies as CSV",
-        csv_bytes,
-        f"{session_key}_included.csv",
-        "text/csv",
-        key=f"dl_inc_{session_key}",
-    )
+    col_a, col_b = st.columns(2)
+    with col_a:
+        csv_bytes = included_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "⬇️ Download included studies as CSV",
+            csv_bytes,
+            f"{session_key}_included.csv",
+            "text/csv",
+            key=f"dl_inc_{session_key}",
+        )
+    with col_b:
+        full_csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "⬇️ Download full screening log as CSV",
+            full_csv,
+            f"{session_key}_screening_log.csv",
+            "text/csv",
+            key=f"dl_full_{session_key}",
+        )
 
     st.session_state[f"{session_key}_included_df"] = included_df
     st.info(f"✅ {len(included_df)} included studies saved. Go to **Day 3 → From Studies to Evidence** when ready.")
@@ -169,31 +306,87 @@ reduce the time spent screening titles and abstracts — all in a **no-code** en
 ### What You Will Do Today
 
 The second day focuses on the most time-consuming phase of a systematic review: screening
-thousands of titles and abstracts. You will be introduced to two complementary AI-assisted
-approaches:
+thousands of titles and abstracts against pre-specified inclusion and exclusion criteria.
+You will be introduced to two complementary AI-assisted approaches and will see them
+applied to all four guided case studies.
 
-**Active Learning** is a human-in-the-loop machine learning technique. A model is trained
-on a small set of labelled examples (seeded from your inclusion/exclusion keywords) and
-then reorders the remaining corpus to surface the most relevant papers first.
+### Screening Frameworks: PICO and SPIDER
 
-**LLM zero-shot screening** uses a Large Language Model prompted with your inclusion and
-exclusion criteria to automatically classify each abstract and provide a one-sentence
+Before any screening can begin, the review question must be formalised using a structured
+framework. The two most widely used are:
+
+| Framework | Full Form | Best Suited For |
+|-----------|-----------|-----------------|
+| **PICO** | Population, Intervention, Comparison, Outcome | Clinical and health sciences, management research |
+| **SPIDER** | Sample, Phenomenon of Interest, Design, Evaluation, Research type | Social sciences, qualitative and mixed-methods research |
+
+Both frameworks are used in this seminar. Examples 1 and 4 use PICO; Example 2 uses SPIDER.
+
+### The Two Screening Approaches
+
+**Active Learning** is a human-in-the-loop machine learning technique. A TF-IDF
+vectoriser converts each abstract into a numerical representation, and a Logistic
+Regression classifier is trained on a small set of seed labels derived from your
+inclusion and exclusion terms. The model then reorders the entire corpus to surface
+the most relevant papers first — dramatically reducing the number of abstracts that
+need to be read to achieve high recall.
+
+**LLM zero-shot screening** uses a Large Language Model prompted with your inclusion
+and exclusion criteria to automatically classify each abstract and provide a one-sentence
 justification. This is a powerful first-pass filter, not a replacement for human judgment.
+Every decision is recorded in the **Transparency Log** to support the audit trail required
+by PRISMA 2020.
+
+### Comparison with Dedicated Screening Tools
+
+The approach used in this seminar is complementary to dedicated systematic review
+screening platforms. The table below situates the app in relation to the two most
+widely used tools:
+
+| Feature | This App | Rayyan | Covidence |
+|---------|----------|--------|-----------|
+| Active Learning | ✅ | ✅ | ❌ |
+| LLM screening | ✅ | ❌ | ❌ |
+| Transparency Log | ✅ | ✅ | ✅ |
+| No-code | ✅ | ✅ | ✅ |
+| Free | ✅ | Freemium | Paid |
+| Integrates with this pipeline | ✅ | ❌ | ❌ |
+
+**Rayyan** and **Covidence** are excellent tools for collaborative human screening.
+This app is designed for the AI-assisted, single-reviewer or small-team context and
+integrates directly with the Day 1 corpus and the Day 3 extraction pipeline.
+
+### Recall-Oriented Evaluation Metrics
+
+Standard classification metrics (accuracy, F1) are not appropriate for systematic
+review screening because the cost of a false negative (missing a relevant paper) is
+far higher than the cost of a false positive (including an irrelevant paper). The
+key metric is **WSS@95** (Work Saved over Sampling at 95% recall), which measures
+how much screening effort is saved while retaining 95% of relevant studies.
+
+### Inter-Rater Reliability
+
+In any systematic review, at least two independent reviewers should screen a random
+sample of abstracts to assess agreement. The **Cohen's κ** statistic is the standard
+measure: κ ≥ 0.61 is considered substantial agreement. In this app, the AL model and
+the LLM serve as two independent screeners, and their agreement rate is reported in
+the Transparency Log.
 
 ### Session Structure
 
 | Hour | Content |
 |------|---------|
-| **Hour 1** | Present the bottleneck of abstract screening. Explain Active Learning and LLM zero-shot screening. Introduce recall-oriented evaluation metrics. |
-| **Hour 2** | Demonstrate the Active Learning module across the four case studies. |
-| **Hour 3** | Introduce LLM-based screening. Participants verify the model's one-sentence justifications. The Transparency Log records every AI decision for the audit trail. |
+| **Hour 1** | Present the bottleneck of abstract screening. Introduce PICO and SPIDER frameworks. Explain Active Learning and LLM zero-shot screening. Introduce recall-oriented metrics and inter-rater reliability. |
+| **Hour 2** | Demonstrate the Active Learning module across the four case studies. Examine recall curves and WSS@95 values. |
+| **Hour 3** | Introduce LLM-based screening. Participants verify the model's one-sentence justifications. The Transparency Log records every AI decision. Compare with Rayyan and Covidence. |
 
 ### Learning Outcome
 
-By the end of Day 2, you should understand how Active Learning and LLMs can accelerate
-abstract screening, how to configure inclusion criteria as algorithmic prompts, how
-recall-oriented metrics assess screening quality, and why human verification and a full
-audit trail remain essential.
+By the end of Day 2, you should understand how to formalise a review question using
+PICO or SPIDER, how Active Learning and LLMs can accelerate abstract screening,
+how recall-oriented metrics assess screening quality, how to interpret the Transparency
+Log as an audit trail, and how this approach relates to dedicated tools such as Rayyan
+and Covidence.
 
 Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Screen Your Own Corpus**.
     """)
@@ -206,23 +399,20 @@ elif section == "📌 Guided Examples":
     st.title("📌 Day 2 — Guided Examples")
     st.markdown("""
 Each example below loads **pre-computed screening results** for the four case study corpora
-from Day 1. **Expand any example** to see the Active Learning rankings, LLM decisions,
-and Transparency Log. No button click required — results render immediately.
+from Day 1. **Expand any example** to see the PICO/SPIDER criteria, Active Learning
+rankings, recall curve, recall-oriented metrics, LLM decisions, and Transparency Log.
+No button click required — results render immediately.
     """)
 
     for ex in GUIDED_EXAMPLES:
         st.markdown("---")
         with st.expander(ex["label"], expanded=False):
-            st.markdown(f"**Inclusion criteria:** {ex['inclusion_criteria']}")
-            st.markdown("**Key inclusion terms:** " + ", ".join(f"`{t}`" for t in ex["include_terms"][:6]))
-            st.markdown("**Key exclusion terms:** " + ", ".join(f"`{t}`" for t in ex["exclude_terms"][:4]))
-
             df, err = load_screened(ex["screened_file"])
             if err:
                 st.error(f"❌ {err}")
             else:
                 st.success(f"✅ Screening results loaded: {len(df)} records.")
-                display_screening_results(df, ex["session_key"])
+                display_screening_results(df, ex["session_key"], ex)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BYOD
@@ -232,8 +422,9 @@ elif section == "🔎 BYOD — Screen Your Own Corpus":
     st.title("🔎 Day 2 — Bring Your Own Data")
     st.markdown("""
 Use this section to screen **your own corpus** from Day 1. Upload the CSV you downloaded
-from Day 1 (or use the corpus saved in the session), enter your inclusion and exclusion
-criteria, and the app will rank and screen your records automatically.
+from Day 1 (or use the corpus saved in the session), define your PICO/SPIDER criteria
+as inclusion and exclusion terms, and the app will rank and screen your records automatically.
+No coding required.
     """)
 
     uploaded = st.file_uploader("Upload your Day 1 corpus CSV", type=["csv"])
@@ -251,6 +442,26 @@ criteria, and the app will rank and screen your records automatically.
         st.dataframe(df.head(10), use_container_width=True)
 
         st.markdown("---")
+        st.markdown("#### Define Your Screening Criteria")
+        framework = st.selectbox("Screening framework", ["PICO", "SPIDER"])
+
+        if framework == "PICO":
+            col1, col2 = st.columns(2)
+            with col1:
+                population = st.text_input("Population", placeholder="e.g. adults with type 2 diabetes")
+                intervention = st.text_input("Intervention", placeholder="e.g. telemedicine")
+            with col2:
+                comparison = st.text_input("Comparison", placeholder="e.g. standard care")
+                outcome = st.text_input("Outcome", placeholder="e.g. HbA1c levels, mortality")
+        else:
+            col1, col2 = st.columns(2)
+            with col1:
+                population = st.text_input("Sample", placeholder="e.g. adults in UBI pilots")
+                intervention = st.text_input("Phenomenon of Interest", placeholder="e.g. cash transfers")
+            with col2:
+                comparison = st.text_input("Design", placeholder="e.g. RCT, quasi-experimental")
+                outcome = st.text_input("Evaluation / Research type", placeholder="e.g. employment outcomes")
+
         include_input = st.text_area(
             "Inclusion terms (one per line)",
             value="empirical\nquantitative\noutcomes\nrandomized\npilot",
@@ -300,5 +511,15 @@ criteria, and the app will rank and screen your records automatically.
             result_df["LLM_Justification"] = llm_justifications
             result_df = result_df.sort_values("Relevance_Score", ascending=False).reset_index(drop=True)
 
-            display_screening_results(result_df, "byod")
+            byod_ex = {
+                "framework": framework,
+                "population": population,
+                "intervention": intervention,
+                "comparison": comparison,
+                "outcome": outcome,
+                "inclusion_criteria": include_input,
+                "include_terms": include_terms,
+                "exclude_terms": exclude_terms,
+            }
+            display_screening_results(result_df, "byod", byod_ex)
             st.session_state["byod_included_df"] = result_df[result_df["AL_Decision"] == "Include"].copy()
