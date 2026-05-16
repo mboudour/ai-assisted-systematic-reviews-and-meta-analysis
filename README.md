@@ -3,6 +3,9 @@
 **instats Seminar — June 10, 11, and 12, 2026**
 **Instructor:** Moses Boudourides, Data Science Graduate Program, School of Professional Studies, Northwestern University
 
+> ### 📋 Registration
+> **[Register now at instats.org](https://instats.org/seminar/ai-assisted-systematic-reviews-and-meta)**
+
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app)
 
 ---
@@ -15,8 +18,7 @@ This repository is the companion resource for the three-day instats seminar
 The seminar is a **no-code** research methods workshop: participants are not expected to write or
 modify a single line of code. All operations are performed through a
 [Streamlit application](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app)
-that guides users through the complete evidence synthesis pipeline. This repository provides the
-underlying Python and R scripts for transparency, reproducibility, and post-workshop extension.
+that guides users through the complete evidence synthesis pipeline.
 
 ---
 
@@ -32,7 +34,8 @@ underlying Python and R scripts for transparency, reproducibility, and post-work
 
 ## Four Guided Case Studies
 
-Each day works through four discipline-spanning examples:
+Each day works through four discipline-spanning examples so you can follow the
+full systematic review lifecycle in a domain close to your own:
 
 | # | Discipline | Topic | API Source |
 |---|---|---|---|
@@ -43,30 +46,18 @@ Each day works through four discipline-spanning examples:
 
 ---
 
-## Repository Structure
+## BYOD — Bring Your Own Data
 
-```
-ai-assisted-systematic-reviews-and-meta-analysis/
-├── app.py                          # Main Streamlit landing page
-├── pages/
-│   ├── 1_Day1_Query_to_Corpus.py
-│   ├── 2_Day2_Corpus_to_Included_Studies.py
-│   └── 3_Day3_Studies_to_Evidence.py
-├── scripts/
-│   ├── python/
-│   │   ├── day1/                   # API query and deduplication scripts
-│   │   ├── day2/                   # Active Learning and LLM screening scripts
-│   │   └── day3/                   # PDF extraction and synthesis scripts
-│   └── R/
-│       ├── day1/                   # R equivalents of Day 1 scripts
-│       ├── day2/                   # R equivalents of Day 2 scripts
-│       └── day3/                   # R equivalents of Day 3 scripts
-├── data/
-│   └── cache/                      # Pre-cached API responses and processed datasets
-├── slides/                         # Lecture slides (PDF)
-├── requirements.txt                # Python dependencies for Streamlit Cloud
-└── environment.yml                 # Conda environment definition
-```
+A central feature of the seminar is the **BYOD (Bring Your Own Data)** extension, which allows participants to apply the pipeline directly to their own research questions. The BYOD modules are integrated into every day of the workshop:
+
+### Day 1: Build Your Own Corpus
+Participants formulate their own search queries (using Boolean logic and PICO/SPIDER frameworks) and run them against the OpenAlex or Semantic Scholar APIs directly within the app. The module automatically fetches the records, flattens nested metadata, performs DOI and title-based deduplication, and exports a clean CSV corpus ready for screening. A detailed query log is also generated to ensure methodological reproducibility.
+
+### Day 2: Screen Your Own Corpus
+Participants upload their Day 1 corpus (or any existing CSV containing titles and abstracts) and define their own inclusion and exclusion criteria in plain language. They first use the Active Learning module to prioritise the most relevant papers by seeding the model with keywords. They then use the LLM zero-shot screening module (powered seamlessly by the Hugging Face Inference API) to automatically classify their abstracts. The app generates a full Transparency Log containing the AI's decision and justification for every record.
+
+### Day 3: Synthesize Your Own Evidence
+Participants upload their screened, included studies and define a custom extraction schema (e.g., PICO elements, methodology, sample size, or specific effect sizes). The LLM extracts the structured data into a tabular format. Depending on the data, participants can then generate a narrative synthesis table, or — if quantitative effect sizes and confidence intervals are extracted — a forest plot with a pooled inverse-variance estimate. The module also automatically generates a PRISMA 2020 flow diagram mapping the exact record counts from their personal pipeline.
 
 ---
 
@@ -80,28 +71,11 @@ and export results entirely through the browser interface.
 
 ---
 
-## Local Installation (Optional — for post-workshop use)
-
-To run the scripts locally, create the conda environment:
-
-```bash
-conda env create -f environment.yml
-conda activate ai-sysreview-env
-streamlit run app.py
-```
-
-The scripts in `scripts/python/` and `scripts/R/` can be run independently of the app
-and are designed to work with [Ollama](https://ollama.com) for fully local, offline LLM
-inference — no API key required.
-
----
-
 ## LLM Architecture
 
 The Streamlit app uses the **Hugging Face Serverless Inference API** (via `st.secrets`) for
-the BYOD (Bring Your Own Data) extension — participants do not need to provide any API key.
-The Python and R scripts in this repository use **Ollama** for fully local inference,
-ensuring complete data privacy for sensitive or unpublished material.
+the BYOD (Bring Your Own Data) extension — participants do not need to provide any API key
+to use the live application during the seminar.
 
 ---
 
