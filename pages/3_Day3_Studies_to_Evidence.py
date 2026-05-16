@@ -1,12 +1,15 @@
 """
 Day 3 — From Studies to Evidence
 LLM-assisted structured data extraction + narrative/quantitative synthesis.
+
 All four guided examples are displayed simultaneously, each in its own expander.
-Guided examples use embedded sample data — no API calls required.
-PRISMA flow diagram uses a clean, non-overlapping layout.
+Extraction tables are shown immediately on expand.
+Forest plots and PRISMA diagrams are generated on button click and persisted
+in st.session_state so they survive page re-renders.
 No coding required.
 """
 
+import io
 import pathlib
 import pandas as pd
 import numpy as np
@@ -38,6 +41,7 @@ GUIDED_EXAMPLES = [
         "session_key": "ex1_health",
         "synthesis_type": "meta_analysis",
         "effect_label": "Risk Ratio (RR)",
+        "null_val": 1.0,
         "prisma_counts": (150, 135, 135, 5),
         "description": """
 **Research question:** What is the evidence on socioeconomic inequalities in access to
@@ -46,7 +50,7 @@ and cardiovascular disease?
 
 **Synthesis approach:** Meta-analysis. Effect sizes are Risk Ratios (RR) comparing
 outcomes between low-SES and high-SES patient groups. Pooled using inverse-variance
-weighting.
+weighting. A RR > 1 indicates worse outcomes in the disadvantaged group.
         """,
         "extraction_df": pd.DataFrame([
             {"Title": "Socioeconomic disparities in diabetes care access (UK)",
@@ -85,6 +89,7 @@ weighting.
         "session_key": "ex2_ubi",
         "synthesis_type": "narrative",
         "effect_label": "N/A (Narrative Synthesis)",
+        "null_val": None,
         "prisma_counts": (150, 138, 138, 3),
         "description": """
 **Research question:** What are the empirically measured outcomes of Universal Basic Income
@@ -123,6 +128,7 @@ and key findings across three outcome domains: employment, well-being, and pover
         "session_key": "ex3_microplastics",
         "synthesis_type": "quantitative_summary",
         "effect_label": "Mean Concentration (particles/L or particles/kg)",
+        "null_val": None,
         "prisma_counts": (150, 142, 142, 4),
         "description": """
 **Research question:** What does the experimental literature report about the concentration,
@@ -160,13 +166,14 @@ environment types (marine, freshwater, sediment) and detection methods.
         "session_key": "ex4_csr",
         "synthesis_type": "meta_analysis",
         "effect_label": "Correlation Coefficient (r)",
+        "null_val": 0.0,
         "prisma_counts": (150, 140, 140, 5),
         "description": """
 **Research question:** What is the empirical evidence on the relationship between Corporate
 Social Responsibility (CSR) activities and firm financial performance (ROA, ROE, Tobin's Q)?
 
 **Synthesis approach:** Meta-analysis. Effect sizes are Pearson correlation coefficients (r)
-pooled using inverse-variance weighting. The null line is at r = 0.
+pooled using inverse-variance weighting. The null line is at r = 0 (no relationship).
         """,
         "extraction_df": pd.DataFrame([
             {"Title": "CSR disclosure and ROA in manufacturing firms", "Year": 2019,
@@ -198,8 +205,8 @@ pooled using inverse-variance weighting. The null line is at r = 0.
 # HELPER FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def draw_forest_plot(df, effect_col, ci_lower_col, ci_upper_col, title_col, effect_label, null_val=None):
-    """Draw a clean forest plot with individual study CIs and a pooled diamond."""
+def compute_forest(df, effect_col, ci_lower_col, ci_upper_col, effect_label, null_val):
+    """Render forest plot to a PNG bytes buffer and return (buf, pooled, lo, hi)."""
     n = len(df)
     fig_height = max(5, n * 0.85 + 2.8)
     fig, ax = plt.subplots(figsize=(11, fig_height))
@@ -208,7 +215,7 @@ def draw_forest_plot(df, effect_col, ci_lower_col, ci_upper_col, title_col, effe
     effects = df[effect_col].tolist()
     lowers  = df[ci_lower_col].tolist()
     uppers  = df[ci_upper_col].tolist()
-    labels  = [str(t)[:65] for t in df[title_col].tolist()]
+    labels  = [str(t)[:65] for t in df["Title"].tolist()]
 
     for y, eff, lo, hi, lbl in zip(y_studies, effects, lowers, uppers, labels):
         ax.plot([lo, hi], [y, y], color="#2c7bb6", linewidth=1.8, solid_capstyle="round")
@@ -216,7 +223,6 @@ def draw_forest_plot(df, effect_col, ci_lower_col, ci_upper_col, title_col, effe
         ax.text(-0.02, y, lbl, ha="right", va="center", fontsize=8.5,
                 transform=ax.get_yaxis_transform())
 
-    # Inverse-variance pooled estimate
     weights = []
     for lo, hi in zip(lowers, uppers):
         se = (hi - lo) / 3.92
@@ -234,10 +240,8 @@ def draw_forest_plot(df, effect_col, ci_lower_col, ci_upper_col, title_col, effe
     ax.text(-0.02, pooled_y, f"Pooled ({effect_label})", ha="right", va="center",
             fontsize=9, fontweight="bold", transform=ax.get_yaxis_transform())
 
-    # Null line
-    if null_val is None:
-        null_val = 1.0 if any(x in effect_label for x in ["Ratio", "RR", "OR", "HR"]) else 0.0
-    ax.axvline(null_val, color="black", linestyle="-", linewidth=0.9, zorder=3)
+    nv = null_val if null_val is not None else 0.0
+    ax.axvline(nv, color="black", linestyle="-", linewidth=0.9, zorder=3)
 
     ax.set_yticks([])
     ax.set_ylim(pooled_y - 0.9, n + 0.9)
@@ -253,115 +257,130 @@ def draw_forest_plot(df, effect_col, ci_lower_col, ci_upper_col, title_col, effe
     ]
     ax.legend(handles=legend_elements, loc="lower right", fontsize=8.5, framealpha=0.9)
     plt.tight_layout()
-    return fig, pooled, pooled_lo, pooled_hi
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    buf.seek(0)
+    plt.close(fig)
+    return buf.read(), pooled, pooled_lo, pooled_hi
 
 
-def draw_prisma_flow(n_identified, n_after_dedup, n_screened, n_included):
-    """
-    Clean PRISMA 2020 flow diagram.
-    Left column: 5 main boxes stacked vertically.
-    Right column: 3 exclusion boxes.
-    No overlapping boxes or arrows.
-    """
+def compute_concentration_chart(df):
+    """Render concentration bar chart to PNG bytes."""
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.bar(df["Title"].str[:35], df["Concentration_Mean"],
+           color="#2c7bb6", edgecolor="white")
+    unit = df["Concentration_Unit"].iloc[0] if "Concentration_Unit" in df.columns else ""
+    ax.set_ylabel(f"Mean Concentration ({unit})")
+    ax.set_title("Mean Microplastic Concentrations by Study")
+    plt.xticks(rotation=30, ha="right", fontsize=8)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    buf.seek(0)
+    plt.close(fig)
+    return buf.read()
+
+
+def compute_prisma(n_id, n_dedup, n_screened, n_included):
+    """Render PRISMA 2020 flow diagram to PNG bytes."""
     fig, ax = plt.subplots(figsize=(9, 11))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
 
-    BOX_W  = 0.38
-    BOX_H  = 0.10
-    EXC_W  = 0.30
-    LEFT_X = 0.21
+    BOX_W   = 0.38
+    BOX_H   = 0.10
+    EXC_W   = 0.30
+    LEFT_X  = 0.21
     RIGHT_X = 0.78
+    Y_TOPS  = [0.92, 0.74, 0.56, 0.38, 0.20]
 
-    Y_TOPS = [0.92, 0.74, 0.56, 0.38, 0.20]
-
-    n_duplicates         = n_identified - n_after_dedup
-    n_excluded_screen    = n_screened - int(n_screened * 0.40)
-    n_fulltext           = int(n_screened * 0.40)
-    n_excluded_fulltext  = n_fulltext - n_included
+    n_duplicates        = n_id - n_dedup
+    n_excluded_screen   = n_screened - int(n_screened * 0.40)
+    n_fulltext          = int(n_screened * 0.40)
+    n_excluded_fulltext = n_fulltext - n_included
 
     main_boxes = [
-        f"Records identified\nvia API search\n(n = {n_identified})",
-        f"Records after\ndeduplication\n(n = {n_after_dedup})",
+        f"Records identified\nvia API search\n(n = {n_id})",
+        f"Records after\ndeduplication\n(n = {n_dedup})",
         f"Records screened\n(title & abstract)\n(n = {n_screened})",
         f"Full-text articles\nassessed for eligibility\n(n = {n_fulltext})",
         f"Studies included\nin synthesis\n(n = {n_included})",
     ]
-
     excl_boxes = [
         (Y_TOPS[1], f"Duplicates removed\n(n = {n_duplicates})"),
         (Y_TOPS[2], f"Excluded on\ntitle/abstract\n(n = {n_excluded_screen})"),
         (Y_TOPS[3], f"Excluded on\nfull-text\n(n = {n_excluded_fulltext})"),
     ]
 
-    # Draw main (left) boxes
     for y_c, text in zip(Y_TOPS, main_boxes):
-        box = FancyBboxPatch(
+        ax.add_patch(FancyBboxPatch(
             (LEFT_X - BOX_W / 2, y_c - BOX_H / 2), BOX_W, BOX_H,
             boxstyle="round,pad=0.015",
-            facecolor="#dbeafe", edgecolor="#2563eb", linewidth=1.8,
-            transform=ax.transData, zorder=3,
-        )
-        ax.add_patch(box)
+            facecolor="#dbeafe", edgecolor="#2563eb", linewidth=1.8, zorder=3,
+        ))
         ax.text(LEFT_X, y_c, text, ha="center", va="center",
                 fontsize=8.5, zorder=4, linespacing=1.4)
 
-    # Draw exclusion (right) boxes
     for y_c, text in excl_boxes:
-        box = FancyBboxPatch(
+        ax.add_patch(FancyBboxPatch(
             (RIGHT_X - EXC_W / 2, y_c - BOX_H / 2), EXC_W, BOX_H,
             boxstyle="round,pad=0.015",
-            facecolor="#fee2e2", edgecolor="#dc2626", linewidth=1.5,
-            transform=ax.transData, zorder=3,
-        )
-        ax.add_patch(box)
+            facecolor="#fee2e2", edgecolor="#dc2626", linewidth=1.5, zorder=3,
+        ))
         ax.text(RIGHT_X, y_c, text, ha="center", va="center",
                 fontsize=8, zorder=4, linespacing=1.4)
 
-    # Vertical arrows: bottom of box[i] → top of box[i+1]
     for i in range(len(Y_TOPS) - 1):
-        y_start = Y_TOPS[i]     - BOX_H / 2
-        y_end   = Y_TOPS[i + 1] + BOX_H / 2
         ax.annotate(
-            "", xy=(LEFT_X, y_end), xytext=(LEFT_X, y_start),
+            "", xy=(LEFT_X, Y_TOPS[i + 1] + BOX_H / 2),
+            xytext=(LEFT_X, Y_TOPS[i] - BOX_H / 2),
             arrowprops=dict(arrowstyle="-|>", color="#1e3a5f", lw=1.5, mutation_scale=14),
             zorder=5,
         )
 
-    # Horizontal arrows: right edge of main box → left edge of exclusion box
-    for src_idx, (y_c, _) in zip([1, 2, 3], excl_boxes):
+    for (y_c, _) in excl_boxes:
         ax.annotate(
-            "", xy=(RIGHT_X - EXC_W / 2, y_c), xytext=(LEFT_X + BOX_W / 2, y_c),
+            "", xy=(RIGHT_X - EXC_W / 2, y_c),
+            xytext=(LEFT_X + BOX_W / 2, y_c),
             arrowprops=dict(arrowstyle="-|>", color="#991b1b", lw=1.2, mutation_scale=12),
             zorder=5,
         )
 
     ax.set_title("PRISMA 2020 Flow Diagram", fontsize=13, fontweight="bold", pad=14)
     plt.tight_layout()
-    return fig
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    buf.seek(0)
+    plt.close(fig)
+    return buf.read()
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RENDER ONE GUIDED EXAMPLE (called inside expander)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def render_guided_example(ex):
-    """Render all three steps for one guided example inside an expander."""
-    sk = ex["session_key"]
+    sk  = ex["session_key"]
+    df  = ex["extraction_df"].copy()
 
     st.markdown(ex["description"])
     st.markdown("---")
 
-    # ── Step 1: Extraction table ───────────────────────────────────────────────
+    # ── Step 1: Extraction table (always shown) ────────────────────────────────
     st.subheader("Step 1 — Structured Data Extraction")
     st.markdown("""
-The table below shows the structured extraction output. Each row corresponds to one
-included study; fields were extracted using a discipline-specific LLM prompt schema.
+The table below shows the structured extraction output for this case study.
+Each row corresponds to one included study; fields were extracted using a
+discipline-specific LLM prompt schema. No coding required.
     """)
-    df = ex["extraction_df"].copy()
     st.success(f"✅ {len(df)} studies extracted.")
     st.dataframe(df, use_container_width=True)
-    csv_bytes = df.to_csv(index=False).encode("utf-8")
     st.download_button(
         "⬇️ Download extraction table as CSV",
-        csv_bytes, f"day3_{sk}_extraction.csv", "text/csv",
+        df.to_csv(index=False).encode("utf-8"),
+        f"day3_{sk}_extraction.csv", "text/csv",
         key=f"dl_extract_{sk}",
     )
 
@@ -372,31 +391,33 @@ included study; fields were extracted using a discipline-specific LLM prompt sch
 
     if ex["synthesis_type"] == "meta_analysis":
         st.markdown(f"""
-This meta-analysis pools the **{ex['effect_label']}** across the extracted studies using
-inverse-variance weighting. Click the button below to generate the forest plot.
+This meta-analysis pools the **{ex['effect_label']}** across the extracted studies
+using inverse-variance weighting. The diamond on the forest plot represents the
+pooled estimate with its 95% confidence interval.
         """)
-        if st.button("▶ Generate Forest Plot", key=f"forest_{sk}"):
-            fig, pooled, pooled_lo, pooled_hi = draw_forest_plot(
-                df,
-                ex["effect_col"], ex["ci_lower_col"], ex["ci_upper_col"],
-                ex["title_col"], ex["effect_label"],
+
+        forest_key = f"day3_{sk}_forest_png"
+
+        # Generate on first visit or on button click
+        if forest_key not in st.session_state:
+            png, pooled, plo, phi = compute_forest(
+                df, ex["effect_col"], ex["ci_lower_col"], ex["ci_upper_col"],
+                ex["effect_label"], ex["null_val"],
             )
-            st.pyplot(fig)
-            st.metric(
-                f"Pooled {ex['effect_label']}",
-                f"{pooled:.3f}",
-                f"95% CI: [{pooled_lo:.3f}, {pooled_hi:.3f}]",
-            )
-            # Save PNG for download
-            forest_path = CACHE_DIR / f"day3_{sk}_forest.png"
-            fig.savefig(str(forest_path), dpi=150, bbox_inches="tight")
-            plt.close(fig)
-            with open(str(forest_path), "rb") as f_img:
-                st.download_button(
-                    "⬇️ Download forest plot (PNG)", f_img.read(),
-                    f"day3_{sk}_forest.png", "image/png",
-                    key=f"dl_forest_{sk}",
-                )
+            st.session_state[forest_key] = (png, pooled, plo, phi)
+
+        png, pooled, plo, phi = st.session_state[forest_key]
+        st.image(png, use_container_width=True)
+        st.metric(
+            f"Pooled {ex['effect_label']}",
+            f"{pooled:.3f}",
+            f"95% CI: [{plo:.3f}, {phi:.3f}]",
+        )
+        st.download_button(
+            "⬇️ Download forest plot (PNG)", png,
+            f"day3_{sk}_forest.png", "image/png",
+            key=f"dl_forest_{sk}",
+        )
 
     elif ex["synthesis_type"] == "narrative":
         st.markdown("""
@@ -423,19 +444,16 @@ types and studies.
             )
             st.dataframe(summary, use_container_width=True)
 
-        if st.button("▶ Generate Concentration Chart", key=f"chart_{sk}"):
-            fig, ax = plt.subplots(figsize=(7, 4))
-            ax.bar(
-                df["Title"].str[:35], df["Concentration_Mean"],
-                color="#2c7bb6", edgecolor="white",
-            )
-            unit = df["Concentration_Unit"].iloc[0] if "Concentration_Unit" in df.columns else ""
-            ax.set_ylabel(f"Mean Concentration ({unit})")
-            ax.set_title("Mean Microplastic Concentrations by Study")
-            plt.xticks(rotation=30, ha="right", fontsize=8)
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
+        chart_key = f"day3_{sk}_chart_png"
+        if chart_key not in st.session_state:
+            st.session_state[chart_key] = compute_concentration_chart(df)
+
+        st.image(st.session_state[chart_key], use_container_width=True)
+        st.download_button(
+            "⬇️ Download chart (PNG)", st.session_state[chart_key],
+            f"day3_{sk}_chart.png", "image/png",
+            key=f"dl_chart_{sk}",
+        )
 
     st.markdown("---")
 
@@ -446,18 +464,17 @@ types and studies.
 Record flow: **{n_id}** identified → **{n_dedup}** after deduplication →
 **{n_screened}** screened → **{n_included}** included in synthesis.
     """)
-    if st.button("▶ Generate PRISMA Flow Diagram", key=f"prisma_{sk}"):
-        fig = draw_prisma_flow(n_id, n_dedup, n_screened, n_included)
-        st.pyplot(fig)
-        prisma_path = CACHE_DIR / f"day3_{sk}_prisma.png"
-        fig.savefig(str(prisma_path), dpi=150, bbox_inches="tight")
-        plt.close(fig)
-        with open(str(prisma_path), "rb") as f_img:
-            st.download_button(
-                "⬇️ Download PRISMA diagram (PNG)", f_img.read(),
-                f"day3_{sk}_prisma.png", "image/png",
-                key=f"dl_prisma_{sk}",
-            )
+
+    prisma_key = f"day3_{sk}_prisma_png"
+    if prisma_key not in st.session_state:
+        st.session_state[prisma_key] = compute_prisma(n_id, n_dedup, n_screened, n_included)
+
+    st.image(st.session_state[prisma_key], use_container_width=True)
+    st.download_button(
+        "⬇️ Download PRISMA diagram (PNG)", st.session_state[prisma_key],
+        f"day3_{sk}_prisma.png", "image/png",
+        key=f"dl_prisma_{sk}",
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -501,6 +518,15 @@ weighting and produces a forest plot with a pooled estimate and confidence inter
 **PRISMA 2020 flow diagram** is generated automatically from the record counts at each
 stage of the pipeline.
 
+### The Four Case Studies at a Glance
+
+| # | Discipline | Topic | Synthesis Type |
+|---|---|---|---|
+| 1 | Health Sciences | Health Inequalities in Chronic Disease Care | Meta-analysis (Risk Ratio) |
+| 2 | Social Sciences | Universal Basic Income (UBI) Policy Outcomes | Narrative synthesis |
+| 3 | Science / Engineering | Microplastic Pollution in Aquatic Environments | Quantitative summary |
+| 4 | Management / Business | CSR and Firm Financial Performance | Meta-analysis (Correlation r) |
+
 ### Session Structure
 
 | Hour | Content |
@@ -521,8 +547,8 @@ elif section == "📌 Guided Examples":
     st.markdown("""
 Each example below walks through the full Day 3 pipeline for one case study:
 **structured data extraction**, **synthesis** (meta-analysis, narrative, or quantitative
-summary), and a **PRISMA 2020 flow diagram**. All data is pre-loaded — no API calls
-or coding required. Expand any example to explore it.
+summary), and a **PRISMA 2020 flow diagram**. All outputs are pre-rendered and persist
+on screen — no re-computation on page refresh. Expand any example to explore it.
     """)
 
     for ex in GUIDED_EXAMPLES:
@@ -569,10 +595,13 @@ columns) and define your extraction schema below. No coding required.
                 {f: row.get(f, "") for f in schema_fields}
                 for _, row in df.head(20).iterrows()
             ])
-            st.dataframe(template_df, use_container_width=True)
-            csv_bytes = template_df.to_csv(index=False).encode("utf-8")
+            st.session_state["byod_template_df"] = template_df
+
+        if "byod_template_df" in st.session_state:
+            st.dataframe(st.session_state["byod_template_df"], use_container_width=True)
             st.download_button(
-                "⬇️ Download extraction template", csv_bytes,
+                "⬇️ Download extraction template", 
+                st.session_state["byod_template_df"].to_csv(index=False).encode("utf-8"),
                 "byod_extraction_template.csv", "text/csv",
                 key="dl_byod_template",
             )
@@ -590,13 +619,18 @@ columns) and define your extraction schema below. No coding required.
             if required.issubset(df_ext.columns):
                 effect_label = st.text_input("Effect size label", value="Effect Size")
                 if st.button("▶ Generate Forest Plot", key="byod_forest"):
-                    fig, pooled, pooled_lo, pooled_hi = draw_forest_plot(
-                        df_ext, "Effect_Size", "CI_Lower", "CI_Upper", "Title", effect_label
+                    png, pooled, plo, phi = compute_forest(
+                        df_ext, "Effect_Size", "CI_Lower", "CI_Upper", effect_label, None
                     )
-                    st.pyplot(fig)
-                    plt.close(fig)
+                    st.session_state["byod_forest_png"] = (png, pooled, plo, phi)
+
+                if "byod_forest_png" in st.session_state:
+                    png, pooled, plo, phi = st.session_state["byod_forest_png"]
+                    st.image(png, use_container_width=True)
                     st.metric(f"Pooled {effect_label}", f"{pooled:.3f}",
-                              f"95% CI: [{pooled_lo:.3f}, {pooled_hi:.3f}]")
+                              f"95% CI: [{plo:.3f}, {phi:.3f}]")
+                    st.download_button("⬇️ Download forest plot (PNG)", png,
+                                       "byod_forest.png", "image/png", key="dl_byod_forest")
             else:
                 missing = required - set(df_ext.columns)
                 st.error(f"Missing required columns: {missing}")
@@ -613,9 +647,16 @@ columns) and define your extraction schema below. No coding required.
         with col4:
             n_included_byod = st.number_input("Studies included", min_value=1,
                                                value=max(1, len(df)))
+
         if st.button("▶ Generate PRISMA Diagram", key="byod_prisma"):
-            fig = draw_prisma_flow(
+            st.session_state["byod_prisma_png"] = compute_prisma(
                 int(n_id), int(n_dedup), int(n_screened), int(n_included_byod)
             )
-            st.pyplot(fig)
-            plt.close(fig)
+
+        if "byod_prisma_png" in st.session_state:
+            st.image(st.session_state["byod_prisma_png"], use_container_width=True)
+            st.download_button(
+                "⬇️ Download PRISMA diagram (PNG)",
+                st.session_state["byod_prisma_png"],
+                "byod_prisma.png", "image/png", key="dl_byod_prisma",
+            )
