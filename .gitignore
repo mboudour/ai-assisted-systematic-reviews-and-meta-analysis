@@ -4,5 +4,3 @@ __pycache__/
 .streamlit/secrets.toml
 *.DS_Store
 data/cache/*.json
-data/cache/*.csv
-!data/cache/.gitkeep
