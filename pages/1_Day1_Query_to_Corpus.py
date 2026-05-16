@@ -1,13 +1,13 @@
 """
 Day 1 — From Query to Corpus
-Four guided examples (Health, Social Science, Engineering, Business) + BYOD extension.
+Five guided examples (Health, Social Science, Engineering, Business, Zotero) + BYOD extension.
 Guided examples load exclusively from pre-cached CSVs — no live API calls required.
 All outputs render immediately when the expander is opened — no button click needed.
 No coding required.
 
 APIs covered: OpenAlex, Crossref, Semantic Scholar, Europe PMC
 BYOD inputs: Boolean query (4 APIs), RIS/BibTeX file upload, Zotero connection
-Outputs: CSV download, RIS export, Query Log, Interactive Bibliometric Map
+Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network link
 """
 
 import io
@@ -105,6 +105,30 @@ excluding purely theoretical or conceptual papers.
 supporting a pooled effect size computation on Day 3.
         """,
     },
+    {
+        "label": "🗂️ Example 5 — Zotero Library: AI-Assisted Systematic Reviews (Mixed Sources)",
+        "cache_file": "day1_ex5_zotero_corpus.csv",
+        "session_key": "ex5_zotero",
+        "source": "Zotero",
+        "query": "AI-assisted systematic reviews (researcher's Zotero library)",
+        "description": """
+**What this example demonstrates:** Instead of querying an open API, this example shows
+what happens when a researcher connects their existing **Zotero library** to the pipeline.
+
+**Scenario:** A researcher has been collecting papers on *AI-assisted systematic reviews*
+in Zotero over several months — a mix of journal articles, conference papers, and preprints
+from multiple sources (PubMed, Scopus, Web of Science, arXiv). They connect their Zotero
+library here, and the app retrieves all items, deduplicates them, and feeds them into the
+same pipeline as the API-based examples.
+
+**Why Zotero?** Many researchers already maintain a reference manager. Zotero integration
+means you do not need to re-search databases — you can start the systematic review pipeline
+from your existing collection, regardless of which databases you used to build it.
+
+**Input flexibility:** The BYOD section below also supports direct Zotero connection using
+your personal User ID and API Key (available from your Zotero account settings).
+        """,
+    },
 ]
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -119,43 +143,6 @@ def load_cached_corpus(cache_file):
         except Exception as e:
             return None, f"Could not read cached file: {e}"
     return None, f"Cache file not found: {cache_file}"
-
-
-def render_bibliometric_map(df, session_key):
-    """Render a simple keyword co-occurrence bar chart as a bibliometric map."""
-    st.markdown("#### Interactive Bibliometric Map — Top Keywords / Concepts")
-    if "Concepts" not in df.columns:
-        st.info("No concept data available for this corpus.")
-        return
-    all_concepts = []
-    for row in df["Concepts"].dropna():
-        all_concepts.extend([c.strip() for c in str(row).split(";") if c.strip()])
-    if not all_concepts:
-        st.info("No concept data available for this corpus.")
-        return
-    from collections import Counter
-    counts = Counter(all_concepts).most_common(20)
-    labels = [c[0] for c in counts]
-    values = [c[1] for c in counts]
-    fig, ax = plt.subplots(figsize=(10, 5))
-    bars = ax.barh(labels[::-1], values[::-1], color="#4C72B0")
-    ax.set_xlabel("Frequency across corpus")
-    ax.set_title("Top 20 Concepts / Keywords in Corpus")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    plt.tight_layout()
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=120)
-    plt.close(fig)
-    buf.seek(0)
-    st.image(buf, use_container_width=True)
-    st.download_button(
-        "⬇️ Download Bibliometric Map (PNG)",
-        buf.getvalue(),
-        f"{session_key}_bibliometric_map.png",
-        "image/png",
-        key=f"dl_bib_{session_key}",
-    )
 
 
 def df_to_ris(df):
@@ -189,8 +176,71 @@ def df_to_ris(df):
     return "\n".join(lines)
 
 
+def render_vosviewer_section(df, session_key):
+    """Render the VOSviewer bibliometric network section."""
+    st.markdown("#### 🔬 Bibliometric Network — VOSviewer")
+    st.markdown("""
+VOSviewer is the standard tool for creating **keyword co-occurrence networks**,
+**citation networks**, and **bibliographic coupling maps** from a corpus of literature.
+It is free, widely used in systematic reviews, and requires no programming.
+
+**To visualise this corpus as a bibliometric network:**
+""")
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("""
+**Step 1 — Download the RIS file** using the export button below.
+
+**Step 2 — Open VOSviewer Online** by clicking the button on the right.
+
+**Step 3 — In VOSviewer Online:**
+- Click **Create** → **Create a map based on bibliographic data**
+- Select **RIS format** and upload your downloaded RIS file
+- Choose the type of analysis: **Co-occurrence** (keywords), **Citation** (papers), or **Bibliographic coupling**
+- Set the minimum number of occurrences (e.g., 3 for keywords) and click **Finish**
+- Explore the resulting network: clusters represent thematic areas, node size reflects frequency
+
+**Tip:** For a keyword co-occurrence network, select *All keywords* or *Author keywords*
+depending on what metadata is available in your corpus.
+        """)
+    with col2:
+        st.markdown("")
+        st.markdown("")
+        st.link_button(
+            "🌐 Open VOSviewer Online",
+            "https://app.vosviewer.com",
+            use_container_width=True,
+        )
+        st.caption("Free, browser-based, no installation required.")
+        st.markdown("")
+        st.link_button(
+            "⬇️ Download VOSviewer Desktop",
+            "https://www.vosviewer.com/download",
+            use_container_width=True,
+        )
+        st.caption("For larger corpora and offline use.")
+
+    # RIS export for VOSviewer
+    ris_str = df_to_ris(df)
+    ris_bytes = ris_str.encode("utf-8")
+    st.download_button(
+        "⬇️ Download RIS file for VOSviewer",
+        ris_bytes,
+        f"{session_key}_corpus_for_vosviewer.ris",
+        "application/x-research-info-systems",
+        key=f"dl_ris_vos_{session_key}",
+    )
+
+    st.info("""
+💡 **VOSviewer Desktop** supports larger corpora (10,000+ records) and additional
+analysis types including co-authorship networks and journal coupling maps.
+Download it free from [vosviewer.com](https://www.vosviewer.com).
+    """)
+
+
 def display_corpus(df, source_label, session_key):
-    """Show stats, preview, year chart, bibliometric map, and download buttons."""
+    """Show stats, preview, year chart, VOSviewer section, and download buttons."""
     st.success(f"✅ Corpus loaded: **{len(df)} records** from {source_label}.")
 
     col1, col2, col3 = st.columns(3)
@@ -205,6 +255,10 @@ def display_corpus(df, source_label, session_key):
         year_counts = (
             df["Year"]
             .dropna()
+            .astype(str)
+            .str[:4]
+            .pipe(lambda s: pd.to_numeric(s, errors="coerce"))
+            .dropna()
             .astype(int)
             .value_counts()
             .sort_index()
@@ -212,10 +266,10 @@ def display_corpus(df, source_label, session_key):
         st.markdown("#### Publication Year Distribution")
         st.bar_chart(year_counts)
 
-    # Bibliometric map
-    render_bibliometric_map(df, session_key)
+    # VOSviewer bibliometric network section
+    render_vosviewer_section(df, session_key)
 
-    # Downloads: CSV and RIS
+    # CSV export
     st.markdown("#### Export")
     col_a, col_b = st.columns(2)
     with col_a:
@@ -278,22 +332,21 @@ def query_crossref_live(search_query, per_page=50):
     items = r.json().get("message", {}).get("items", [])
     rows = []
     for item in items:
-        title = " ".join(item.get("title", [])).strip()
+        title = item.get("title", [""])[0] if item.get("title") else ""
+        authors_list = item.get("author", [])
         authors = "; ".join(
             f"{a.get('family', '')} {a.get('given', '')}".strip()
-            for a in item.get("author", [])[:5]
+            for a in authors_list[:5]
         )
-        year = ""
         pub = item.get("published", {})
-        dp = pub.get("date-parts", [[]])
-        if dp and dp[0]:
-            year = str(dp[0][0])
-        venue = " ".join(item.get("container-title", [])).strip()
+        parts = pub.get("date-parts", [[""]])[0]
+        year = str(parts[0]) if parts else ""
+        venue = item.get("container-title", [""])[0] if item.get("container-title") else ""
         abstract = item.get("abstract", "") or ""
         rows.append({
             "ID": item.get("DOI", ""),
-            "DOI": item.get("DOI", ""),
-            "Title": title,
+            "DOI": item.get("DOI", "") or "",
+            "Title": title.strip(),
             "Year": year,
             "Authors": authors,
             "Venue": venue,
@@ -308,7 +361,7 @@ def query_semantic_scholar_live(search_query, per_page=50):
     base = "https://api.semanticscholar.org/graph/v1/paper/search"
     params = {
         "query": search_query,
-        "limit": min(per_page, 100),
+        "limit": per_page,
         "fields": "paperId,externalIds,title,year,authors,venue,abstract,citationCount",
     }
     r = requests.get(base, params=params, timeout=30)
@@ -316,10 +369,8 @@ def query_semantic_scholar_live(search_query, per_page=50):
     items = r.json().get("data", [])
     rows = []
     for item in items:
-        doi = (item.get("externalIds") or {}).get("DOI", "")
-        authors = "; ".join(
-            a.get("name", "") for a in (item.get("authors") or [])[:5]
-        )
+        authors = "; ".join(a.get("name", "") for a in item.get("authors", [])[:5])
+        doi = (item.get("externalIds") or {}).get("DOI", "") or ""
         rows.append({
             "ID": item.get("paperId", ""),
             "DOI": doi,
@@ -338,21 +389,22 @@ def query_europepmc_live(search_query, per_page=50):
     base = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     params = {
         "query": search_query,
-        "format": "json",
-        "pageSize": min(per_page, 100),
         "resultType": "core",
+        "pageSize": per_page,
+        "format": "json",
     }
     r = requests.get(base, params=params, timeout=30)
     r.raise_for_status()
     items = r.json().get("resultList", {}).get("result", [])
     rows = []
     for item in items:
+        authors = item.get("authorString", "") or ""
         rows.append({
             "ID": item.get("id", ""),
             "DOI": item.get("doi", "") or "",
             "Title": (item.get("title", "") or "").strip(),
             "Year": item.get("pubYear", ""),
-            "Authors": item.get("authorString", "") or "",
+            "Authors": authors,
             "Venue": item.get("journalTitle", "") or "",
             "Abstract": item.get("abstractText", "") or "",
             "Citations": item.get("citedByCount", 0),
@@ -364,18 +416,14 @@ def query_europepmc_live(search_query, per_page=50):
 def openalex_to_df(records):
     rows = []
     for r in records:
-        inv = r.get("abstract_inverted_index") or {}
-        if inv:
-            try:
-                max_pos = max(p for positions in inv.values() for p in positions)
-                words = [""] * (max_pos + 1)
-                for word, positions in inv.items():
-                    for p in positions:
-                        if 0 <= p <= max_pos:
-                            words[p] = word
-                abstract = " ".join(words).strip()
-            except Exception:
-                abstract = ""
+        raw_aii = r.get("abstract_inverted_index") or {}
+        if raw_aii:
+            max_pos = max(pos for positions in raw_aii.values() for pos in positions)
+            words = [""] * (max_pos + 1)
+            for word, positions in raw_aii.items():
+                for pos in positions:
+                    words[pos] = word
+            abstract = " ".join(words)
         else:
             abstract = ""
         authors = "; ".join(
@@ -494,7 +542,7 @@ supports automatically.
 |------|---------|
 | **Hour 1** | Introduce the logic of programmatic literature collection. Clarify the difference between manual database searches and open API retrieval. Present discipline-spanning examples and explain how query timestamps are logged for reproducibility. |
 | **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into Boolean queries and retrieve metadata from OpenAlex, Crossref, Semantic Scholar, and Europe PMC. |
-| **Hour 3** | Use the Streamlit app to run automated deduplication. Participants inspect the output, compare field completeness, export a clean CSV or RIS file for Zotero, and explore the Interactive Bibliometric Map of their corpus. |
+| **Hour 3** | Use the Streamlit app to run automated deduplication. Participants inspect the output, compare field completeness, export a clean CSV or RIS file for Zotero, and explore the corpus using **VOSviewer** for bibliometric network analysis. |
 
 ### Input Flexibility: Multiple Entry Points
 
@@ -506,12 +554,22 @@ Participants do not need to start from a Boolean query. The BYOD section accepts
 | **RIS / BibTeX File** | Already searched traditional databases (PubMed, Scopus, Web of Science) |
 | **Zotero Integration** | Already using a reference manager — connect your cloud or self-hosted library |
 
+### Bibliometric Network Analysis with VOSviewer
+
+Every corpus produced by this app — whether from a guided example or your own BYOD query —
+can be visualised as a **bibliometric network** using [VOSviewer](https://www.vosviewer.com),
+the standard tool for this purpose in systematic review methodology.
+
+The app generates a **RIS export** for each corpus. You upload this file to
+[VOSviewer Online](https://app.vosviewer.com) (free, browser-based, no installation needed)
+and choose your analysis type: keyword co-occurrence, citation network, or bibliographic coupling.
+
 ### Learning Outcome
 
 By the end of Day 1, you should be able to formulate a search strategy, understand how
 open APIs retrieve bibliographic metadata, follow the logic by which the app converts API
-responses into a clean, deduplicated corpus ready for screening, and interpret a basic
-bibliometric map of your corpus.
+responses into a clean, deduplicated corpus ready for screening, and produce a bibliometric
+network map of your corpus using VOSviewer.
 
 Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Your Own Query**.
     """)
@@ -523,17 +581,27 @@ Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Your Own Qu
 elif section == "📌 Guided Examples":
     st.title("📌 Day 1 — Guided Examples")
     st.markdown("""
-Each example below loads a pre-built corpus of 150 records from OpenAlex.
+Each example below loads a pre-built corpus from a cached dataset.
 **Expand any example** to see the corpus preview, year distribution chart,
-Interactive Bibliometric Map, and download buttons (CSV and RIS).
+VOSviewer bibliometric network instructions, and download buttons (CSV and RIS).
 No button click required — everything renders immediately.
+
+**Five examples are provided:**
+- 🏥 Health Sciences (OpenAlex)
+- 🏛️ Social Sciences (OpenAlex)
+- ⚗️ Science / Engineering (OpenAlex)
+- 💼 Management / Business (OpenAlex)
+- 🗂️ Zotero Library (researcher's existing reference collection)
     """)
 
     for ex in GUIDED_EXAMPLES:
         st.markdown("---")
         with st.expander(ex["label"], expanded=False):
             st.markdown(ex["description"])
-            st.markdown(f"**API source:** {ex['source']} &nbsp;|&nbsp; **Query:** `{ex['query']}`")
+            if ex["source"] == "Zotero":
+                st.markdown(f"**Source:** {ex['source']} &nbsp;|&nbsp; **Collection:** `{ex['query']}`")
+            else:
+                st.markdown(f"**API source:** {ex['source']} &nbsp;|&nbsp; **Query:** `{ex['query']}`")
 
             df, err = load_cached_corpus(ex["cache_file"])
             if err:
@@ -550,6 +618,10 @@ elif section == "🔎 BYOD — Your Own Query":
     st.markdown("""
 Use this section to build a corpus from **your own research question**.
 Choose your preferred input method below. No coding required.
+
+All three input methods produce the same outputs: a deduplicated corpus table,
+a publication year chart, a RIS export for Zotero, and a RIS file ready for
+**VOSviewer** bibliometric network analysis.
     """)
 
     input_method = st.radio(
@@ -604,7 +676,9 @@ Choose your preferred input method below. No coding required.
                         df = deduplicate_df(df)
                         after = len(df)
                         st.info(f"Deduplication removed {before - after} duplicate records ({before} → {after}).")
-                        display_corpus(df, f"Custom query: '{query_input.strip()}'", "byod")
+                        st.session_state["byod_df"] = df
+                        st.session_state["byod_api"] = api_name
+                        st.session_state["byod_query"] = query_input.strip()
 
                         log = {
                             "query": query_input.strip(),
@@ -615,16 +689,22 @@ Choose your preferred input method below. No coding required.
                             "records_after_dedup": after,
                             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
                         }
-                        st.markdown("#### Query Log (for reproducibility)")
-                        st.json(log)
-                        log_bytes = json.dumps(log, indent=2).encode("utf-8")
-                        st.download_button(
-                            "⬇️ Download Query Log",
-                            log_bytes, "query_log.json", "application/json",
-                            key="dl_log",
-                        )
+                        st.session_state["byod_log"] = log
                     except Exception as e:
                         st.error(f"Error retrieving data: {e}")
+
+        if "byod_df" in st.session_state and st.session_state["byod_df"] is not None:
+            df = st.session_state["byod_df"]
+            display_corpus(df, f"Custom query: '{st.session_state.get('byod_query', '')}'", "byod")
+            if "byod_log" in st.session_state:
+                st.markdown("#### Query Log (for reproducibility)")
+                st.json(st.session_state["byod_log"])
+                log_bytes = json.dumps(st.session_state["byod_log"], indent=2).encode("utf-8")
+                st.download_button(
+                    "⬇️ Download Query Log",
+                    log_bytes, "query_log.json", "application/json",
+                    key="dl_log",
+                )
 
     # ── Option 2: RIS / BibTeX Upload ─────────────────────────────────────────
     elif input_method == "📄 Upload RIS / BibTeX file":
@@ -634,8 +714,8 @@ Choose your preferred input method below. No coding required.
 If you have already searched traditional databases (PubMed, Scopus, Web of Science,
 CINAHL, PsycINFO, etc.) and exported the results as a **RIS** or **BibTeX** file,
 upload it here. The app will parse the file, deduplicate the records, and produce
-the same corpus preview, year chart, bibliometric map, and export options as the
-guided examples.
+the same corpus preview, year chart, VOSviewer bibliometric network export, and
+download options as the guided examples.
         """)
         uploaded_file = st.file_uploader(
             "Upload your RIS or BibTeX file",
@@ -665,6 +745,10 @@ Zotero Web API. You will need your **User ID** and a **Personal API Key**, both
 of which are available from your [Zotero account settings](https://www.zotero.org/settings/keys).
 
 Your credentials are used only for this session and are never stored.
+
+Once connected, the app retrieves your items, deduplicates them, and produces the same
+corpus preview, year chart, VOSviewer bibliometric network export, and download options
+as the guided examples.
         """)
         zotero_user_id = st.text_input("Zotero User ID", placeholder="e.g. 1234567")
         zotero_api_key = st.text_input("Zotero API Key", type="password", placeholder="Your personal API key")
@@ -709,7 +793,7 @@ Your credentials are used only for this session and are never stored.
                         df = deduplicate_df(df)
                         after = len(df)
                         st.info(f"Retrieved {before} records from Zotero. Deduplication removed {before - after} duplicates ({before} → {after}).")
-                        display_corpus(df, "Zotero library", "byod_zotero")
+                        st.session_state["zotero_df"] = df
                     except requests.HTTPError as e:
                         if e.response.status_code == 403:
                             st.error("Access denied. Please check your API key and User ID.")
@@ -717,3 +801,6 @@ Your credentials are used only for this session and are never stored.
                             st.error(f"Zotero API error: {e}")
                     except Exception as e:
                         st.error(f"Error connecting to Zotero: {e}")
+
+        if "zotero_df" in st.session_state and st.session_state["zotero_df"] is not None:
+            display_corpus(st.session_state["zotero_df"], "Zotero library", "byod_zotero")
