@@ -79,6 +79,20 @@ to use the live application during the seminar.
 
 ---
 
+## Manuscript about the Workshop
+
+A manuscript describing the workshope is available here:
+
+[AI-Assisted Systematic Reviews and Meta-Analysis Manuscript](./ai_systematic_review_paper.pdf)
+
+## Workshop Slides
+
+- [Day 1: From Query to Corpus](./slides/day1_slides.pdf)
+- [Day 2: From Corpus to Included Studies](./slides/day2_slides.pdf)
+- [Day 3: From Studies to Evidence](./slides/day3_slides.pdf)
+
+---
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
