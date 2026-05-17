@@ -225,8 +225,8 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
         if f >= q1: return "#3498db"
         return "#95a5a6"
 
-    net = PyvisNetwork(height="520px", width="100%", bgcolor="#1a1a2e",
-                       font_color="white", notebook=False)
+    net = PyvisNetwork(height="520px", width="100%", bgcolor="#ffffff",
+                       font_color="#222222", notebook=False)
     net.set_options("""
     {
       "physics": {
@@ -239,7 +239,7 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
         "solver": "forceAtlas2Based",
         "stabilization": {"iterations": 150}
       },
-      "nodes": {"font": {"size": 13, "color": "white"}, "borderWidth": 1.5},
+      "nodes": {"font": {"size": 13, "color": "#222222"}, "borderWidth": 1.5},
       "edges": {"color": {"opacity": 0.5}, "smooth": {"type": "continuous"}},
       "interaction": {"hover": true, "tooltipDelay": 100}
     }
@@ -293,7 +293,7 @@ of the corpus. **Drag nodes, scroll to zoom, hover for details.**
     else:
         components.html(html, height=540, scrolling=False)
         st.caption(
-            "🔴 High-frequency keywords  🟠 Medium-high  🔵 Medium-low  ⚫ Low-frequency. "
+            "🔴 High-frequency keywords  🟠 Medium-high  🔵 Medium-low  🩶 Low-frequency. "
             "Edge thickness = co-occurrence count."
         )
 
