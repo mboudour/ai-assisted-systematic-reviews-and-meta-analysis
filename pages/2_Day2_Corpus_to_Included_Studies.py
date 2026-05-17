@@ -12,13 +12,24 @@ inter-rater reliability, PRISMA-S, comparison with Rayyan/Covidence.
 
 import os
 import io
+import re
 import pathlib
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from collections import Counter
+from itertools import combinations
+
+# pyvis — optional import with graceful fallback
+try:
+    from pyvis.network import Network as PyvisNetwork
+    PYVIS_AVAILABLE = True
+except ImportError:
+    PYVIS_AVAILABLE = False
 
 st.set_page_config(
     page_title="Day 2 — From Corpus to Included Studies",
@@ -131,6 +142,130 @@ GUIDED_EXAMPLES = [
         ],
     },
 ]
+
+# ── Stopwords ─────────────────────────────────────────────────────────────────
+_STOPWORDS = {
+    "the","a","an","and","or","of","in","to","for","with","on","at","by","from",
+    "is","are","was","were","be","been","being","have","has","had","do","does",
+    "did","will","would","could","should","may","might","shall","this","that",
+    "these","those","it","its","as","but","not","no","so","if","than","then",
+    "also","which","who","whom","what","when","where","how","all","both","each",
+    "more","most","other","some","such","into","through","during","before",
+    "after","above","below","between","out","about","up","down","over","under",
+    "again","further","once","study","studies","research","results","analysis",
+    "data","paper","article","review","systematic","meta","based","using","used",
+    "associated","among","across","within","between","compared","including",
+    "however","therefore","thus","hence","while","although","despite","whether",
+    "effect","effects","impact","impacts","evidence","approach","methods","method",
+    "findings","conclusion","conclusions","objective","objectives","background",
+    "introduction","discussion","aim","aims","purpose","sample","samples",
+    "number","total","high","low","significant","significantly","p","ci",
+    "95","mean","median","sd","se","n","vs","et","al","doi","journal",
+}
+
+# ── pyvis network helpers ──────────────────────────────────────────────────────
+
+def _build_cooccurrence_network(df, top_n=40, min_cooccurrence=2):
+    all_docs_keywords = []
+    for _, row in df.iterrows():
+        doc_keywords = set()
+        concepts = str(row.get("Concepts", "") or "")
+        if concepts and concepts != "nan":
+            for c in concepts.split(";"):
+                kw = c.strip().lower()
+                if kw and len(kw) > 3 and kw not in _STOPWORDS:
+                    doc_keywords.add(kw)
+        title = str(row.get("Title", "") or "")
+        if title and title != "nan":
+            for w in re.findall(r'\b[a-zA-Z]{4,}\b', title.lower()):
+                if w not in _STOPWORDS:
+                    doc_keywords.add(w)
+        if doc_keywords:
+            all_docs_keywords.append(doc_keywords)
+    freq = Counter()
+    for doc_kws in all_docs_keywords:
+        for kw in doc_kws:
+            freq[kw] += 1
+    top_keywords = {kw for kw, _ in freq.most_common(top_n)}
+    cooc = Counter()
+    for doc_kws in all_docs_keywords:
+        filtered = doc_kws & top_keywords
+        for pair in combinations(sorted(filtered), 2):
+            cooc[pair] += 1
+    edges = [(a, b, cnt) for (a, b), cnt in cooc.items() if cnt >= min_cooccurrence]
+    return freq, edges, top_keywords
+
+
+def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
+    if not PYVIS_AVAILABLE:
+        return None, "pyvis is not installed in this environment."
+    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
+    if not edges:
+        return None, "Not enough co-occurring keywords to build a network. Try lowering the minimum co-occurrence threshold."
+    sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
+    q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
+    q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
+    q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
+    def node_color(f):
+        if f >= q3: return "#e74c3c"
+        if f >= q2: return "#e67e22"
+        if f >= q1: return "#3498db"
+        return "#95a5a6"
+    net = PyvisNetwork(height="520px", width="100%", bgcolor="#1a1a2e",
+                       font_color="white", notebook=False)
+    net.set_options("""
+    {
+      "physics": {
+        "forceAtlas2Based": {
+          "gravitationalConstant": -80,
+          "centralGravity": 0.01,
+          "springLength": 120,
+          "springConstant": 0.05
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {"iterations": 150}
+      },
+      "nodes": {"font": {"size": 13, "color": "white"}, "borderWidth": 1.5},
+      "edges": {"color": {"opacity": 0.5}, "smooth": {"type": "continuous"}},
+      "interaction": {"hover": true, "tooltipDelay": 100}
+    }
+    """)
+    nodes_in_edges = set()
+    for a, b, _ in edges:
+        nodes_in_edges.add(a)
+        nodes_in_edges.add(b)
+    for kw in nodes_in_edges:
+        f = freq.get(kw, 1)
+        size = max(10, min(40, 8 + f * 2))
+        net.add_node(kw, label=kw, title=f"{kw}\nFrequency: {f}",
+                     size=size, color=node_color(f))
+    max_cooc = max(cnt for _, _, cnt in edges) if edges else 1
+    for a, b, cnt in edges:
+        width = max(1, min(8, 1 + (cnt / max_cooc) * 7))
+        net.add_edge(a, b, value=cnt, title=f"Co-occurrences: {cnt}", width=width)
+    return net.generate_html(), None
+
+
+def render_pyvis_network(df, session_key, label="Included Studies"):
+    st.markdown("#### 🕸️ Interactive Keyword Co-occurrence Network — " + label)
+    st.markdown("""
+This network maps the **most frequent keywords** in the included studies and draws a link
+between any two keywords that appear together in the same paper. It reveals the thematic
+structure of the studies that survived screening. **Drag nodes, scroll to zoom, hover for details.**
+    """)
+    col_opts, _ = st.columns([2, 1])
+    with col_opts:
+        top_n = st.slider("Number of top keywords", min_value=10, max_value=60, value=35, step=5,
+                          key=f"pyvis_topn_{session_key}")
+        min_cooc = st.slider("Minimum co-occurrence", min_value=1, max_value=10, value=2, step=1,
+                             key=f"pyvis_mincooc_{session_key}")
+    html, err = generate_pyvis_html(df, top_n=top_n, min_cooccurrence=min_cooc)
+    if err:
+        st.warning(f"⚠️ Network could not be generated: {err}")
+    else:
+        components.html(html, height=540, scrolling=False)
+        st.caption("🔴 High-frequency  🟠 Medium-high  🔵 Medium-low  ⚫ Low-frequency. Edge thickness = co-occurrence count.")
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -280,6 +415,12 @@ agreement. Disagreements are resolved by a third reviewer or by consensus.
             "text/csv",
             key=f"dl_full_{session_key}",
         )
+
+    # ── pyvis network of included studies ────────────────────────────────────
+    if len(included_df) >= 5:
+        render_pyvis_network(included_df, session_key, label="Included Studies")
+    else:
+        st.info("ℹ️ Too few included studies to build a keyword co-occurrence network.")
 
     st.session_state[f"{session_key}_included_df"] = included_df
     st.info(f"✅ {len(included_df)} included studies saved. Go to **Day 3 → From Studies to Evidence** when ready.")

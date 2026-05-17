@@ -7,21 +7,33 @@ No coding required.
 
 APIs covered: OpenAlex, Crossref, Semantic Scholar, Europe PMC
 BYOD inputs: Boolean query (4 APIs), RIS/BibTeX file upload, Zotero connection
-Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network link
+Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network link,
+         pyvis interactive keyword co-occurrence network
 """
 
 import io
 import os
+import re
 import json
 import time
 import pathlib
 import requests
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from collections import Counter
+from itertools import combinations
+
+# pyvis — optional import with graceful fallback
+try:
+    from pyvis.network import Network as PyvisNetwork
+    PYVIS_AVAILABLE = True
+except ImportError:
+    PYVIS_AVAILABLE = False
 
 st.set_page_config(
     page_title="Day 1 — From Query to Corpus",
@@ -131,6 +143,161 @@ your personal User ID and API Key (available from your Zotero account settings).
     },
 ]
 
+# ── Stopwords for keyword extraction ──────────────────────────────────────────
+_STOPWORDS = {
+    "the","a","an","and","or","of","in","to","for","with","on","at","by","from",
+    "is","are","was","were","be","been","being","have","has","had","do","does",
+    "did","will","would","could","should","may","might","shall","this","that",
+    "these","those","it","its","as","but","not","no","so","if","than","then",
+    "also","which","who","whom","what","when","where","how","all","both","each",
+    "more","most","other","some","such","into","through","during","before",
+    "after","above","below","between","out","about","up","down","over","under",
+    "again","further","once","study","studies","research","results","analysis",
+    "data","paper","article","review","systematic","meta","based","using","used",
+    "associated","among","across","within","between","compared","including",
+    "however","therefore","thus","hence","while","although","despite","whether",
+    "effect","effects","impact","impacts","evidence","approach","methods","method",
+    "findings","conclusion","conclusions","objective","objectives","background",
+    "introduction","discussion","aim","aims","purpose","sample","samples",
+    "number","total","high","low","significant","significantly","p","ci",
+    "95","mean","median","sd","se","n","vs","et","al","doi","journal",
+}
+
+# ── pyvis network helpers ──────────────────────────────────────────────────────
+
+def _build_cooccurrence_network(df, top_n=40, min_cooccurrence=2):
+    """Extract keyword co-occurrence edges from a corpus DataFrame."""
+    all_docs_keywords = []
+    for _, row in df.iterrows():
+        doc_keywords = set()
+        concepts = str(row.get("Concepts", "") or "")
+        if concepts and concepts != "nan":
+            for c in concepts.split(";"):
+                kw = c.strip().lower()
+                if kw and len(kw) > 3 and kw not in _STOPWORDS:
+                    doc_keywords.add(kw)
+        title = str(row.get("Title", "") or "")
+        if title and title != "nan":
+            for w in re.findall(r'\b[a-zA-Z]{4,}\b', title.lower()):
+                if w not in _STOPWORDS:
+                    doc_keywords.add(w)
+        if doc_keywords:
+            all_docs_keywords.append(doc_keywords)
+
+    freq = Counter()
+    for doc_kws in all_docs_keywords:
+        for kw in doc_kws:
+            freq[kw] += 1
+
+    top_keywords = {kw for kw, _ in freq.most_common(top_n)}
+
+    cooc = Counter()
+    for doc_kws in all_docs_keywords:
+        filtered = doc_kws & top_keywords
+        for pair in combinations(sorted(filtered), 2):
+            cooc[pair] += 1
+
+    edges = [(a, b, cnt) for (a, b), cnt in cooc.items() if cnt >= min_cooccurrence]
+    return freq, edges, top_keywords
+
+
+def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
+    """Return (html_string, error_message). error_message is None on success."""
+    if not PYVIS_AVAILABLE:
+        return None, "pyvis is not installed in this environment."
+
+    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
+
+    if not edges:
+        return None, (
+            "Not enough co-occurring keywords to build a network with the current settings. "
+            "Try lowering the minimum co-occurrence threshold or using a larger corpus."
+        )
+
+    sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
+    q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
+    q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
+    q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
+
+    def node_color(f):
+        if f >= q3: return "#e74c3c"
+        if f >= q2: return "#e67e22"
+        if f >= q1: return "#3498db"
+        return "#95a5a6"
+
+    net = PyvisNetwork(height="520px", width="100%", bgcolor="#1a1a2e",
+                       font_color="white", notebook=False)
+    net.set_options("""
+    {
+      "physics": {
+        "forceAtlas2Based": {
+          "gravitationalConstant": -80,
+          "centralGravity": 0.01,
+          "springLength": 120,
+          "springConstant": 0.05
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {"iterations": 150}
+      },
+      "nodes": {"font": {"size": 13, "color": "white"}, "borderWidth": 1.5},
+      "edges": {"color": {"opacity": 0.5}, "smooth": {"type": "continuous"}},
+      "interaction": {"hover": true, "tooltipDelay": 100}
+    }
+    """)
+
+    nodes_in_edges = set()
+    for a, b, _ in edges:
+        nodes_in_edges.add(a)
+        nodes_in_edges.add(b)
+
+    for kw in nodes_in_edges:
+        f = freq.get(kw, 1)
+        size = max(10, min(40, 8 + f * 2))
+        net.add_node(kw, label=kw, title=f"{kw}\nFrequency: {f}",
+                     size=size, color=node_color(f))
+
+    max_cooc = max(cnt for _, _, cnt in edges) if edges else 1
+    for a, b, cnt in edges:
+        width = max(1, min(8, 1 + (cnt / max_cooc) * 7))
+        net.add_edge(a, b, value=cnt, title=f"Co-occurrences: {cnt}", width=width)
+
+    return net.generate_html(), None
+
+
+def render_pyvis_network(df, session_key):
+    """Render the interactive keyword co-occurrence network section."""
+    st.markdown("#### 🕸️ Interactive Keyword Co-occurrence Network")
+    st.markdown("""
+This network maps the **most frequent keywords** in the corpus and draws a link between
+any two keywords that appear together in the same paper. Larger nodes = more frequent;
+thicker edges = more papers share both keywords. Clusters reveal the main thematic areas
+of the corpus. **Drag nodes, scroll to zoom, hover for details.**
+    """)
+
+    col_opts, _ = st.columns([2, 1])
+    with col_opts:
+        top_n = st.slider(
+            "Number of top keywords to display",
+            min_value=10, max_value=60, value=40, step=5,
+            key=f"pyvis_topn_{session_key}",
+        )
+        min_cooc = st.slider(
+            "Minimum co-occurrence threshold",
+            min_value=1, max_value=10, value=2, step=1,
+            key=f"pyvis_mincooc_{session_key}",
+        )
+
+    html, err = generate_pyvis_html(df, top_n=top_n, min_cooccurrence=min_cooc)
+    if err:
+        st.warning(f"⚠️ Network could not be generated: {err}")
+    else:
+        components.html(html, height=540, scrolling=False)
+        st.caption(
+            "🔴 High-frequency keywords  🟠 Medium-high  🔵 Medium-low  ⚫ Low-frequency. "
+            "Edge thickness = co-occurrence count."
+        )
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def load_cached_corpus(cache_file):
@@ -177,70 +344,78 @@ def df_to_ris(df):
 
 
 def render_vosviewer_section(df, session_key):
-    """Render the VOSviewer bibliometric network section."""
-    st.markdown("#### 🔬 Bibliometric Network — VOSviewer")
+    """Render the VOSviewer bibliometric network section with clear step-by-step instructions."""
+    st.markdown("#### 🔬 Bibliometric Network Map — VOSviewer")
+
     st.markdown("""
-VOSviewer is the standard tool for creating **keyword co-occurrence networks**,
-**citation networks**, and **bibliographic coupling maps** from a corpus of literature.
-It is free, widely used in systematic reviews, and requires no programming.
+[VOSviewer](https://www.vosviewer.com) is the standard free tool for creating
+**keyword co-occurrence networks**, **citation networks**, and **bibliographic coupling maps**
+from a corpus of literature. It requires no programming and runs in your browser.
 
-**To visualise this corpus as a bibliometric network:**
-""")
+The interactive keyword network above (pyvis) shows co-occurrence patterns computed
+directly in this app. VOSviewer provides a richer, publication-quality map with
+colour-coded clusters, zoom, and label filtering — ideal for exploring a large corpus.
+    """)
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown("""
-**Step 1 — Download the RIS file** using the export button below.
+    st.info("""
+**How to create a VOSviewer map from this corpus — step by step:**
 
-**Step 2 — Open VOSviewer Online** by clicking the button on the right.
+**Step 1 →** Click **"⬇️ Download RIS file for VOSviewer"** below to save the corpus as a RIS file.
 
-**Step 3 — In VOSviewer Online:**
-- Click **Create** → **Create a map based on bibliographic data**
-- Select **RIS format** and upload your downloaded RIS file
-- Choose the type of analysis: **Co-occurrence** (keywords), **Citation** (papers), or **Bibliographic coupling**
-- Set the minimum number of occurrences (e.g., 3 for keywords) and click **Finish**
-- Explore the resulting network: clusters represent thematic areas, node size reflects frequency
+**Step 2 →** Click **"🌐 Open VOSviewer Online"** (button on the right). The tool opens in a new browser tab — no installation needed.
 
-**Tip:** For a keyword co-occurrence network, select *All keywords* or *Author keywords*
-depending on what metadata is available in your corpus.
-        """)
+**Step 3 →** In VOSviewer Online, click **"Create"** (top-left menu).
+
+**Step 4 →** Select **"Create a map based on bibliographic data"** → click **"Next"**.
+
+**Step 5 →** Choose **"RIS format"** → click **"Browse"** and upload the RIS file you downloaded in Step 1 → click **"Next"**.
+
+**Step 6 →** Choose the type of analysis:
+- **Co-occurrence → All keywords** — maps which topics appear together most often *(recommended first choice)*
+- **Co-occurrence → Author keywords** — uses only author-supplied keywords
+- **Citation → Documents** — maps which papers cite each other
+- **Bibliographic coupling → Documents** — groups papers that share references
+
+**Step 7 →** Set **"Minimum number of occurrences"** to **3** (or lower for small corpora) → click **"Finish"**.
+
+**Step 8 →** Explore the map: clusters = thematic areas, node size = frequency, edge thickness = co-occurrence strength. Use the **Zoom**, **Labels**, and **Colours** controls on the right panel.
+    """)
+
+    col1, col2 = st.columns([3, 1])
     with col2:
-        st.markdown("")
         st.markdown("")
         st.link_button(
             "🌐 Open VOSviewer Online",
             "https://app.vosviewer.com",
             use_container_width=True,
         )
-        st.caption("Free, browser-based, no installation required.")
+        st.caption("Free · browser-based · no installation")
         st.markdown("")
         st.link_button(
-            "⬇️ Download VOSviewer Desktop",
+            "⬇️ VOSviewer Desktop",
             "https://www.vosviewer.com/download",
             use_container_width=True,
         )
-        st.caption("For larger corpora and offline use.")
+        st.caption("For larger corpora & offline use")
 
-    # RIS export for VOSviewer
-    ris_str = df_to_ris(df)
-    ris_bytes = ris_str.encode("utf-8")
-    st.download_button(
-        "⬇️ Download RIS file for VOSviewer",
-        ris_bytes,
-        f"{session_key}_corpus_for_vosviewer.ris",
-        "application/x-research-info-systems",
-        key=f"dl_ris_vos_{session_key}",
-    )
-
-    st.info("""
-💡 **VOSviewer Desktop** supports larger corpora (10,000+ records) and additional
-analysis types including co-authorship networks and journal coupling maps.
-Download it free from [vosviewer.com](https://www.vosviewer.com).
-    """)
+    with col1:
+        ris_str = df_to_ris(df)
+        ris_bytes = ris_str.encode("utf-8")
+        st.download_button(
+            "⬇️ Download RIS file for VOSviewer  (use this in Step 1 above)",
+            ris_bytes,
+            f"{session_key}_corpus_for_vosviewer.ris",
+            "application/x-research-info-systems",
+            key=f"dl_ris_vos_{session_key}",
+        )
+        st.caption(
+            "The RIS file contains titles, authors, years, venues, DOIs, and abstracts "
+            "for all records in this corpus. VOSviewer reads this format natively."
+        )
 
 
 def display_corpus(df, source_label, session_key):
-    """Show stats, preview, year chart, VOSviewer section, and download buttons."""
+    """Show stats, preview, year chart, pyvis network, VOSviewer section, and download buttons."""
     st.success(f"✅ Corpus loaded: **{len(df)} records** from {source_label}.")
 
     col1, col2, col3 = st.columns(3)
@@ -266,10 +441,13 @@ def display_corpus(df, source_label, session_key):
         st.markdown("#### Publication Year Distribution")
         st.bar_chart(year_counts)
 
-    # VOSviewer bibliometric network section
+    # ── pyvis interactive keyword co-occurrence network ────────────────────────
+    render_pyvis_network(df, session_key)
+
+    # ── VOSviewer bibliometric network section ─────────────────────────────────
     render_vosviewer_section(df, session_key)
 
-    # CSV export
+    # ── Export ─────────────────────────────────────────────────────────────────
     st.markdown("#### Export")
     col_a, col_b = st.columns(2)
     with col_a:
@@ -542,7 +720,7 @@ supports automatically.
 |------|---------|
 | **Hour 1** | Introduce the logic of programmatic literature collection. Clarify the difference between manual database searches and open API retrieval. Present discipline-spanning examples and explain how query timestamps are logged for reproducibility. |
 | **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into Boolean queries and retrieve metadata from OpenAlex, Crossref, Semantic Scholar, and Europe PMC. |
-| **Hour 3** | Use the Streamlit app to run automated deduplication. Participants inspect the output, compare field completeness, export a clean CSV or RIS file for Zotero, and explore the corpus using **VOSviewer** for bibliometric network analysis. |
+| **Hour 3** | Use the Streamlit app to run automated deduplication. Participants inspect the output, compare field completeness, explore the corpus using the **interactive keyword co-occurrence network** (pyvis), export a clean CSV or RIS file, and create a **VOSviewer** bibliometric map. |
 
 ### Input Flexibility: Multiple Entry Points
 
@@ -554,22 +732,25 @@ Participants do not need to start from a Boolean query. The BYOD section accepts
 | **RIS / BibTeX File** | Already searched traditional databases (PubMed, Scopus, Web of Science) |
 | **Zotero Integration** | Already using a reference manager — connect your cloud or self-hosted library |
 
-### Bibliometric Network Analysis with VOSviewer
+### Two Visualisation Tools for Every Corpus
 
 Every corpus produced by this app — whether from a guided example or your own BYOD query —
-can be visualised as a **bibliometric network** using [VOSviewer](https://www.vosviewer.com),
-the standard tool for this purpose in systematic review methodology.
+is visualised in **two complementary ways**:
 
-The app generates a **RIS export** for each corpus. You upload this file to
-[VOSviewer Online](https://app.vosviewer.com) (free, browser-based, no installation needed)
-and choose your analysis type: keyword co-occurrence, citation network, or bibliographic coupling.
+1. **Interactive keyword co-occurrence network (pyvis)** — built directly in this app.
+   Drag nodes, scroll to zoom, hover for details. Instantly shows which topics cluster together.
+
+2. **VOSviewer bibliometric map** — export the corpus as a RIS file and open it in
+   [VOSviewer Online](https://app.vosviewer.com) (free, browser-based). Provides
+   publication-quality maps with colour-coded clusters, citation networks, and bibliographic
+   coupling — the standard tool in systematic review methodology.
 
 ### Learning Outcome
 
 By the end of Day 1, you should be able to formulate a search strategy, understand how
 open APIs retrieve bibliographic metadata, follow the logic by which the app converts API
-responses into a clean, deduplicated corpus ready for screening, and produce a bibliometric
-network map of your corpus using VOSviewer.
+responses into a clean, deduplicated corpus ready for screening, and produce both an
+interactive keyword network and a VOSviewer bibliometric map of your corpus.
 
 Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Your Own Query**.
     """)
@@ -583,7 +764,8 @@ elif section == "📌 Guided Examples":
     st.markdown("""
 Each example below loads a pre-built corpus from a cached dataset.
 **Expand any example** to see the corpus preview, year distribution chart,
-VOSviewer bibliometric network instructions, and download buttons (CSV and RIS).
+an **interactive keyword co-occurrence network** (pyvis), VOSviewer export
+instructions, and download buttons (CSV and RIS).
 No button click required — everything renders immediately.
 
 **Five examples are provided:**
@@ -620,8 +802,8 @@ Use this section to build a corpus from **your own research question**.
 Choose your preferred input method below. No coding required.
 
 All three input methods produce the same outputs: a deduplicated corpus table,
-a publication year chart, a RIS export for Zotero, and a RIS file ready for
-**VOSviewer** bibliometric network analysis.
+a publication year chart, an **interactive keyword co-occurrence network** (pyvis),
+a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric network analysis.
     """)
 
     input_method = st.radio(
@@ -714,8 +896,8 @@ a publication year chart, a RIS export for Zotero, and a RIS file ready for
 If you have already searched traditional databases (PubMed, Scopus, Web of Science,
 CINAHL, PsycINFO, etc.) and exported the results as a **RIS** or **BibTeX** file,
 upload it here. The app will parse the file, deduplicate the records, and produce
-the same corpus preview, year chart, VOSviewer bibliometric network export, and
-download options as the guided examples.
+the same corpus preview, year chart, interactive keyword co-occurrence network,
+VOSviewer bibliometric network export, and download options as the guided examples.
         """)
         uploaded_file = st.file_uploader(
             "Upload your RIS or BibTeX file",
@@ -744,63 +926,72 @@ You can retrieve records directly from your **Zotero** cloud library using the
 Zotero Web API. You will need your **User ID** and a **Personal API Key**, both
 of which are available from your [Zotero account settings](https://www.zotero.org/settings/keys).
 
-Your credentials are used only for this session and are never stored.
-
-Once connected, the app retrieves your items, deduplicates them, and produces the same
-corpus preview, year chart, VOSviewer bibliometric network export, and download options
-as the guided examples.
+**How to find your credentials:**
+1. Log in at [zotero.org](https://www.zotero.org) → click your username (top right) → **Settings**
+2. Click **Feeds/API** → note your **User ID** (a number, e.g. `1234567`)
+3. Click **Create new private key** → give it a name → tick **Allow library access** → **Save Key**
+4. Copy the key and paste it below (it is only shown once)
         """)
+
         zotero_user_id = st.text_input("Zotero User ID", placeholder="e.g. 1234567")
-        zotero_api_key = st.text_input("Zotero API Key", type="password", placeholder="Your personal API key")
+        zotero_api_key = st.text_input("Zotero API Key", type="password",
+                                        placeholder="Paste your personal API key here")
         zotero_collection = st.text_input(
-            "Collection name or key (optional — leave blank to retrieve all items)",
-            placeholder="e.g. MySystematicReview",
+            "Collection key (optional — leave blank to retrieve entire library)",
+            placeholder="e.g. ABC12DEF",
         )
 
-        if st.button("▶ Connect to Zotero", key="run_zotero"):
+        if st.button("▶ Retrieve from Zotero", key="run_zotero"):
             if not zotero_user_id.strip() or not zotero_api_key.strip():
-                st.warning("Please enter both your Zotero User ID and API Key.")
+                st.warning("Please provide both your Zotero User ID and API Key.")
             else:
                 with st.spinner("Connecting to Zotero…"):
                     try:
                         headers = {"Zotero-API-Key": zotero_api_key.strip()}
-                        url = f"https://api.zotero.org/users/{zotero_user_id.strip()}/items"
-                        params = {"format": "json", "limit": 100, "itemType": "journalArticle"}
+                        uid = zotero_user_id.strip()
+                        if zotero_collection.strip():
+                            url = f"https://api.zotero.org/users/{uid}/collections/{zotero_collection.strip()}/items"
+                        else:
+                            url = f"https://api.zotero.org/users/{uid}/items"
+                        params = {"format": "json", "itemType": "journalArticle || conferencePaper || preprint", "limit": 100}
                         r = requests.get(url, headers=headers, params=params, timeout=30)
                         r.raise_for_status()
                         items = r.json()
                         rows = []
                         for item in items:
                             data = item.get("data", {})
-                            creators = data.get("creators", [])
+                            if data.get("itemType") not in ("journalArticle", "conferencePaper", "preprint", "report"):
+                                continue
                             authors = "; ".join(
                                 f"{c.get('lastName', '')} {c.get('firstName', '')}".strip()
-                                for c in creators[:5]
+                                for c in data.get("creators", [])
+                                if c.get("creatorType") == "author"
                             )
                             rows.append({
                                 "ID": item.get("key", ""),
                                 "DOI": data.get("DOI", "") or "",
-                                "Title": data.get("title", "").strip(),
+                                "Title": (data.get("title", "") or "").strip(),
                                 "Year": str(data.get("date", ""))[:4],
                                 "Authors": authors,
-                                "Venue": data.get("publicationTitle", "") or "",
+                                "Venue": data.get("publicationTitle", "") or data.get("conferenceName", "") or "",
                                 "Abstract": data.get("abstractNote", "") or "",
                                 "Citations": "",
                                 "Concepts": "",
                             })
                         df = pd.DataFrame(rows)
-                        before = len(df)
-                        df = deduplicate_df(df)
-                        after = len(df)
-                        st.info(f"Retrieved {before} records from Zotero. Deduplication removed {before - after} duplicates ({before} → {after}).")
-                        st.session_state["zotero_df"] = df
-                    except requests.HTTPError as e:
-                        if e.response.status_code == 403:
-                            st.error("Access denied. Please check your API key and User ID.")
+                        if df.empty:
+                            st.warning("No journal articles, conference papers, or preprints found in this library/collection.")
                         else:
-                            st.error(f"Zotero API error: {e}")
+                            before = len(df)
+                            df = deduplicate_df(df)
+                            after = len(df)
+                            st.info(f"Retrieved {before} records from Zotero. Deduplication removed {before - after} duplicates ({before} → {after}).")
+                            st.session_state["byod_zotero_df"] = df
+                    except requests.HTTPError as e:
+                        st.error(f"Zotero API error: {e}. Check your User ID and API Key.")
                     except Exception as e:
-                        st.error(f"Error connecting to Zotero: {e}")
+                        st.error(f"Error: {e}")
 
-        if "zotero_df" in st.session_state and st.session_state["zotero_df"] is not None:
-            display_corpus(st.session_state["zotero_df"], "Zotero library", "byod_zotero")
+        if "byod_zotero_df" in st.session_state and st.session_state["byod_zotero_df"] is not None:
+            df = st.session_state["byod_zotero_df"]
+            display_corpus(df, "Zotero library", "byod_zotero")
