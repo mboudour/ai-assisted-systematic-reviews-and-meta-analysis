@@ -1,17 +1,21 @@
-# Day 1 — Additional Case Studies: From Query to Corpus
+# Additional Case Studies: From Query to Corpus
 
-This document provides **10 additional case studies** for the Day 1 module of the
+This document provides **10 additional case studies** for the
 *AI-Assisted Systematic Reviews and Meta-Analysis* seminar. Every example is completely
 distinct from the five guided examples already built into the Streamlit app
 (Health Inequalities, Universal Basic Income, Microplastics, CSR & Financial Performance,
 and Zotero Library). Each case study can be run immediately in the **BYOD — Your Own Query**
 section of the app by entering the parameters listed below.
 
+These case studies are designed to work across all three days of the seminar. See
+`Additional_Case_Studies_Suitability.md` in this folder for a full suitability mapping
+of each case study against the Day 2 screening and Day 3 synthesis workflows.
+
 ---
 
 ## How to Use These Case Studies in the App
 
-1. Open the Streamlit app and navigate to **Day 1 → From Query to Corpus**.
+1. Open the Streamlit app and navigate to **From Query to Corpus**.
 2. In the sidebar, select **🔎 BYOD — Your Own Query**.
 3. Choose **🔍 Boolean Query (search open APIs live)**.
 4. Select the **API** listed in the table for each case study.
@@ -55,7 +59,8 @@ adaptive learning platforms) on student academic achievement?
 **Why this topic?** One of the most active areas of educational meta-analysis since 2015,
 spanning K-12 and higher education. The corpus supports a PICO-structured extraction
 (Population = students; Intervention = technology-enhanced learning; Comparison = traditional
-instruction; Outcome = academic achievement scores) and a pooled effect size on Day 3.
+instruction; Outcome = academic achievement scores) and a pooled effect size in the
+synthesis stage.
 
 **What to look for in the keyword network:** Clusters around *blended learning*,
 *e-learning*, *gamification*, and *higher education* should emerge as distinct communities.
@@ -80,7 +85,7 @@ effectiveness of mindfulness-based interventions (MBSR, MBCT) in reducing anxiet
 symptoms in adult populations?
 
 **Why this topic?** A mature and heavily replicated literature with a large number of
-RCTs, making it ideal for demonstrating the Day 3 meta-analysis workflow. Europe PMC is
+RCTs, making it ideal for demonstrating the meta-analysis workflow. Europe PMC is
 preferred here because it provides full-text access to many open-access trials and
 indexes clinical trial registrations alongside journal articles.
 
@@ -193,7 +198,7 @@ because it indexes nursing journals and health policy reports alongside clinical
 **What to look for in the keyword network:** Strong co-occurrence between *nurse staffing*,
 *patient mortality*, *hospital-acquired infections*, and *workload*. The corpus will
 illustrate how the same outcome (patient safety) is measured using multiple different
-indicators — a key challenge for meta-analysis on Day 3.
+indicators — a key challenge for meta-analysis.
 
 ---
 
@@ -270,7 +275,7 @@ infarction, stroke) in primary and secondary prevention settings?
 
 **Why this topic?** One of the most heavily meta-analysed topics in clinical medicine,
 with landmark trials (4S, WOSCOPS, JUPITER) and multiple Cochrane reviews. The corpus
-is ideal for demonstrating the Day 3 meta-analysis workflow with a well-defined binary
+is ideal for demonstrating the meta-analysis workflow with a well-defined binary
 outcome (cardiovascular event: yes/no) and a large number of high-quality RCTs.
 
 **What to look for in the keyword network:** A dense, well-connected network dominated
@@ -297,9 +302,8 @@ do open access articles receive more citations than equivalent subscription-acce
 
 **Why this topic?** A self-referential and methodologically rich literature: it uses
 the same bibliometric tools (citation counts, OpenAlex, Crossref) that are the subject
-of Day 1. The corpus demonstrates how OpenAlex's `is_oa` filter can be used to compare
-OA and non-OA papers within the same corpus. This case study is also directly relevant
-to the seminar's own methodological context.
+of the corpus-construction module. The corpus demonstrates how OpenAlex's `is_oa` filter
+can be used to compare OA and non-OA papers within the same corpus.
 
 **What to look for in the keyword network:** Clusters around *open access*, *citation
 impact*, *gold open access*, *preprint*, and *bibliometrics*. The year distribution
@@ -343,4 +347,5 @@ were assigned to APIs deliberately to showcase this diversity:
 
 *Document prepared for the AI-Assisted Systematic Reviews and Meta-Analysis seminar
 (instats, June 2026). All case studies are designed to run in the BYOD section of the
-Day 1 Streamlit app without any coding.*
+app without any coding. For suitability across all three seminar days, see
+`Additional_Case_Studies_Suitability.md`.*
