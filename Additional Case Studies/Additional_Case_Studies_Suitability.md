@@ -1,7 +1,7 @@
 # Additional Case Studies — Suitability Across All Three Seminar Days
 
 This document explains how the 10 additional case studies (defined in
-`Day1_Additional_Case_Studies.md`) map onto the three-day structure of the
+`Additional_Case_Studies.md`) map onto the three-day structure of the
 *AI-Assisted Systematic Reviews and Meta-Analysis* seminar. It answers the question:
 **can a corpus built in the corpus-construction session be carried through to screening
 and then to evidence synthesis?**
@@ -82,4 +82,4 @@ corpus for quantitative synthesis.
 
 *Document prepared for the AI-Assisted Systematic Reviews and Meta-Analysis seminar
 (instats, June 2026). For the full case study parameters, see
-`Day1_Additional_Case_Studies.md`.*
+`Additional_Case_Studies.md`.*
