@@ -31,6 +31,7 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import FancyBboxPatch
 from collections import Counter
 from itertools import combinations
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # pyvis — optional import with graceful fallback
 try:
@@ -69,6 +70,147 @@ _STOPWORDS = {
     "number","total","high","low","significant","significantly","p","ci",
     "95","mean","median","sd","se","n","vs","et","al","doi","journal",
 }
+
+
+# ── VOSviewer helpers ──────────────────────────────────────────────────────────
+
+def _extract_tfidf_keywords(texts, top_n=8):
+    """Extract top TF-IDF keywords per document. Falls back to frequency if corpus too small."""
+    clean = [t if isinstance(t, str) and len(t.strip()) > 20 else "" for t in texts]
+    non_empty = [t for t in clean if t]
+    if len(non_empty) < 2:
+        results = []
+        for t in clean:
+            if not t:
+                results.append([])
+                continue
+            words = re.findall(r'\\b[a-zA-Z]{4,}\\b', t.lower())
+            stop = {"this","that","with","from","have","been","were","they",
+                    "their","which","also","more","than","into","such","when",
+                    "study","paper","research","results","using","used","based",
+                    "show","showed","found","data","analysis","method","methods"}
+            kws = [w for w in words if w not in stop]
+            freq_c = Counter(kws)
+            results.append([w for w, _ in freq_c.most_common(top_n)])
+        return results
+    try:
+        vec = TfidfVectorizer(
+            max_features=500, ngram_range=(1, 2), stop_words="english",
+            min_df=1, token_pattern=r'\\b[a-zA-Z]{4,}\\b',
+        )
+        tfidf_matrix = vec.fit_transform(clean)
+        feature_names = vec.get_feature_names_out()
+        results = []
+        for i, text in enumerate(clean):
+            if not text:
+                results.append([])
+                continue
+            row_arr = tfidf_matrix[i].toarray().flatten()
+            top_indices = row_arr.argsort()[::-1][:top_n]
+            kws = [feature_names[idx] for idx in top_indices if row_arr[idx] > 0]
+            results.append(kws)
+        return results
+    except Exception:
+        return [[] for _ in texts]
+
+
+def df_to_ris(df):
+    """Convert a DataFrame of included/extracted studies to RIS format with KW tags for VOSviewer."""
+    abstracts = [str(row.get("Abstract", row.get("Title", "")) or "") for _, row in df.iterrows()]
+    tfidf_kws = _extract_tfidf_keywords(abstracts, top_n=8)
+    lines = []
+    for i, (_, row) in enumerate(df.iterrows()):
+        lines.append("TY  - JOUR")
+        title = str(row.get("Title", "")).strip()
+        if title:
+            lines.append(f"TI  - {title}")
+        year = str(row.get("Year", "")).strip()
+        if year and year != "nan":
+            lines.append(f"PY  - {year}")
+        authors = str(row.get("Authors", "")).strip()
+        if authors and authors != "nan":
+            for author in authors.split(";"):
+                a = author.strip()
+                if a:
+                    lines.append(f"AU  - {a}")
+        venue = str(row.get("Venue", "")).strip()
+        if venue and venue != "nan":
+            lines.append(f"JO  - {venue}")
+        doi = str(row.get("DOI", "")).strip()
+        if doi and doi != "nan":
+            lines.append(f"DO  - {doi}")
+        abstract = str(row.get("Abstract", "")).strip()
+        if abstract and abstract != "nan":
+            lines.append(f"AB  - {abstract}")
+        concepts = str(row.get("Concepts", "") or "").strip()
+        if concepts and concepts != "nan":
+            for kw in concepts.split(";"):
+                kw = kw.strip()
+                if kw:
+                    lines.append(f"KW  - {kw}")
+        else:
+            for kw in tfidf_kws[i]:
+                lines.append(f"KW  - {kw}")
+        lines.append("ER  - ")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def render_vosviewer_section(df, session_key):
+    """Render VOSviewer bibliometric network section for included/extracted studies."""
+    st.markdown("#### \U0001f52c Bibliometric Network Map \u2014 VOSviewer (Included Studies)")
+    st.markdown("""
+[VOSviewer](https://www.vosviewer.com) provides a richer, publication-quality map of the
+**included studies** with colour-coded clusters, zoom, and label filtering.
+The pyvis network above shows co-occurrence patterns computed in this app;
+VOSviewer adds citation networks and bibliographic coupling on top of keyword co-occurrence.
+
+- **VOSviewer Desktop** \u2014 where you **create** maps from bibliographic data (free, Windows/Mac/Linux).
+- **VOSviewer Online** (`app.vosviewer.com`) \u2014 browser viewer only; load a `.json` map saved from the desktop app.
+    """)
+    st.info("""
+**How to create a VOSviewer map from the included studies \u2014 step by step (Desktop App):**
+
+**Step 1 \u2192** Click **"\u2b07\ufe0f Download RIS file for VOSviewer"** below.
+
+**Step 2 \u2192** Download and install **VOSviewer Desktop** (free) from the button on the right.
+
+**Step 3 \u2192** Open VOSviewer Desktop. Click **"Create"** (bottom-left panel).
+
+**Step 4 \u2192** Select **"Create a map based on bibliographic data"** \u2192 click **"Next"**.
+
+\u26a0\ufe0f *Do NOT select "Create a map based on network data" \u2014 that is for VOSviewer/GML/Pajek files.*
+
+**Step 5 \u2192** Select **"Read data from reference manager files"** \u2192 click **"Next"**.
+
+\u26a0\ufe0f *Do NOT select "Read data from bibliographic database files" \u2014 that is for Scopus CSV / Web of Science TXT.*
+
+**Step 6 \u2192** Click the **"RIS"** tab \u2192 **"Browse"** \u2192 select the RIS file \u2192 click **"Next"**.
+
+**Step 7 \u2192** Choose analysis type (Co-occurrence \u2192 All keywords recommended) \u2192 **"Next"**.
+
+**Step 8 \u2192** Set minimum occurrences to **2** (small corpus) or **3** \u2192 **"Next"** \u2192 **"Finish"**.
+
+**To view in VOSviewer Online:** File \u2192 Save as `.json` in the desktop app, then load via the folder icon at `app.vosviewer.com`.
+    """)
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        st.markdown("")
+        st.link_button("\U0001f310 Open VOSviewer Online", "https://app.vosviewer.com", use_container_width=True)
+        st.caption("Free \u00b7 browser-based \u00b7 viewer only")
+        st.markdown("")
+        st.link_button("\u2b07\ufe0f VOSviewer Desktop", "https://www.vosviewer.com/download", use_container_width=True)
+        st.caption("Create maps \u00b7 free \u00b7 Windows/Mac/Linux")
+    with col1:
+        ris_bytes = df_to_ris(df).encode("utf-8")
+        st.download_button(
+            "\u2b07\ufe0f Download RIS file for VOSviewer",
+            ris_bytes,
+            f"{session_key}_studies_for_vosviewer.ris",
+            "application/x-research-info-systems",
+            key=f"dl_ris_vos_{session_key}",
+        )
+        st.caption("Contains titles, authors, years, DOIs, abstracts, and keywords for all included studies.")
 
 # ── pyvis network helpers ──────────────────────────────────────────────────────
 
@@ -736,6 +878,10 @@ Record flow: **{n_id}** identified → **{n_dedup}** after deduplication →
     # ── Step 5: pyvis concept network ─────────────────────────────────────
     st.subheader("Step 5 — Concept Network of Included Studies")
     render_pyvis_network(df, sk)
+
+    # ── VOSviewer section ───────────────────────────────────────────────
+    if len(df) >= 3:
+        render_vosviewer_section(df, sk)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
