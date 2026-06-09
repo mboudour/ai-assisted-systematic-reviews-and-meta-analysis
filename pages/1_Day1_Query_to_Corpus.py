@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
 from itertools import combinations
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # pyvis — optional import with graceful fallback
 try:
@@ -312,10 +313,66 @@ def load_cached_corpus(cache_file):
     return None, f"Cache file not found: {cache_file}"
 
 
+def _extract_tfidf_keywords(texts, top_n=8):
+    """Extract top TF-IDF keywords per document from a list of abstract texts.
+    Returns a list of lists (one list of keyword strings per document).
+    Documents with no usable text get an empty list.
+    """
+    # Build a per-document keyword list using TF-IDF
+    clean = [t if isinstance(t, str) and len(t.strip()) > 20 else "" for t in texts]
+    # If fewer than 2 non-empty docs, fall back to simple frequency
+    non_empty = [t for t in clean if t]
+    if len(non_empty) < 2:
+        results = []
+        for t in clean:
+            if not t:
+                results.append([])
+                continue
+            words = re.findall(r'\b[a-zA-Z]{4,}\b', t.lower())
+            stop = {"this","that","with","from","have","been","were","they",
+                    "their","which","also","more","than","into","such","when",
+                    "study","paper","research","results","using","used","based",
+                    "show","showed","found","data","analysis","method","methods"}
+            kws = [w for w in words if w not in stop]
+            freq = Counter(kws)
+            results.append([w for w, _ in freq.most_common(top_n)])
+        return results
+    try:
+        vec = TfidfVectorizer(
+            max_features=500,
+            ngram_range=(1, 2),
+            stop_words="english",
+            min_df=1,
+            token_pattern=r'\b[a-zA-Z]{4,}\b',
+        )
+        tfidf_matrix = vec.fit_transform(clean)
+        feature_names = vec.get_feature_names_out()
+        results = []
+        for i, text in enumerate(clean):
+            if not text:
+                results.append([])
+                continue
+            row = tfidf_matrix[i].toarray().flatten()
+            top_indices = row.argsort()[::-1][:top_n]
+            kws = [feature_names[idx] for idx in top_indices if row[idx] > 0]
+            results.append(kws)
+        return results
+    except Exception:
+        return [[] for _ in texts]
+
+
 def df_to_ris(df):
-    """Convert a corpus DataFrame to RIS format string."""
+    """Convert a corpus DataFrame to RIS format string.
+    Keywords (KW tags) are populated from the Concepts column when available;
+    for rows without concepts, TF-IDF keywords are extracted from the abstract
+    so that VOSviewer's Co-occurrence analysis is always enabled.
+    """
+    # Pre-compute TF-IDF fallback keywords for all rows in one vectorisation pass
+    abstracts = [str(row.get("Abstract", "") or "") for _, row in df.iterrows()]
+    tfidf_kws = _extract_tfidf_keywords(abstracts, top_n=8)
+
     lines = []
-    for _, row in df.iterrows():
+    for i, (_, row) in enumerate(df.iterrows()):
         lines.append("TY  - JOUR")
         title = str(row.get("Title", "")).strip()
         if title:
@@ -338,12 +395,16 @@ def df_to_ris(df):
         abstract = str(row.get("Abstract", "")).strip()
         if abstract and abstract != "nan":
             lines.append(f"AB  - {abstract}")
-        concepts = str(row.get("Concepts", "")).strip()
+        # Keywords: prefer structured Concepts; fall back to TF-IDF from abstract
+        concepts = str(row.get("Concepts", "") or "").strip()
         if concepts and concepts != "nan":
             for kw in concepts.split(";"):
                 kw = kw.strip()
                 if kw:
                     lines.append(f"KW  - {kw}")
+        else:
+            for kw in tfidf_kws[i]:
+                lines.append(f"KW  - {kw}")
         lines.append("ER  - ")
         lines.append("")
     return "\n".join(lines)
