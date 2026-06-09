@@ -338,6 +338,12 @@ def df_to_ris(df):
         abstract = str(row.get("Abstract", "")).strip()
         if abstract and abstract != "nan":
             lines.append(f"AB  - {abstract}")
+        concepts = str(row.get("Concepts", "")).strip()
+        if concepts and concepts != "nan":
+            for kw in concepts.split(";"):
+                kw = kw.strip()
+                if kw:
+                    lines.append(f"KW  - {kw}")
         lines.append("ER  - ")
         lines.append("")
     return "\n".join(lines)
