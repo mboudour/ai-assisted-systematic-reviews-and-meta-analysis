@@ -438,11 +438,9 @@ colour-coded clusters, zoom, and label filtering — ideal for exploring a large
 
 **Step 4 →** A wizard opens. Select **"Create a map based on bibliographic data"** → click **"Next"**.
 
-⚠️ *Do NOT select "Create a map based on network data" — that option is for VOSviewer/GML/Pajek files, not for RIS.*
 
 **Step 5 →** On the next screen, select **"Read data from reference manager files"** → click **"Next"**.
 
-⚠️ *Do NOT select "Read data from bibliographic database files" — that option is for Scopus CSV or Web of Science TXT exports, not for RIS.*
 
 **Step 6 →** A panel with tabs appears. Click the **"RIS"** tab → click **"Browse"** → select the RIS file you downloaded in Step 1 → click **"Next"**.
 

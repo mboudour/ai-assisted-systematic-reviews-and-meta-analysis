@@ -179,11 +179,9 @@ VOSviewer adds citation networks and bibliographic coupling on top of keyword co
 
 **Step 4 \u2192** Select **"Create a map based on bibliographic data"** \u2192 click **"Next"**.
 
-\u26a0\ufe0f *Do NOT select "Create a map based on network data" \u2014 that is for VOSviewer/GML/Pajek files.*
 
 **Step 5 \u2192** Select **"Read data from reference manager files"** \u2192 click **"Next"**.
 
-\u26a0\ufe0f *Do NOT select "Read data from bibliographic database files" \u2014 that is for Scopus CSV / Web of Science TXT.*
 
 **Step 6 \u2192** Click the **"RIS"** tab \u2192 **"Browse"** \u2192 select the RIS file \u2192 click **"Next"**.
 
