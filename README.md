@@ -6,7 +6,7 @@
 > ### 📋 Registration
 > **[Register now at instats.org](https://instats.org/seminar/ai-assisted-systematic-reviews-and-meta)**
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app)
+[![Streamlit App](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app)
 
 ---
 
