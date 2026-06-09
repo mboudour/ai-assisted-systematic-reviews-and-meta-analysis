@@ -350,7 +350,10 @@ def render_vosviewer_section(df, session_key):
     st.markdown("""
 [VOSviewer](https://www.vosviewer.com) is the standard free tool for creating
 **keyword co-occurrence networks**, **citation networks**, and **bibliographic coupling maps**
-from a corpus of literature. It requires no programming and runs in your browser.
+from a corpus of literature. It is free and available in two versions:
+
+- **VOSviewer Desktop** — the full application (Windows / Mac / Linux). Downloads and installs in under a minute. This is where you **create** maps from bibliographic data.
+- **VOSviewer Online** (`app.vosviewer.com`) — a browser-based viewer. It can only **display** maps that were already created and saved by the desktop app. It has no "Create" function.
 
 The interactive keyword network above (pyvis) shows co-occurrence patterns computed
 directly in this app. VOSviewer provides a richer, publication-quality map with
@@ -358,17 +361,17 @@ colour-coded clusters, zoom, and label filtering — ideal for exploring a large
     """)
 
     st.info("""
-**How to create a VOSviewer map from this corpus — step by step:**
+**How to create a VOSviewer map from this corpus — step by step (Desktop App):**
 
 **Step 1 →** Click **"⬇️ Download RIS file for VOSviewer"** below to save the corpus as a RIS file.
 
-**Step 2 →** Click **"🌐 Open VOSviewer Online"** (button on the right). The tool opens in a new browser tab — no installation needed.
+**Step 2 →** Download and install the **VOSviewer Desktop** app (free) from the button on the right.
 
-**Step 3 →** In VOSviewer Online, click **"Create"** (top-left menu).
+**Step 3 →** Open VOSviewer Desktop. Click **"Create"** (bottom-left panel).
 
 **Step 4 →** Select **"Create a map based on bibliographic data"** → click **"Next"**.
 
-**Step 5 →** Choose **"RIS format"** → click **"Browse"** and upload the RIS file you downloaded in Step 1 → click **"Next"**.
+**Step 5 →** Select **"Read data from reference manager files"** → choose **"RIS format"** → click **"Browse"** and upload the RIS file from Step 1 → click **"Next"**.
 
 **Step 6 →** Choose the type of analysis:
 - **Co-occurrence → All keywords** — maps which topics appear together most often *(recommended first choice)*
@@ -376,9 +379,17 @@ colour-coded clusters, zoom, and label filtering — ideal for exploring a large
 - **Citation → Documents** — maps which papers cite each other
 - **Bibliographic coupling → Documents** — groups papers that share references
 
-**Step 7 →** Set **"Minimum number of occurrences"** to **3** (or lower for small corpora) → click **"Finish"**.
+**Step 7 →** Set **"Minimum number of occurrences"** to **3** (or lower for small corpora) → click **"Next"** → **"Finish"**.
 
-**Step 8 →** Explore the map: clusters = thematic areas, node size = frequency, edge thickness = co-occurrence strength. Use the **Zoom**, **Labels**, and **Colours** controls on the right panel.
+**Step 8 →** Explore the map: clusters = thematic areas, node size = frequency, edge thickness = co-occurrence strength.
+
+---
+
+**To share or view the map in VOSviewer Online:**
+
+**Step 9 →** In the desktop app, go to **File → Save** to save the map as a `.json` file.
+
+**Step 10 →** Open `app.vosviewer.com`, click the **folder icon** (top-right), and load the `.json` file to view and share the map interactively in the browser.
     """)
 
     col1, col2 = st.columns([3, 1])
