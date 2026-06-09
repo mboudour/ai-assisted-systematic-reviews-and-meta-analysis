@@ -367,29 +367,37 @@ colour-coded clusters, zoom, and label filtering — ideal for exploring a large
 
 **Step 2 →** Download and install the **VOSviewer Desktop** app (free) from the button on the right.
 
-**Step 3 →** Open VOSviewer Desktop. Click **"Create"** (bottom-left panel).
+**Step 3 →** Open VOSviewer Desktop. In the bottom-left panel, click **"Create"**.
 
-**Step 4 →** Select **"Create a map based on bibliographic data"** → click **"Next"**.
+**Step 4 →** A wizard opens. Select **"Create a map based on bibliographic data"** → click **"Next"**.
 
-**Step 5 →** Select **"Read data from reference manager files"** → choose **"RIS format"** → click **"Browse"** and upload the RIS file from Step 1 → click **"Next"**.
+⚠️ *Do NOT select "Create a map based on network data" — that option is for VOSviewer/GML/Pajek files, not for RIS.*
 
-**Step 6 →** Choose the type of analysis:
+**Step 5 →** On the next screen, select **"Read data from reference manager files"** → click **"Next"**.
+
+⚠️ *Do NOT select "Read data from bibliographic database files" — that option is for Scopus CSV or Web of Science TXT exports, not for RIS.*
+
+**Step 6 →** A panel with tabs appears. Click the **"RIS"** tab → click **"Browse"** → select the RIS file you downloaded in Step 1 → click **"Next"**.
+
+**Step 7 →** Choose the type of analysis:
 - **Co-occurrence → All keywords** — maps which topics appear together most often *(recommended first choice)*
 - **Co-occurrence → Author keywords** — uses only author-supplied keywords
 - **Citation → Documents** — maps which papers cite each other
 - **Bibliographic coupling → Documents** — groups papers that share references
 
-**Step 7 →** Set **"Minimum number of occurrences"** to **3** (or lower for small corpora) → click **"Next"** → **"Finish"**.
+Click **"Next"**.
 
-**Step 8 →** Explore the map: clusters = thematic areas, node size = frequency, edge thickness = co-occurrence strength.
+**Step 8 →** Set **"Minimum number of occurrences"** to **3** (or lower for small corpora) → click **"Next"** → **"Finish"**.
+
+**Step 9 →** Explore the map: clusters = thematic areas, node size = frequency, edge thickness = co-occurrence strength.
 
 ---
 
 **To share or view the map in VOSviewer Online:**
 
-**Step 9 →** In the desktop app, go to **File → Save** to save the map as a `.json` file.
+**Step 10 →** In the desktop app, go to **File → Save** to save the map as a `.json` file.
 
-**Step 10 →** Open `app.vosviewer.com`, click the **folder icon** (top-right), and load the `.json` file to view and share the map interactively in the browser.
+**Step 11 →** Open `app.vosviewer.com`, click the **folder icon** (top-right corner), and load the `.json` file to view and share the map interactively in the browser.
     """)
 
     col1, col2 = st.columns([3, 1])
