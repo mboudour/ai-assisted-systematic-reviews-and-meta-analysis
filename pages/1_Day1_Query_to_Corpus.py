@@ -670,10 +670,28 @@ def display_corpus(df, source_label, session_key):
 
 # ── Live API helpers (BYOD only) ───────────────────────────────────────────────
 
+def _sanitise_for_openalex(query: str) -> str:
+    """Strip Boolean operators, parentheses, and quoted phrases from a query string
+    so it is safe to pass to OpenAlex's `search` parameter, which only accepts
+    plain keyword terms (no AND/OR/NOT/parentheses).
+    """
+    import re as _re
+    # Remove parentheses
+    q = query.replace('(', ' ').replace(')', ' ')
+    # Remove quoted phrases — keep the words inside the quotes
+    q = _re.sub(r'"([^"]+)"', r'\1', q)
+    # Remove Boolean operators (case-insensitive, whole word)
+    q = _re.sub(r'\b(AND|OR|NOT)\b', ' ', q, flags=_re.IGNORECASE)
+    # Collapse whitespace
+    q = ' '.join(q.split())
+    return q
+
+
 def query_openalex_live(search_query, per_page=50, max_pages=2):
     base = "https://api.openalex.org/works"
+    clean_query = _sanitise_for_openalex(search_query)
     params = {
-        "search": search_query,
+        "search": clean_query,
         "filter": "has_abstract:true",
         "per_page": per_page,
         "select": "id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count,concepts",
