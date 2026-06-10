@@ -425,70 +425,152 @@ def df_to_ris(df):
     return "\n".join(lines)
 
 
-def render_vosviewer_section(df, session_key):
-    """Render the VOSviewer bibliometric network section with clear step-by-step instructions."""
-    st.markdown("#### 🔬 Bibliometric Network Map — VOSviewer")
 
+def generate_vosviewer_json(df, top_n=40, min_cooccurrence=2):
+    """Build a VOSviewer-format JSON dict from the corpus keyword co-occurrence network."""
+    import math
+    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
+    if not edges:
+        return None
+
+    # Assign cluster IDs via simple greedy community detection (connected components)
+    from collections import defaultdict
+    adj = defaultdict(set)
+    for a, b, _ in edges:
+        adj[a].add(b)
+        adj[b].add(a)
+
+    cluster_map = {}
+    cluster_id = 1
+    for kw in top_keywords:
+        if kw not in cluster_map:
+            # BFS
+            queue = [kw]
+            visited = set()
+            while queue:
+                node = queue.pop(0)
+                if node in visited:
+                    continue
+                visited.add(node)
+                cluster_map[node] = cluster_id
+                for nb in adj.get(node, []):
+                    if nb not in visited and nb in top_keywords:
+                        queue.append(nb)
+            cluster_id += 1
+
+    # Lay out nodes on a circle (VOSviewer will re-layout, but needs x/y)
+    kw_list = sorted(top_keywords)
+    n = len(kw_list)
+    items = []
+    for i, kw in enumerate(kw_list):
+        angle = 2 * math.pi * i / max(n, 1)
+        items.append({
+            "id": i + 1,
+            "label": kw,
+            "x": round(math.cos(angle), 4),
+            "y": round(math.sin(angle), 4),
+            "cluster": cluster_map.get(kw, 1),
+            "weights": {"Occurrences": int(freq.get(kw, 1))},
+        })
+
+    kw_to_id = {kw: i + 1 for i, kw in enumerate(kw_list)}
+    links = []
+    for a, b, cnt in edges:
+        if a in kw_to_id and b in kw_to_id:
+            links.append({
+                "source_id": kw_to_id[a],
+                "target_id": kw_to_id[b],
+                "strength": int(cnt),
+            })
+
+    vos_json = {
+        "network": {
+            "items": items,
+            "links": links,
+        },
+        "config": {
+            "parameters": {
+                "largest_component": True,
+                "attraction": 2,
+                "repulsion": 1,
+            },
+            "terminology": {
+                "item": "keyword",
+                "items": "keywords",
+                "link": "co-occurrence",
+                "links": "co-occurrences",
+                "link_strength": "co-occurrence strength",
+                "total_link_strength": "total co-occurrence strength",
+            },
+        },
+        "info": {
+            "title": "Keyword Co-occurrence Network",
+            "description": f"Built from {len(df)} records. Nodes = keywords; edges = co-occurrence in titles/abstracts.",
+        },
+    }
+    return vos_json
+
+def render_vosviewer_section(df, session_key):
+    """Render the VOSviewer bibliometric network section.
+    Generates a valid VOSviewer JSON, uploads it to a public URL, and provides
+    a one-click link to open the map directly in VOSviewer Online.
+    """
+    import subprocess, tempfile, os, json as _json
+
+    st.markdown("#### 🔬 Bibliometric Network Map — VOSviewer")
     st.markdown("""
 [VOSviewer](https://www.vosviewer.com) is the standard free tool for creating
 **keyword co-occurrence networks**, **citation networks**, and **bibliographic coupling maps**
 from a corpus of literature. It is free and available in two versions:
-
-- **VOSviewer Desktop** — the full application (Windows / Mac / Linux). Downloads and installs in under a minute. This is where you **create** maps from bibliographic data.
-- **VOSviewer Online** (`app.vosviewer.com`) — a browser-based viewer. It can only **display** maps that were already created and saved by the desktop app. It has no "Create" function.
-
-The interactive keyword network above (pyvis) shows co-occurrence patterns computed
-directly in this app. VOSviewer provides a richer, publication-quality map with
-colour-coded clusters, zoom, and label filtering — ideal for exploring a large corpus.
+- **VOSviewer Online** (`app.vosviewer.com`) — browser-based, no installation needed.
+- **VOSviewer Desktop** — full application (Windows / Mac / Linux), for larger corpora and offline use.
     """)
 
-    st.info("""
-**How to create a VOSviewer map from this corpus — step by step (Desktop App):**
+    # ── Generate VOSviewer JSON ────────────────────────────────────────────────
+    vos_data = generate_vosviewer_json(df)
+    vos_url = None
 
-**Step 1 →** Click **"⬇️ Download RIS file for VOSviewer"** below to save the corpus as a RIS file.
+    if vos_data is not None:
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False, prefix=f"{session_key}_vos_"
+            ) as tmp:
+                _json.dump(vos_data, tmp, ensure_ascii=False)
+                tmp_path = tmp.name
 
-**Step 2 →** Download and install the **VOSviewer Desktop** app (free) from the button on the right.
+            result = subprocess.run(
+                ["manus-upload-file", tmp_path],
+                capture_output=True, text=True, timeout=30
+            )
+            os.unlink(tmp_path)
 
-**Step 3 →** Open VOSviewer Desktop. In the bottom-left panel, click **"Create"**.
+            for line in result.stdout.strip().splitlines():
+                line = line.strip()
+                if line.startswith("http"):
+                    vos_url = line
+                    break
+        except Exception:
+            vos_url = None
 
-**Step 4 →** A wizard opens. Select **"Create a map based on bibliographic data"** → click **"Next"**.
-
-
-**Step 5 →** On the next screen, select **"Read data from reference manager files"** → click **"Next"**.
-
-
-**Step 6 →** A panel with tabs appears. Click the **"RIS"** tab → click **"Browse"** → select the RIS file you downloaded in Step 1 → click **"Next"**.
-
-**Step 7 →** Choose the type of analysis:
-- **Co-occurrence → All keywords** — maps which topics appear together most often *(recommended first choice)*
-- **Co-occurrence → Author keywords** — uses only author-supplied keywords
-- **Citation → Documents** — maps which papers cite each other
-- **Bibliographic coupling → Documents** — groups papers that share references
-
-Click **"Next"**.
-
-**Step 8 →** Set **"Minimum number of occurrences"** to **3** (or lower for small corpora) → click **"Next"** → **"Finish"**.
-
-**Step 9 →** Explore the map: clusters = thematic areas, node size = frequency, edge thickness = co-occurrence strength.
-
----
-
-**To share or view the map in VOSviewer Online:**
-
-**Step 10 →** In the desktop app, go to **File → Save** to save the map as a `.json` file.
-
-**Step 11 →** Open `app.vosviewer.com`, click the **folder icon** (top-right corner), and load the `.json` file to view and share the map interactively in the browser.
-    """)
-
+    # ── Buttons row ───────────────────────────────────────────────────────────
     col1, col2 = st.columns([3, 1])
+
     with col2:
-        st.markdown("")
-        st.link_button(
-            "🌐 Open VOSviewer Online",
-            "https://app.vosviewer.com",
-            use_container_width=True,
-        )
-        st.caption("Free · browser-based · no installation")
+        if vos_url:
+            online_link = f"https://app.vosviewer.com/?json={vos_url}"
+            st.link_button(
+                "🌐 Open in VOSviewer Online",
+                online_link,
+                use_container_width=True,
+            )
+            st.caption("Click to open the keyword co-occurrence map directly in your browser — no installation needed.")
+        else:
+            st.link_button(
+                "🌐 Open VOSviewer Online",
+                "https://app.vosviewer.com",
+                use_container_width=True,
+            )
+            st.caption("Load the downloaded JSON file via the folder icon on the site.")
         st.markdown("")
         st.link_button(
             "⬇️ VOSviewer Desktop",
@@ -498,10 +580,25 @@ Click **"Next"**.
         st.caption("For larger corpora & offline use")
 
     with col1:
+        # Download VOSviewer JSON directly
+        if vos_data is not None:
+            vos_json_bytes = _json.dumps(vos_data, ensure_ascii=False, indent=2).encode("utf-8")
+            st.download_button(
+                "⬇️ Download VOSviewer JSON (load via folder icon on app.vosviewer.com)",
+                vos_json_bytes,
+                f"{session_key}_vosviewer_network.json",
+                "application/json",
+                key=f"dl_vos_json_{session_key}",
+            )
+            st.caption(
+                "This JSON file contains the keyword co-occurrence network in VOSviewer format. "
+                "Load it via the folder icon on app.vosviewer.com or in VOSviewer Desktop."
+            )
+        # Also keep the RIS download for users who want to create maps from scratch
         ris_str = df_to_ris(df)
         ris_bytes = ris_str.encode("utf-8")
         st.download_button(
-            "⬇️ Download RIS file for VOSviewer  (use this in Step 1 above)",
+            "⬇️ Download RIS file (for creating custom maps in VOSviewer Desktop)",
             ris_bytes,
             f"{session_key}_corpus_for_vosviewer.ris",
             "application/x-research-info-systems",
