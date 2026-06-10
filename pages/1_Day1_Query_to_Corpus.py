@@ -641,8 +641,16 @@ def query_semantic_scholar_live(search_query, per_page=50):
         "limit": per_page,
         "fields": "paperId,externalIds,title,year,authors,venue,abstract,citationCount",
     }
-    r = requests.get(base, params=params, timeout=30)
-    r.raise_for_status()
+    # Retry with exponential backoff to handle 429 rate-limit responses
+    for attempt in range(4):
+        r = requests.get(base, params=params, timeout=30)
+        if r.status_code == 429:
+            time.sleep(2 ** attempt)
+            continue
+        r.raise_for_status()
+        break
+    else:
+        raise Exception("Semantic Scholar rate limit exceeded after 4 retries. Please wait a moment and try again.")
     items = r.json().get("data", [])
     rows = []
     for item in items:
@@ -942,11 +950,12 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         per_page = st.slider("Records per page", min_value=10, max_value=100, value=50, step=10)
         max_pages = st.slider("Number of pages to retrieve", min_value=1, max_value=5, value=2)
 
-        col_yr1, col_yr2 = st.columns(2)
-        with col_yr1:
-            byod_year_from = st.number_input("Year from (leave 0 for no lower limit)", min_value=0, max_value=2100, value=0, step=1)
-        with col_yr2:
-            byod_year_to = st.number_input("Year to (leave 0 for no upper limit)", min_value=0, max_value=2100, value=0, step=1)
+        use_year_filter = st.checkbox("Filter by publication year range", value=False, key="byod_use_year")
+        if use_year_filter:
+            yr_range = st.slider("Publication year range", min_value=1990, max_value=2026, value=(2010, 2026), step=1, key="byod_yr_slider")
+            byod_year_from, byod_year_to = yr_range
+        else:
+            byod_year_from, byod_year_to = None, None
         byod_pub_types = st.multiselect(
             "Publication types (leave empty for all types)",
             ["journal-article", "book-chapter", "conference-paper", "preprint", "review", "report"],
