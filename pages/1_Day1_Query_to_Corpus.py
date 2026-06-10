@@ -939,10 +939,10 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
             [
                 "OpenAlex (recommended for most disciplines)",
                 "Crossref (DOI-centric, all disciplines)",
-                "Semantic Scholar (STEM, CS, Biomedical)",
                 "Europe PMC (Life sciences, health)",
             ],
         )
+        st.caption("ℹ️ Semantic Scholar is not available for live queries due to strict rate limits on their public API. Use OpenAlex for STEM and biomedical topics — it covers the same literature without rate restrictions.")
         query_input = st.text_input(
             "Enter your search query (e.g. 'machine learning clinical diagnosis')",
             placeholder="e.g. telemedicine chronic disease management outcomes",
