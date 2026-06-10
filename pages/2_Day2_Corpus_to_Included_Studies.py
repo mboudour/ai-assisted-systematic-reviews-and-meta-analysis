@@ -346,56 +346,113 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
     freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
     if not edges:
         return None, "Not enough co-occurring keywords to build a network. Try lowering the minimum co-occurrence threshold."
-    sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
-    q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
-    q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
-    q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
-    def node_color(f):
-        if f >= q3: return "#e74c3c"
-        if f >= q2: return "#e67e22"
-        if f >= q1: return "#3498db"
-        return "#95a5a6"
-    net = PyvisNetwork(height="520px", width="100%", bgcolor="#ffffff",
+
+    # ── Louvain community detection ───────────────────────────────────────────
+    try:
+        import networkx as nx
+        import community as community_louvain  # python-louvain
+
+        G = nx.Graph()
+        nodes_in_edges = set()
+        for a, b, cnt in edges:
+            nodes_in_edges.add(a)
+            nodes_in_edges.add(b)
+            G.add_edge(a, b, weight=cnt)
+
+        partition = community_louvain.best_partition(G, weight='weight', random_state=42)
+        num_communities = max(partition.values()) + 1 if partition else 1
+
+        PALETTE = [
+            "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
+            "#1abc9c", "#e67e22", "#34495e", "#e91e63", "#00bcd4",
+            "#8bc34a", "#ff5722",
+        ]
+        def community_color(node):
+            cid = partition.get(node, 0)
+            return PALETTE[cid % len(PALETTE)]
+
+        louvain_ok = True
+    except Exception:
+        louvain_ok = False
+        nodes_in_edges = set()
+        for a, b, _ in edges:
+            nodes_in_edges.add(a)
+            nodes_in_edges.add(b)
+        sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
+        q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
+        q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
+        q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
+        def community_color(node):
+            f = freq.get(node, 1)
+            if f >= q3: return "#e74c3c"
+            if f >= q2: return "#e67e22"
+            if f >= q1: return "#3498db"
+            return "#95a5a6"
+        num_communities = 4
+
+    # ── Build pyvis network ───────────────────────────────────────────────────
+    net = PyvisNetwork(height="560px", width="100%", bgcolor="#fafafa",
                        font_color="#222222", notebook=False)
     net.set_options("""
     {
       "physics": {
         "forceAtlas2Based": {
-          "gravitationalConstant": -80,
-          "centralGravity": 0.01,
-          "springLength": 120,
-          "springConstant": 0.05
+          "gravitationalConstant": -120,
+          "centralGravity": 0.015,
+          "springLength": 100,
+          "springConstant": 0.08,
+          "damping": 0.9
         },
         "solver": "forceAtlas2Based",
-        "stabilization": {"iterations": 150}
+        "stabilization": {"iterations": 200, "updateInterval": 25}
       },
-      "nodes": {"font": {"size": 13, "color": "#222222"}, "borderWidth": 1.5},
-      "edges": {"color": {"opacity": 0.5}, "smooth": {"type": "continuous"}},
+      "nodes": {"font": {"size": 13, "color": "#222222"}, "borderWidth": 2,
+                 "borderWidthSelected": 3},
+      "edges": {"color": {"opacity": 0.4}, "smooth": {"type": "continuous"}},
       "interaction": {"hover": true, "tooltipDelay": 100}
     }
     """)
-    nodes_in_edges = set()
-    for a, b, _ in edges:
-        nodes_in_edges.add(a)
-        nodes_in_edges.add(b)
+
     for kw in nodes_in_edges:
         f = freq.get(kw, 1)
-        size = max(10, min(40, 8 + f * 2))
-        net.add_node(kw, label=kw, title=f"{kw}\nFrequency: {f}",
-                     size=size, color=node_color(f))
+        size = max(10, min(45, 8 + f * 2))
+        cid = partition.get(kw, 0) if louvain_ok else 0
+        color = community_color(kw)
+        tooltip = f"{kw}\nFrequency: {f}"
+        if louvain_ok:
+            tooltip += f"\nCommunity: {cid + 1}"
+        net.add_node(kw, label=kw, title=tooltip, size=size,
+                     color={"background": color, "border": "#333333",
+                            "highlight": {"background": color, "border": "#000000"}})
+
     max_cooc = max(cnt for _, _, cnt in edges) if edges else 1
     for a, b, cnt in edges:
         width = max(1, min(8, 1 + (cnt / max_cooc) * 7))
-        net.add_edge(a, b, value=cnt, title=f"Co-occurrences: {cnt}", width=width)
-    return net.generate_html(), None
+        same_comm = louvain_ok and partition.get(a, -1) == partition.get(b, -2)
+        opacity = 0.65 if same_comm else 0.3
+        net.add_edge(a, b, value=cnt, title=f"Co-occurrences: {cnt}", width=width,
+                     color={"opacity": opacity})
+
+    legend_note = f" ({num_communities} Louvain communities detected)" if louvain_ok else ""
+    html = net.generate_html()
+    html = html.replace(
+        "</body>",
+        f'<div style="position:absolute;bottom:8px;left:12px;font-size:11px;'
+        f'color:#555;font-family:sans-serif;">'
+        f'Node colour = Louvain community{legend_note}. '
+        f'Node size = keyword frequency.</div></body>'
+    )
+    return html, None
+
 
 
 def render_pyvis_network(df, session_key, label="Included Studies"):
     st.markdown("#### 🕸️ Interactive Keyword Co-occurrence Network — " + label)
     st.markdown("""
 This network maps the **most frequent keywords** in the included studies and draws a link
-between any two keywords that appear together in the same paper. It reveals the thematic
-structure of the studies that survived screening. **Drag nodes, scroll to zoom, hover for details.**
+between any two keywords that appear together in the same paper. **Node colour = Louvain community**
+(nodes of the same colour belong to the same thematic cluster). Larger nodes = more frequent;
+thicker edges = more papers share both keywords. **Drag nodes, scroll to zoom, hover for details.**
     """)
     col_opts, _ = st.columns([2, 1])
     with col_opts:
@@ -408,7 +465,7 @@ structure of the studies that survived screening. **Drag nodes, scroll to zoom, 
         st.warning(f"⚠️ Network could not be generated: {err}")
     else:
         components.html(html, height=540, scrolling=False)
-        st.caption("🔴 High-frequency  🟠 Medium-high  🔵 Medium-low  ⚫ Low-frequency. Edge thickness = co-occurrence count.")
+        st.caption("Node colour = Louvain community. Node size = keyword frequency. Edge thickness = co-occurrence count.")
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
