@@ -418,9 +418,14 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
         size = max(10, min(45, 8 + f * 2))
         cid = partition.get(kw, 0) if louvain_ok else 0
         color = community_color(kw)
-        tooltip = f"{kw}\nFrequency: {f}"
         if louvain_ok:
-            tooltip += f"\nCommunity: {cid + 1}"
+            tooltip = (
+                f"<b>{kw}</b><br/>"
+                f"Frequency: {f}<br/>"
+                f"Community: {cid + 1}"
+            )
+        else:
+            tooltip = f"<b>{kw}</b><br/>Frequency: {f}"
         net.add_node(kw, label=kw, title=tooltip, size=size,
                      color={"background": color, "border": "#333333",
                             "highlight": {"background": color, "border": "#000000"}})
