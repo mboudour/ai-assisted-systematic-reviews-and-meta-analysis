@@ -324,6 +324,7 @@ GUIDED_EXAMPLES = [
     {
         "label": "🏥 Example 1 — Health Sciences: Health Inequalities in Chronic Disease Care",
         "session_key": "ex1_health",
+        "year_from": 2000, "year_to": 2024, "pub_types": ["journal-article"],
         "synthesis_type": "meta_analysis",
         "schema_type": "PICO",
         "effect_label": "Risk Ratio (RR)",
@@ -370,6 +371,7 @@ GUIDED_EXAMPLES = [
     {
         "label": "🏛️ Example 2 — Social Sciences: Universal Basic Income (UBI) Policy Outcomes",
         "session_key": "ex2_ubi",
+        "year_from": 2010, "year_to": 2024, "pub_types": ["journal-article", "book-chapter"],
         "synthesis_type": "narrative",
         "schema_type": "Thematic Synthesis",
         "effect_label": "N/A (Narrative Synthesis)",
@@ -413,6 +415,7 @@ GUIDED_EXAMPLES = [
     {
         "label": "⚗️ Example 3 — Science / Engineering: Microplastic Pollution in Aquatic Environments",
         "session_key": "ex3_microplastics",
+        "year_from": 2010, "year_to": 2024, "pub_types": ["journal-article"],
         "synthesis_type": "quantitative_summary",
         "schema_type": "Custom (Concentration Schema)",
         "effect_label": "Mean Concentration",
@@ -458,6 +461,7 @@ GUIDED_EXAMPLES = [
     {
         "label": "💼 Example 4 — Management / Business: CSR and Firm Financial Performance",
         "session_key": "ex4_csr",
+        "year_from": 2000, "year_to": 2024, "pub_types": ["journal-article"],
         "synthesis_type": "meta_analysis",
         "schema_type": "Custom (CSR/FP Schema)",
         "effect_label": "Correlation Coefficient (r)",
@@ -977,6 +981,14 @@ on screen. Expand any example to explore it.
     for ex in GUIDED_EXAMPLES:
         st.markdown("---")
         with st.expander(ex["label"], expanded=False):
+            yr_from = ex.get("year_from")
+            yr_to = ex.get("year_to")
+            pub_types = ex.get("pub_types", [])
+            period_str = f"{yr_from}\u2013{yr_to}" if yr_from and yr_to else "All years"
+            types_str = ", ".join(pub_types) if pub_types else "All types"
+            st.markdown(
+                f"**Time period:** {period_str} \u00a0|\u00a0 **Publication types:** {types_str}"
+            )
             render_guided_example(ex)
 
 # ══════════════════════════════════════════════════════════════════════════════

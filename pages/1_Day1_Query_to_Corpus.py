@@ -55,6 +55,9 @@ GUIDED_EXAMPLES = [
         "session_key": "ex1_health",
         "source": "OpenAlex",
         "query": "health inequalities diabetes care socioeconomic",
+        "year_from": 2000,
+        "year_to": 2024,
+        "pub_types": ["journal-article"],
         "description": """
 **Research question:** What does the empirical literature say about socioeconomic health
 inequalities in the care and outcomes of patients with chronic diseases such as diabetes,
@@ -73,6 +76,9 @@ The corpus supports a full PICO extraction and meta-analysis on Day 3.
         "session_key": "ex2_ubi",
         "source": "OpenAlex",
         "query": "universal basic income policy evaluation employment outcomes",
+        "year_from": 2010,
+        "year_to": 2024,
+        "pub_types": ["journal-article", "book-chapter"],
         "description": """
 **Research question:** What are the empirically measured outcomes of Universal Basic Income
 (UBI) programmes and pilots in terms of employment, poverty, and well-being?
@@ -90,6 +96,9 @@ social sciences, spanning economics, sociology, and political science.
         "session_key": "ex3_microplastics",
         "source": "OpenAlex",
         "query": "microplastics aquatic marine pollution concentration",
+        "year_from": 2010,
+        "year_to": 2024,
+        "pub_types": ["journal-article"],
         "description": """
 **Research question:** What does the experimental literature report about the concentration,
 distribution, and ecological impact of microplastic pollution in aquatic environments?
@@ -107,6 +116,9 @@ supporting a quantitative synthesis of concentration estimates on Day 3.
         "session_key": "ex4_csr",
         "source": "OpenAlex",
         "query": "corporate social responsibility firm financial performance empirical",
+        "year_from": 2000,
+        "year_to": 2024,
+        "pub_types": ["journal-article"],
         "description": """
 **Research question:** What is the empirical evidence on the relationship between Corporate
 Social Responsibility (CSR) activities and firm financial performance (ROA, ROE, Tobin's Q)?
@@ -124,6 +136,9 @@ supporting a pooled effect size computation on Day 3.
         "session_key": "ex5_zotero",
         "source": "Zotero",
         "query": "AI-assisted systematic reviews (researcher's Zotero library)",
+        "year_from": None,
+        "year_to": None,
+        "pub_types": ["All types (Zotero library)"],
         "description": """
 **What this example demonstrates:** Instead of querying an open API, this example shows
 what happens when a researcher connects their existing **Zotero library** to the pipeline.
@@ -867,7 +882,15 @@ No button click required — everything renders immediately.
             if ex["source"] == "Zotero":
                 st.markdown(f"**Source:** {ex['source']} &nbsp;|&nbsp; **Collection:** `{ex['query']}`")
             else:
-                st.markdown(f"**API source:** {ex['source']} &nbsp;|&nbsp; **Query:** `{ex['query']}`")
+                yr_from = ex.get("year_from")
+                yr_to = ex.get("year_to")
+                pub_types = ex.get("pub_types", [])
+                period_str = f"{yr_from}–{yr_to}" if yr_from and yr_to else "All years"
+                types_str = ", ".join(pub_types) if pub_types else "All types"
+                st.markdown(
+                    f"**API source:** {ex['source']} &nbsp;|&nbsp; **Query:** `{ex['query']}`  \n"
+                    f"**Time period:** {period_str} &nbsp;|&nbsp; **Publication types:** {types_str}"
+                )
 
             df, err = load_cached_corpus(ex["cache_file"])
             if err:
@@ -919,6 +942,16 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         per_page = st.slider("Records per page", min_value=10, max_value=100, value=50, step=10)
         max_pages = st.slider("Number of pages to retrieve", min_value=1, max_value=5, value=2)
 
+        col_yr1, col_yr2 = st.columns(2)
+        with col_yr1:
+            byod_year_from = st.number_input("Year from (leave 0 for no lower limit)", min_value=0, max_value=2100, value=0, step=1)
+        with col_yr2:
+            byod_year_to = st.number_input("Year to (leave 0 for no upper limit)", min_value=0, max_value=2100, value=0, step=1)
+        byod_pub_types = st.multiselect(
+            "Publication types (leave empty for all types)",
+            ["journal-article", "book-chapter", "conference-paper", "preprint", "review", "report"],
+            default=[],
+        )
         if st.button("▶ Run My Query", key="run_byod"):
             if not query_input.strip():
                 st.warning("Please enter a search query above.")
@@ -945,6 +978,9 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                         st.session_state["byod_df"] = df
                         st.session_state["byod_api"] = api_name
                         st.session_state["byod_query"] = query_input.strip()
+                        st.session_state["byod_year_from"] = int(byod_year_from) if byod_year_from else None
+                        st.session_state["byod_year_to"] = int(byod_year_to) if byod_year_to else None
+                        st.session_state["byod_pub_types"] = byod_pub_types
 
                         log = {
                             "query": query_input.strip(),
@@ -953,6 +989,9 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                             "max_pages": max_pages if "OpenAlex" in api_choice else 1,
                             "records_retrieved": before,
                             "records_after_dedup": after,
+                            "year_from": int(byod_year_from) if byod_year_from else "all",
+                            "year_to": int(byod_year_to) if byod_year_to else "all",
+                            "publication_types": byod_pub_types if byod_pub_types else "all",
                             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
                         }
                         st.session_state["byod_log"] = log
@@ -961,6 +1000,16 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
 
         if "byod_df" in st.session_state and st.session_state["byod_df"] is not None:
             df = st.session_state["byod_df"]
+            _yr_from = st.session_state.get("byod_year_from")
+            _yr_to = st.session_state.get("byod_year_to")
+            _ptypes = st.session_state.get("byod_pub_types", [])
+            _period = f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years"))
+            _types_disp = ", ".join(_ptypes) if _ptypes else "All types"
+            st.markdown(
+                f"**API source:** {st.session_state.get('byod_api', '')} &nbsp;|&nbsp; "
+                f"**Query:** `{st.session_state.get('byod_query', '')}`  \n"
+                f"**Time period:** {_period} &nbsp;|&nbsp; **Publication types:** {_types_disp}"
+            )
             display_corpus(df, f"Custom query: '{st.session_state.get('byod_query', '')}'", "byod")
             if "byod_log" in st.session_state:
                 st.markdown("#### Query Log (for reproducibility)")

@@ -49,6 +49,7 @@ GUIDED_EXAMPLES = [
         "label": "🏥 Example 1 — Health Sciences: Health Inequalities in Chronic Disease Care",
         "screened_file": "day2_ex1_health_screened.csv",
         "session_key": "ex1_health",
+        "year_from": 2000, "year_to": 2024, "pub_types": ["journal-article"],
         "framework": "PICO",
         "population": "Adults with chronic diseases (diabetes, hypertension, cardiovascular disease)",
         "intervention": "Standard or enhanced care access",
@@ -74,6 +75,7 @@ GUIDED_EXAMPLES = [
         "label": "🏛️ Example 2 — Social Sciences: Universal Basic Income (UBI) Policy Outcomes",
         "screened_file": "day2_ex2_ubi_screened.csv",
         "session_key": "ex2_ubi",
+        "year_from": 2010, "year_to": 2024, "pub_types": ["journal-article", "book-chapter"],
         "framework": "SPIDER",
         "population": "Adults in UBI pilot programmes or policy evaluations",
         "intervention": "Universal Basic Income / guaranteed income transfer",
@@ -98,6 +100,7 @@ GUIDED_EXAMPLES = [
         "label": "⚗️ Example 3 — Science / Engineering: Microplastic Pollution in Aquatic Environments",
         "screened_file": "day2_ex3_microplastics_screened.csv",
         "session_key": "ex3_microplastics",
+        "year_from": 2010, "year_to": 2024, "pub_types": ["journal-article"],
         "framework": "PICO",
         "population": "Aquatic environments (freshwater, marine, estuarine)",
         "intervention": "Presence and concentration of microplastic particles",
@@ -122,6 +125,7 @@ GUIDED_EXAMPLES = [
         "label": "💼 Example 4 — Management / Business: CSR and Firm Financial Performance",
         "screened_file": "day2_ex4_csr_screened.csv",
         "session_key": "ex4_csr",
+        "year_from": 2000, "year_to": 2024, "pub_types": ["journal-article"],
         "framework": "PICO",
         "population": "Publicly listed firms across industries and countries",
         "intervention": "Corporate Social Responsibility (CSR) activities",
@@ -460,6 +464,15 @@ def display_screening_results(df, session_key, ex):
     n_exclude = (df["AL_Decision"] == "Exclude").sum()
     n_uncertain = (df["AL_Decision"] == "Uncertain").sum() if "Uncertain" in df["AL_Decision"].values else 0
 
+    # ── Query constraints summary ──────────────────────────────────────────────
+    yr_from = ex.get("year_from")
+    yr_to = ex.get("year_to")
+    pub_types = ex.get("pub_types", [])
+    period_str = f"{yr_from}\u2013{yr_to}" if yr_from and yr_to else "All years"
+    types_str = ", ".join(pub_types) if pub_types else "All types"
+    st.markdown(
+        f"**Time period:** {period_str} \u00a0|\u00a0 **Publication types:** {types_str}"
+    )
     # ── PICO / SPIDER criteria ─────────────────────────────────────────────────
     st.markdown("#### Screening Framework — " + ex["framework"])
     framework_data = {
@@ -717,6 +730,16 @@ No coding required.
     if uploaded is None and "byod_df" in st.session_state:
         st.info("Using corpus from Day 1 BYOD session.")
         df = st.session_state["byod_df"]
+        _yr_from = st.session_state.get("byod_year_from")
+        _yr_to = st.session_state.get("byod_year_to")
+        _ptypes = st.session_state.get("byod_pub_types", [])
+        _period = f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years"))
+        _types_disp = ", ".join(_ptypes) if _ptypes else "All types"
+        st.markdown(
+            f"**Query:** `{st.session_state.get('byod_query', '')}` &nbsp;|&nbsp; "
+            f"**API:** {st.session_state.get('byod_api', '')}  \n"
+            f"**Time period:** {_period} &nbsp;|&nbsp; **Publication types:** {_types_disp}"
+        )
     elif uploaded is not None:
         df = pd.read_csv(uploaded)
     else:
