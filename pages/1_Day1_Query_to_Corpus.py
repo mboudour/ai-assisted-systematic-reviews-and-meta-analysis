@@ -363,10 +363,6 @@ keywords. **Drag nodes, scroll to zoom, hover for community and frequency detail
         st.warning(f"⚠️ Network could not be generated: {err}")
     else:
         components.html(html, height=540, scrolling=False)
-        st.caption(
-            "🔴 High-frequency keywords  🟠 Medium-high  🔵 Medium-low  🩶 Low-frequency. "
-            "Edge thickness = co-occurrence count."
-        )
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

@@ -370,7 +370,7 @@ thicker edges = more papers share both keywords. **Drag, zoom, hover for communi
         st.warning(f"⚠️ Network could not be generated: {err}")
     else:
         components.html(html, height=500, scrolling=False)
-        st.caption("Node colour = Louvain community. Node size = keyword frequency. Edge thickness = co-occurrence count.")
+
 
 
 # ══════════════════════════════════════════════════════════════════════════════
