@@ -40,7 +40,7 @@ full systematic review lifecycle in a domain close to your own:
 | # | Discipline | Topic | API Source |
 |---|---|---|---|
 | 1 | Health Sciences | Health Inequalities in Chronic Disease Care | OpenAlex |
-| 2 | Social Sciences | Universal Basic Income (UBI) Policy Outcomes | Semantic Scholar |
+| 2 | Social Sciences | Universal Basic Income (UBI) Policy Outcomes | OpenAlex |
 | 3 | Science / Engineering | Microplastic Pollution in Aquatic Environments | OpenAlex / Crossref |
 | 4 | Management / Business | CSR and Firm Financial Performance | OpenAlex |
 
@@ -51,7 +51,7 @@ full systematic review lifecycle in a domain close to your own:
 A central feature of the seminar is the **BYOD (Bring Your Own Data)** extension, which allows participants to apply the pipeline directly to their own research questions. The BYOD modules are integrated into every day of the workshop:
 
 ### Day 1: Build Your Own Corpus
-Participants formulate their own search queries (using Boolean logic and PICO/SPIDER frameworks) and run them against the OpenAlex or Semantic Scholar APIs directly within the app. The module automatically fetches the records, flattens nested metadata, performs DOI and title-based deduplication, and exports a clean CSV corpus ready for screening. A detailed query log is also generated to ensure methodological reproducibility.
+Participants formulate their own search queries (using Boolean logic and PICO/SPIDER frameworks) and run them against the OpenAlex, Crossref, or Europe PMC APIs directly within the app. (Semantic Scholar is not available for live queries due to strict public API rate limits; OpenAlex is recommended for STEM and biomedical topics.) The module automatically fetches the records, flattens nested metadata, performs DOI and title-based deduplication, and exports a clean CSV corpus ready for screening. A detailed query log is also generated to ensure methodological reproducibility.
 
 ### Day 2: Screen Your Own Corpus
 Participants upload their Day 1 corpus (or any existing CSV containing titles and abstracts) and define their own inclusion and exclusion criteria in plain language. They first use the Active Learning module to prioritise the most relevant papers by seeding the model with keywords. They then use the LLM zero-shot screening module (powered seamlessly by the Hugging Face Inference API) to automatically classify their abstracts. The app generates a full Transparency Log containing the AI's decision and justification for every record.
