@@ -352,6 +352,39 @@ def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
         f'Node colour = Louvain community{legend_note}. '
         f'Node size = keyword frequency.</div></body>'
     )
+
+    # Fix: vis.js 9.x disabled HTML string parsing in title= (XSS protection)
+    # Post-process the HTML to inject a JS helper that converts title strings
+    # to DOM elements so that HTML content renders correctly on hover.
+    _fix_js = (
+        "\n    (function fixNodeTitles() {"
+        "\n        var rawNodes = nodes.get();"
+        "\n        rawNodes.forEach(function(node) {"
+        "\n            if (node.title && typeof node.title === 'string') {"
+        "\n                var div = document.createElement('div');"
+        "\n                div.innerHTML = node.title;"
+        "\n                div.style.cssText = 'font-size:13px;line-height:1.6;padding:4px 8px;max-width:240px;';"
+        "\n                nodes.update({id: node.id, title: div});"
+        "\n            }"
+        "\n        });"
+        "\n    })();"
+        "\n    (function fixEdgeTitles() {"
+        "\n        var rawEdges = edges.get();"
+        "\n        rawEdges.forEach(function(edge) {"
+        "\n            if (edge.title && typeof edge.title === 'string') {"
+        "\n                var div = document.createElement('div');"
+        "\n                div.innerHTML = edge.title;"
+        "\n                div.style.cssText = 'font-size:12px;padding:3px 6px;';"
+        "\n                edges.update({id: edge.id, title: div});"
+        "\n            }"
+        "\n        });"
+        "\n    })();"
+    )
+    _nodes_ds_pat = re.compile(r'(nodes\s*=\s*new\s+vis\.DataSet\([^;]+;)', re.DOTALL)
+    _m = _nodes_ds_pat.search(html)
+    if _m:
+        html = html[:_m.end()] + _fix_js + html[_m.end():]
+
     return html, None
 
 
