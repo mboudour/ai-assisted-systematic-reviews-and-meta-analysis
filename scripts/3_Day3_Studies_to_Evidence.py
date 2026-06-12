@@ -115,7 +115,11 @@ def _extract_tfidf_keywords(texts, top_n=8):
 
 
 def df_to_ris(df):
-    """Convert a DataFrame of included/extracted studies to RIS format with KW tags for VOSviewer."""
+    """Convert a DataFrame of included/extracted studies to RIS format with KW tags for VOSviewer.
+
+    VOSviewer requires at least one AU (author) or KW (keyword) field per record.
+    This function guarantees both are always present.
+    """
     abstracts = [str(row.get("Abstract", row.get("Title", "")) or "") for _, row in df.iterrows()]
     tfidf_kws = _extract_tfidf_keywords(abstracts, top_n=8)
     lines = []
@@ -127,12 +131,20 @@ def df_to_ris(df):
         year = str(row.get("Year", "")).strip()
         if year and year != "nan":
             lines.append(f"PY  - {year}")
+
+        # ── Authors: always write at least one AU tag (VOSviewer requirement) ──
         authors = str(row.get("Authors", "")).strip()
-        if authors and authors != "nan":
+        wrote_au = False
+        if authors and authors not in ("nan", ""):
             for author in authors.split(";"):
                 a = author.strip()
                 if a:
                     lines.append(f"AU  - {a}")
+                    wrote_au = True
+        if not wrote_au:
+            # Fallback: use title words as pseudo-author so VOSviewer can parse
+            lines.append("AU  - Unknown Author")
+
         venue = str(row.get("Venue", "")).strip()
         if venue and venue != "nan":
             lines.append(f"JO  - {venue}")
@@ -142,18 +154,263 @@ def df_to_ris(df):
         abstract = str(row.get("Abstract", "")).strip()
         if abstract and abstract != "nan":
             lines.append(f"AB  - {abstract}")
+
+        # ── Keywords: always write at least one KW tag (VOSviewer requirement) ──
         concepts = str(row.get("Concepts", "") or "").strip()
-        if concepts and concepts != "nan":
+        wrote_kw = False
+        if concepts and concepts not in ("nan", ""):
             for kw in concepts.split(";"):
                 kw = kw.strip()
                 if kw:
                     lines.append(f"KW  - {kw}")
-        else:
+                    wrote_kw = True
+        if not wrote_kw:
+            # TF-IDF fallback from abstract/title
             for kw in tfidf_kws[i]:
                 lines.append(f"KW  - {kw}")
+                wrote_kw = True
+        if not wrote_kw:
+            # Last resort: use title words directly
+            import re as _re
+            title_words = _re.findall(r'\b[A-Za-z]{4,}\b', title)
+            for w in title_words[:5]:
+                lines.append(f"KW  - {w.lower()}")
+
         lines.append("ER  - ")
         lines.append("")
     return "\n".join(lines)
+
+
+# ── NLP PICO extraction helper (no API key required) ──────────────────────────
+
+def _nlp_extract_pico(title: str, abstract: str) -> dict:
+    """Extract PICO fields from title + abstract using spaCy NER and regex.
+
+    No API key required.  Uses the lightweight en_core_web_sm model for
+    named-entity recognition (GPE/LOC for Country, NORP for Population) and
+    hand-crafted regex patterns for Sample_Size, Effect_Size, Intervention,
+    Comparison, and Outcome.
+
+    Falls back gracefully if spaCy is unavailable or the model is missing.
+    """
+    import sys as _sys
+
+    text = f"{title}. {abstract}"
+
+    result = {
+        "Country": "N/A",
+        "Population": "N/A",
+        "Intervention": "N/A",
+        "Comparison": "N/A",
+        "Outcome": "N/A",
+        "Effect_Size": "N/A",
+        "Sample_Size": "N/A",
+    }
+
+    # ── spaCy NER (Country + Population) ─────────────────────────────────────
+    try:
+        import spacy as _spacy
+        try:
+            _nlp = _spacy.load("en_core_web_sm")
+        except OSError:
+            import subprocess as _sp
+            _sp.run([_sys.executable, "-m", "spacy", "download", "en_core_web_sm"],
+                    capture_output=True, check=False)
+            _nlp = _spacy.load("en_core_web_sm")
+
+        doc = _nlp(text[:2000])
+
+        # Country: GPE / LOC entities
+        countries = list(dict.fromkeys([
+            ent.text for ent in doc.ents
+            if ent.label_ in ("GPE", "LOC") and len(ent.text) > 2
+        ]))
+        if countries:
+            result["Country"] = "; ".join(countries[:3])
+
+        # Population: NORP entities + clinical keyword regex
+        pop_kws = [ent.text for ent in doc.ents if ent.label_ == "NORP"]
+        pop_matches = re.findall(
+            r'\b(nurses?|patients?|adults?|children|elderly|women|men|infants?|'
+            r'neonates?|adolescents?|participants?|subjects?|staff|workers?|'
+            r'healthcare workers?|clinicians?|physicians?|surgeons?)\b',
+            text, re.IGNORECASE,
+        )
+        pop_kws.extend(pop_matches)
+        if pop_kws:
+            seen_pop: set = set()
+            unique_pop = []
+            for p in pop_kws:
+                pl = p.lower()
+                if pl not in seen_pop:
+                    seen_pop.add(pl)
+                    unique_pop.append(p)
+            result["Population"] = "; ".join(unique_pop[:3])
+
+    except Exception:
+        pass  # spaCy unavailable — Country/Population remain "N/A"
+
+    # ── Sample Size ───────────────────────────────────────────────────────────
+    for _pat in [
+        r'[nN]\s*=\s*([0-9,]+)',
+        r'([0-9,]+)\s+(?:patients?|participants?|subjects?|individuals?|cases?|studies)',
+        r'sample\s+(?:size|of)\s+(?:was\s+)?([0-9,]+)',
+        r'total\s+of\s+([0-9,]+)',
+        r'included\s+([0-9,]+)\s+(?:patients?|participants?|studies?|trials?)',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _val = _m.group(1).replace(",", "")
+            if _val.isdigit() and int(_val) > 1:
+                result["Sample_Size"] = _val
+                break
+
+    # ── Effect Size ───────────────────────────────────────────────────────────
+    for _pat in [
+        r'\b(?:OR|RR|HR|SMD|MD|WMD|beta|d)\s*[=:]\s*([\u2212\-]?\d+\.?\d*)',
+        r'\b(?:odds ratio|risk ratio|hazard ratio|mean difference)\s+(?:of\s+|was\s+|=\s*)?([\u2212\-]?\d+\.?\d*)',
+        r'\beffect\s+size\s+(?:of\s+|was\s+|=\s*)?([\u2212\-]?\d+\.?\d*)',
+        r"\b(?:SMD|Cohen'?s?\s+d)\s*[=:]\s*([\u2212\-]?\d+\.?\d*)",
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            result["Effect_Size"] = _m.group(1)
+            break
+
+    # ── Intervention ──────────────────────────────────────────────────────────
+    for _pat in [
+        r'[Ii]ntervention[:\s]+([^.]{10,80})',
+        r'(?:mandatory|minimum|fixed)\s+(?:nurse[- ]to[- ]patient\s+)?(?:staffing\s+)?ratio[s]?\s+(?:of\s+)?([^.]{5,60})',
+        r'(?:treatment|intervention|program|protocol|strategy)\s+(?:was|included|consisted of)\s+([^.]{10,80})',
+        r'(?:assigned to|received|underwent)\s+([^.]{10,60})',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _v = _m.group(1).strip().rstrip(",;")
+            if len(_v) > 5:
+                result["Intervention"] = _v[:100]
+                break
+
+    # ── Comparison ────────────────────────────────────────────────────────────
+    for _pat in [
+        r'(?:compared to|versus|vs\.?)\s+([^.]{5,80})',
+        r'[Cc]omparison[:\s]+([^.]{10,80})',
+        r'(?:control|comparator)\s+(?:group|arm|condition)\s+(?:was|received|had)\s+([^.]{5,60})',
+        r'(?:standard care|usual care|placebo|control)\s+([^.]{0,60})',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _v = _m.group(1).strip().rstrip(",;")
+            if len(_v) > 3:
+                result["Comparison"] = _v[:100]
+                break
+
+    # ── Outcome ───────────────────────────────────────────────────────────────
+    for _pat in [
+        r'(?:primary\s+)?[Oo]utcome[s]?\s+(?:was|were|included|measured)\s+([^.]{10,80})',
+        r'(?:mortality|morbidity|adverse events?|falls?|errors?|readmission|'
+        r'complications?|infections?|satisfaction|length of stay)\b[^.]{0,60}',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _v = _m.group(0).strip().rstrip(",;")
+            if len(_v) > 5:
+                result["Outcome"] = _v[:100]
+                break
+
+    return result
+
+
+def _nlp_extract_thematic(title: str, abstract: str) -> dict:
+    """Extract Thematic Synthesis fields from title + abstract using NLP/regex."""
+    text = f"{title}. {abstract}"
+
+    result = {
+        "Country": "N/A",
+        "Methodology": "N/A",
+        "Sample_Size": "N/A",
+        "Theme_1": "N/A",
+        "Theme_2": "N/A",
+        "Theme_3": "N/A",
+        "Evidence_Strength": "N/A",
+    }
+
+    # Country via spaCy
+    try:
+        import spacy as _spacy
+        import sys as _sys
+        try:
+            _nlp = _spacy.load("en_core_web_sm")
+        except OSError:
+            import subprocess as _sp
+            _sp.run([_sys.executable, "-m", "spacy", "download", "en_core_web_sm"],
+                    capture_output=True, check=False)
+            _nlp = _spacy.load("en_core_web_sm")
+        doc = _nlp(text[:2000])
+        countries = list(dict.fromkeys([
+            ent.text for ent in doc.ents
+            if ent.label_ in ("GPE", "LOC") and len(ent.text) > 2
+        ]))
+        if countries:
+            result["Country"] = "; ".join(countries[:3])
+        # Themes: top noun chunks from spaCy
+        noun_chunks = [chunk.text.strip() for chunk in doc.noun_chunks
+                       if len(chunk.text.strip()) > 4
+                       and chunk.text.strip().lower() not in _STOPWORDS]
+        chunk_freq = Counter(nc.lower() for nc in noun_chunks)
+        top_themes = [nc for nc, _ in chunk_freq.most_common(5)]
+        if len(top_themes) >= 1:
+            result["Theme_1"] = top_themes[0][:60]
+        if len(top_themes) >= 2:
+            result["Theme_2"] = top_themes[1][:60]
+        if len(top_themes) >= 3:
+            result["Theme_3"] = top_themes[2][:60]
+    except Exception:
+        pass
+
+    # Methodology: study design keywords
+    method_map = [
+        (r'\b(systematic review|meta.?analysis)\b', "Systematic Review/Meta-analysis"),
+        (r'\b(randomis?ed|RCT|randomized controlled trial)\b', "RCT"),
+        (r'\b(qualitative|thematic analysis|grounded theory|ethnograph)\b', "Qualitative"),
+        (r'\b(cohort|longitudinal|prospective|retrospective)\b', "Cohort/Longitudinal"),
+        (r'\b(cross.?sectional|survey)\b', "Cross-sectional/Survey"),
+        (r'\b(case.?control)\b', "Case-control"),
+        (r'\b(mixed.?method)\b', "Mixed Methods"),
+    ]
+    for _pat, _label in method_map:
+        if re.search(_pat, text, re.IGNORECASE):
+            result["Methodology"] = _label
+            break
+
+    # Sample Size
+    for _pat in [
+        r'[nN]\s*=\s*([0-9,]+)',
+        r'([0-9,]+)\s+(?:patients?|participants?|subjects?|individuals?|cases?|studies)',
+        r'total\s+of\s+([0-9,]+)',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _val = _m.group(1).replace(",", "")
+            if _val.isdigit() and int(_val) > 1:
+                result["Sample_Size"] = _val
+                break
+
+    # Evidence Strength
+    ev_map = [
+        (r'\b(systematic review|meta.?analysis)\b', "High"),
+        (r'\b(RCT|randomis?ed controlled)\b', "High"),
+        (r'\b(cohort|longitudinal)\b', "Moderate"),
+        (r'\b(cross.?sectional|survey)\b', "Moderate"),
+        (r'\b(case.?control)\b', "Moderate"),
+        (r'\b(qualitative|case study|case report)\b', "Low"),
+    ]
+    for _pat, _level in ev_map:
+        if re.search(_pat, text, re.IGNORECASE):
+            result["Evidence_Strength"] = _level
+            break
+
+    return result
 
 
 def render_vosviewer_section(df, session_key):
@@ -246,16 +503,24 @@ def _build_cooccurrence_network(df, col="Title", top_n=30, min_cooccurrence=2):
 
 
 def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
-    if not PYVIS_AVAILABLE:
-        return None, "pyvis is not installed in this environment."
-    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
-    if not edges:
-        return None, "Not enough co-occurring keywords to build a network. Try lowering the minimum co-occurrence threshold."
+    """Return (html_string, error_message). error_message is None on success.
 
-    # ── Louvain community detection ───────────────────────────────────────────
+    Builds a fully self-contained HTML string with vis-network inlined from the
+    local pyvis package — no CDN calls, no external resources.  This is required
+    because Streamlit Community Cloud's Content Security Policy blocks external
+    script/style loads inside components.html iframes.
+    """
+    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
+
+    if not edges:
+        return None, (
+            "Not enough co-occurring keywords to build a network with the current settings. "
+            "Try lowering the minimum co-occurrence threshold or using a larger corpus."
+        )
+
+    # ── Louvain community detection (via networkx built-in — no extra package) ──
     try:
         import networkx as nx
-        import community as community_louvain  # python-louvain
 
         G = nx.Graph()
         nodes_in_edges = set()
@@ -264,18 +529,22 @@ def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
             nodes_in_edges.add(b)
             G.add_edge(a, b, weight=cnt)
 
-        partition = community_louvain.best_partition(G, weight='weight', random_state=42)
-        num_communities = max(partition.values()) + 1 if partition else 1
-
+        # nx.community.louvain_communities is available in networkx >= 3.0
+        communities = nx.community.louvain_communities(G, weight='weight', seed=42)
+        # Sort communities by size descending so the largest gets colour 0
+        communities = sorted(communities, key=len, reverse=True)
+        partition = {}
+        for i, comm in enumerate(communities):
+            for node in comm:
+                partition[node] = i
+        num_communities = len(communities)
         PALETTE = [
             "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
             "#1abc9c", "#e67e22", "#34495e", "#e91e63", "#00bcd4",
             "#8bc34a", "#ff5722",
         ]
         def community_color(node):
-            cid = partition.get(node, 0)
-            return PALETTE[cid % len(PALETTE)]
-
+            return PALETTE[partition.get(node, 0) % len(PALETTE)]
         louvain_ok = True
     except Exception:
         louvain_ok = False
@@ -283,110 +552,234 @@ def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
         for a, b, _ in edges:
             nodes_in_edges.add(a)
             nodes_in_edges.add(b)
-        sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
-        q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
-        q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
-        q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
-        def community_color(node):
+        # Use only the actually-drawn nodes (nodes_in_edges) for quartile thresholds
+        # so that community colours respond correctly to slider changes.
+        drawn_freqs = sorted([freq[kw] for kw in nodes_in_edges]) if nodes_in_edges else [1]
+        q1 = drawn_freqs[max(0, len(drawn_freqs) // 4)]
+        q2 = drawn_freqs[max(0, len(drawn_freqs) // 2)]
+        q3 = drawn_freqs[max(0, 3 * len(drawn_freqs) // 4)]
+        def _freq_group(node):
             f = freq.get(node, 1)
-            if f >= q3: return "#e74c3c"
-            if f >= q2: return "#e67e22"
-            if f >= q1: return "#3498db"
-            return "#95a5a6"
+            if f >= q3: return 3
+            if f >= q2: return 2
+            if f >= q1: return 1
+            return 0
+        partition = {n: _freq_group(n) for n in nodes_in_edges}
+        def community_color(node):
+            g = partition.get(node, 0)
+            return ["#95a5a6", "#3498db", "#e67e22", "#e74c3c"][g]
         num_communities = 4
 
-    # ── Build pyvis network ───────────────────────────────────────────────────
-    net = PyvisNetwork(height="560px", width="100%", bgcolor="#fafafa",
-                       font_color="#222222", notebook=False)
-    net.set_options("""
-    {
-      "physics": {
-        "forceAtlas2Based": {
-          "gravitationalConstant": -120,
-          "centralGravity": 0.015,
-          "springLength": 100,
-          "springConstant": 0.08,
-          "damping": 0.9
-        },
-        "solver": "forceAtlas2Based",
-        "stabilization": {"iterations": 200, "updateInterval": 25}
-      },
-      "nodes": {"font": {"size": 13, "color": "#222222"}, "borderWidth": 2,
-                 "borderWidthSelected": 3},
-      "edges": {"color": {"opacity": 0.4}, "smooth": {"type": "continuous"}},
-      "interaction": {"hover": true, "tooltipDelay": 100}
-    }
-    """)
+    # ── Build node / edge data as JSON ────────────────────────────────────────
+    import json as _json
 
+    # Pre-compute degree (number of distinct neighbours) for each node
+    _degree: dict = {}
+    for a, b, _ in edges:
+        _degree[a] = _degree.get(a, 0) + 1
+        _degree[b] = _degree.get(b, 0) + 1
+
+    nodes_data = []
     for kw in nodes_in_edges:
         f = freq.get(kw, 1)
+        deg = _degree.get(kw, 0)
         size = max(10, min(45, 8 + f * 2))
-        cid = partition.get(kw, 0) if louvain_ok else 0
+        cid = partition.get(kw, 0)
         color = community_color(kw)
+        # Always include Community — use Louvain id when available,
+        # otherwise use the frequency-quartile group (1-4) as a proxy.
         if louvain_ok:
-            tooltip = (
-                f"<b>{kw}</b><br/>"
-                f"Frequency: {f}<br/>"
-                f"Community: {cid + 1}"
-            )
+            community_label = cid + 1
         else:
-            tooltip = f"<b>{kw}</b><br/>Frequency: {f}"
-        net.add_node(kw, label=kw, title=tooltip, size=size,
-                     color={"background": color, "border": "#333333",
-                            "highlight": {"background": color, "border": "#000000"}})
+            # frequency-quartile group already encoded in color choice (1-4)
+            community_label = cid + 1  # cid set below via partition fallback
+        tooltip = (
+            f"<b>{kw}</b><br/>"
+            f"Frequency: {f}<br/>"
+            f"Degree: {deg}<br/>"
+            f"Community: {community_label}"
+        )
+        nodes_data.append({
+            "id": kw, "label": kw, "title": tooltip,
+            "size": size,
+            "color": {"background": color, "border": "#333333",
+                      "highlight": {"background": color, "border": "#000000"}},
+            "font": {"size": 13, "color": "#222222"},
+            "shape": "dot", "borderWidth": 2,
+        })
 
     max_cooc = max(cnt for _, _, cnt in edges) if edges else 1
-    for a, b, cnt in edges:
+    edges_data = []
+    for idx, (a, b, cnt) in enumerate(edges):
         width = max(1, min(8, 1 + (cnt / max_cooc) * 7))
         same_comm = louvain_ok and partition.get(a, -1) == partition.get(b, -2)
         opacity = 0.65 if same_comm else 0.3
-        net.add_edge(a, b, value=cnt, title=f"Co-occurrences: {cnt}", width=width,
-                     color={"opacity": opacity})
+        edges_data.append({
+            "id": idx, "from": a, "to": b, "value": cnt,
+            "title": f"Co-occurrences: {cnt}",
+            "width": width,
+            "color": {"opacity": opacity},
+        })
 
+    nodes_json = _json.dumps(nodes_data)
+    edges_json = _json.dumps(edges_data)
     legend_note = f" ({num_communities} Louvain communities detected)" if louvain_ok else ""
-    html = net.generate_html()
-    html = html.replace(
-        "</body>",
-        f'<div style="position:absolute;bottom:8px;left:12px;font-size:11px;'
-        f'color:#555;font-family:sans-serif;">'
-        f'Node colour = Louvain community{legend_note}. '
-        f'Node size = keyword frequency.</div></body>'
-    )
 
-    # Fix: vis.js 9.x disabled HTML string parsing in title= (XSS protection)
-    # Post-process the HTML to inject a JS helper that converts title strings
-    # to DOM elements so that HTML content renders correctly on hover.
-    _fix_js = (
-        "\n    (function fixNodeTitles() {"
-        "\n        var rawNodes = nodes.get();"
-        "\n        rawNodes.forEach(function(node) {"
-        "\n            if (node.title && typeof node.title === 'string') {"
-        "\n                var div = document.createElement('div');"
-        "\n                div.innerHTML = node.title;"
-        "\n                div.style.cssText = 'font-size:13px;line-height:1.6;padding:4px 8px;max-width:240px;';"
-        "\n                nodes.update({id: node.id, title: div});"
-        "\n            }"
-        "\n        });"
-        "\n    })();"
-        "\n    (function fixEdgeTitles() {"
-        "\n        var rawEdges = edges.get();"
-        "\n        rawEdges.forEach(function(edge) {"
-        "\n            if (edge.title && typeof edge.title === 'string') {"
-        "\n                var div = document.createElement('div');"
-        "\n                div.innerHTML = edge.title;"
-        "\n                div.style.cssText = 'font-size:12px;padding:3px 6px;';"
-        "\n                edges.update({id: edge.id, title: div});"
-        "\n            }"
-        "\n        });"
-        "\n    })();"
+    # ── Load vis-network JS from the local pyvis package (no CDN) ─────────────
+    import pathlib as _pl
+    import pyvis as _pyvis_mod
+    _vis_js_path = (
+        _pl.Path(_pyvis_mod.__file__).parent
+        / "templates" / "lib" / "vis-9.1.2" / "vis-network.min.js"
     )
-    _nodes_ds_pat = re.compile(r'(nodes\s*=\s*new\s+vis\.DataSet\([^;]+;)', re.DOTALL)
-    _m = _nodes_ds_pat.search(html)
-    if _m:
-        html = html[:_m.end()] + _fix_js + html[_m.end():]
+    if _vis_js_path.exists():
+        _vis_js = _vis_js_path.read_text(encoding="utf-8")
+    else:
+        # Absolute fallback: use CDN (will fail under strict CSP but better than nothing)
+        _vis_js = None
+
+    if _vis_js:
+        vis_script_tag = f'<script type="text/javascript">\n{_vis_js}\n</script>'
+    else:
+        vis_script_tag = (
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/'
+            'dist/vis-network.min.js" crossorigin="anonymous"></script>'
+        )
+
+    # ── Build fully self-contained HTML ───────────────────────────────────────
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body {{ margin: 0; padding: 0; background: #fafafa; }}
+  #mynetwork {{
+    width: 100%;
+    height: 560px;
+    background-color: #fafafa;
+    border: 1px solid #e0e0e0;
+    position: relative;
+  }}
+</style>
+{vis_script_tag}
+</head>
+<body>
+<div id="mynetwork"></div>
+<div style="position:absolute;bottom:8px;left:12px;font-size:11px;
+     color:#555;font-family:sans-serif;">
+  Node colour = Louvain community{legend_note}. Node size = keyword frequency.
+</div>
+<script type="text/javascript">
+(function() {{
+  // Script runs synchronously at end of <body> — DOM is already ready.
+  // Store tooltip HTML strings in a lookup; leave node.title undefined so
+  // vis.js does NOT attempt its own (broken) tooltip rendering.
+  var nodesRaw = {nodes_json};
+  var edgesRaw = {edges_json};
+
+  var nodeTooltip = {{}};
+  nodesRaw.forEach(function(n) {{
+    if (n.title) {{ nodeTooltip[n.id] = n.title; n.title = undefined; }}
+  }});
+  var edgeTooltip = {{}};
+  edgesRaw.forEach(function(e) {{
+    if (e.title) {{ edgeTooltip[e.id] = e.title; e.title = undefined; }}
+  }});
+
+  var nodes = new vis.DataSet(nodesRaw);
+  var edges = new vis.DataSet(edgesRaw);
+  var container = document.getElementById('mynetwork');
+
+  var options = {{
+    physics: {{
+      forceAtlas2Based: {{
+        gravitationalConstant: -120,
+        centralGravity: 0.015,
+        springLength: 100,
+        springConstant: 0.08,
+        damping: 0.9
+      }},
+      solver: 'forceAtlas2Based',
+      stabilization: {{ iterations: 200, updateInterval: 25 }}
+    }},
+    nodes: {{ font: {{ size: 13, color: '#222222' }}, borderWidth: 2, borderWidthSelected: 3 }},
+    edges: {{ color: {{ opacity: 0.4 }}, smooth: {{ type: 'continuous' }} }},
+    interaction: {{ hover: true, tooltipDelay: 150 }}
+  }};
+
+  var network = new vis.Network(container, {{ nodes: nodes, edges: edges }}, options);
+
+  // Create tooltip div AFTER vis.Network() — vis.js clears container innerHTML on init,
+  // so any div appended before this point would be destroyed.
+  var tip = document.createElement('div');
+  tip.style.cssText = [
+    'position:absolute', 'display:none', 'pointer-events:none',
+    'background:#fff', 'border:1px solid #bbb', 'border-radius:5px',
+    'padding:6px 10px', 'font-size:13px', 'line-height:1.6',
+    'max-width:260px', 'box-shadow:2px 2px 6px rgba(0,0,0,.15)',
+    'z-index:9999', 'font-family:sans-serif'
+  ].join(';');
+  container.appendChild(tip);
+
+  // Use canvas mousemove + getNodeAt/getEdgeAt for reliable tooltip detection.
+  // vis.js hoverNode/blurNode events require pointer events to propagate through
+  // the Streamlit iframe stack; canvas-level mousemove is more reliable.
+  var canvas = container.querySelector('canvas');
+  var lastNodeId = null;
+  var lastEdgeId = null;
+
+  function positionTip(x, y) {{
+    var cx = x + 14;
+    var cy = y - 14;
+    if (cx + 270 > container.offsetWidth) cx = x - 270;
+    if (cy < 0) cy = 4;
+    tip.style.left = cx + 'px';
+    tip.style.top  = cy + 'px';
+  }}
+
+  // Wait for canvas to be ready (network may still be stabilizing)
+  function attachMouseHandlers() {{
+    var c = container.querySelector('canvas');
+    if (!c) {{ setTimeout(attachMouseHandlers, 100); return; }}
+    c.addEventListener('mousemove', function(e) {{
+      var rect = c.getBoundingClientRect();
+      var domPos = {{ x: e.clientX - rect.left, y: e.clientY - rect.top }};
+      var nodeId = network.getNodeAt(domPos);
+      var edgeId = nodeId ? null : network.getEdgeAt(domPos);
+      if (nodeId !== undefined && nodeId !== null) {{
+        var html = nodeTooltip[nodeId];
+        if (html) {{
+          tip.innerHTML = html;
+          tip.style.display = 'block';
+          positionTip(domPos.x, domPos.y);
+        }} else {{
+          tip.style.display = 'none';
+        }}
+        lastNodeId = nodeId; lastEdgeId = null;
+      }} else if (edgeId !== undefined && edgeId !== null) {{
+        var html = edgeTooltip[edgeId];
+        if (html) {{
+          tip.innerHTML = html;
+          tip.style.display = 'block';
+          positionTip(domPos.x, domPos.y);
+        }} else {{
+          tip.style.display = 'none';
+        }}
+        lastEdgeId = edgeId; lastNodeId = null;
+      }} else {{
+        tip.style.display = 'none';
+        lastNodeId = null; lastEdgeId = null;
+      }}
+    }});
+    c.addEventListener('mouseleave', function() {{ tip.style.display = 'none'; }});
+  }}
+  attachMouseHandlers();
+}})();
+</script>
+</body>
+</html>"""
 
     return html, None
-
 
 
 def render_pyvis_network(df, session_key):
@@ -1271,18 +1664,205 @@ columns) and define your extraction schema below. No coding required.
 
         st.info(f"**Active schema:** {', '.join(schema_fields)}")
 
-        template_df = pd.DataFrame([
-            {f: row.get(f, "") for f in schema_fields}
-            for _, row in df.head(20).iterrows()
-        ])
-        st.dataframe(template_df, use_container_width=True)
+        # ── Auto-Extraction ───────────────────────────────────────────────────
+        st.markdown("""**Step 1 — Auto-extract fields**  
+Choose an extraction method below. The **AI** method uses an OpenAI API key for
+higher accuracy; the **NLP** method uses spaCy + regex and requires no API key.
+You can then review, correct, and download the result.
+""")
+
+        byod_extracted_key = f"byod_extracted_df_{schema_choice}"
+
+        # ── OpenAI API Key input ──────────────────────────────────────────────
+        # Try app secrets first; if not set, let the user paste their own key.
+        _secret_key = ""
+        try:
+            _secret_key = st.secrets["OPENAI_API_KEY"]
+        except Exception:
+            import os as _os_key
+            _secret_key = _os_key.environ.get("OPENAI_API_KEY", "")
+
+        if _secret_key:
+            # Key already configured server-side — no need to expose it
+            _user_api_key = _secret_key
+            st.info("🔑 OpenAI API key is configured in app secrets.")
+        else:
+            _user_api_key = st.text_input(
+                "🔑 Enter your OpenAI API key (required for AI extraction)",
+                type="password",
+                placeholder="sk-…",
+                help="Your key is used only for this extraction request and is never stored.",
+                key="byod_openai_api_key_input",
+            )
+
+        if st.button("🤖 Auto-extract fields with AI", key="byod_run_extraction"):
+            import json as _json
+            import os as _os
+
+            # Build the field list excluding Title/Year (already in CSV)
+            extract_fields = [f for f in schema_fields if f not in ("Title", "Year")]
+
+            api_key = _user_api_key
+
+            if not api_key:
+                st.error("❌ No OpenAI API key provided. Enter your key in the field above, or add "
+                         "OPENAI_API_KEY to the Streamlit app secrets.")
+            else:
+                # Import OpenAI client (litellm preferred, openai as fallback)
+                _llm_completion = None
+                _OpenAI = None
+                try:
+                    from litellm import completion as _llm_completion
+                except ImportError:
+                    try:
+                        from openai import OpenAI as _OpenAI
+                    except ImportError:
+                        st.error("❌ Neither litellm nor openai package is available. "
+                                 "Please check requirements.txt.")
+
+                if _llm_completion is not None or _OpenAI is not None:
+                    rows_out = []
+                    errors = []
+                    progress = st.progress(0, text="Extracting…")
+                    total = len(df)
+
+                    for idx, (_, row) in enumerate(df.iterrows()):
+                        title = str(row.get("Title", "") or "")
+                        abstract = str(row.get("Abstract", "") or "")
+                        text_block = f"Title: {title}\n\nAbstract: {abstract[:1200]}"
+
+                        fields_desc = ", ".join(extract_fields)
+                        prompt = (
+                            f"You are a systematic review assistant. Extract the following fields "
+                            f"from the study text below. Return ONLY a JSON object with these keys: "
+                            f"{fields_desc}.\n"
+                            f"Rules:\n"
+                            f"- Use \"N/A\" if a field cannot be determined from the text.\n"
+                            f"- For Effect_Size, CI_Lower, CI_Upper, Sample_Size: return a number or N/A.\n"
+                            f"- Keep values concise (max 10 words per field).\n\n"
+                            f"{text_block}"
+                        )
+
+                        extracted = {f: "N/A" for f in extract_fields}
+                        try:
+                            if _llm_completion is not None:
+                                resp = _llm_completion(
+                                    model="gpt-4o-mini",
+                                    messages=[{"role": "user", "content": prompt}],
+                                    api_key=api_key,
+                                    max_tokens=300,
+                                    temperature=0,
+                                )
+                                raw = resp.choices[0].message.content.strip()
+                            else:
+                                client = _OpenAI(api_key=api_key)
+                                resp = client.chat.completions.create(
+                                    model="gpt-4o-mini",
+                                    messages=[{"role": "user", "content": prompt}],
+                                    max_tokens=300,
+                                    temperature=0,
+                                )
+                                raw = resp.choices[0].message.content.strip()
+
+                            # Parse JSON from response
+                            raw = raw.strip()
+                            if raw.startswith("```"):
+                                raw = raw.split("```")[1]
+                                if raw.startswith("json"):
+                                    raw = raw[4:]
+                            parsed = _json.loads(raw)
+                            for f in extract_fields:
+                                val = parsed.get(f, "N/A")
+                                extracted[f] = val if val not in ("", None) else "N/A"
+                        except Exception as _e:
+                            errors.append(f"Row {idx}: {_e}")  # surface errors, don't silently swallow
+
+                        out_row = {"Title": title, "Year": row.get("Year", "")}
+                        out_row.update(extracted)
+                        # Carry over Abstract and Concepts for keyword network
+                        out_row["Abstract"] = abstract
+                        out_row["Concepts"] = str(row.get("Concepts", "") or "")
+                        rows_out.append(out_row)
+                        progress.progress((idx + 1) / total, text=f"Extracting… {idx+1}/{total}")
+
+                    progress.empty()
+                    extracted_df = pd.DataFrame(rows_out)
+                    st.session_state[byod_extracted_key] = extracted_df
+                    if errors:
+                        st.warning(f"⚠️ Extraction complete with {len(errors)} error(s): {errors[:3]}")
+                    else:
+                        st.success(f"✅ Extraction complete — {len(extracted_df)} studies.")
+
+        # ── NLP Extraction (no API key) ───────────────────────────────────────────
+        if st.button("🔬 Extract with NLP (no API key)", key="byod_run_nlp_extraction",
+                     help="Uses spaCy named-entity recognition + regex patterns. "
+                          "No OpenAI API key required."):
+            extract_fields_nlp = [f for f in schema_fields if f not in ("Title", "Year")]
+            rows_out_nlp = []
+            errors_nlp = []
+            progress_nlp = st.progress(0, text="Extracting with NLP…")
+            total_nlp = len(df)
+
+            for idx_nlp, (_, row_nlp) in enumerate(df.iterrows()):
+                title_nlp = str(row_nlp.get("Title", "") or "")
+                abstract_nlp = str(row_nlp.get("Abstract", "") or "")
+                try:
+                    if schema_choice == "PICO (Health Sciences)":
+                        extracted_nlp = _nlp_extract_pico(title_nlp, abstract_nlp)
+                    elif schema_choice == "Thematic Synthesis (Social Sciences / Humanities)":
+                        extracted_nlp = _nlp_extract_thematic(title_nlp, abstract_nlp)
+                    else:
+                        # Custom schema: use PICO extraction as best-effort base,
+                        # then map available keys; unknown fields default to "N/A"
+                        _base = _nlp_extract_pico(title_nlp, abstract_nlp)
+                        extracted_nlp = {f: _base.get(f, "N/A") for f in extract_fields_nlp}
+                except Exception as _e_nlp:
+                    extracted_nlp = {f: "N/A" for f in extract_fields_nlp}
+                    errors_nlp.append(f"Row {idx_nlp}: {_e_nlp}")
+
+                out_row_nlp = {"Title": title_nlp, "Year": row_nlp.get("Year", "")}
+                # Only include fields that are in the schema
+                for _f in extract_fields_nlp:
+                    out_row_nlp[_f] = extracted_nlp.get(_f, "N/A")
+                # Carry over Abstract and Concepts for keyword network
+                out_row_nlp["Abstract"] = abstract_nlp
+                out_row_nlp["Concepts"] = str(row_nlp.get("Concepts", "") or "")
+                rows_out_nlp.append(out_row_nlp)
+                progress_nlp.progress((idx_nlp + 1) / total_nlp,
+                                      text=f"Extracting with NLP… {idx_nlp+1}/{total_nlp}")
+
+            progress_nlp.empty()
+            extracted_df_nlp = pd.DataFrame(rows_out_nlp)
+            st.session_state[byod_extracted_key] = extracted_df_nlp
+            if errors_nlp:
+                st.warning(f"⚠️ NLP extraction complete with {len(errors_nlp)} error(s): "
+                           f"{errors_nlp[:3]}")
+            else:
+                st.success(f"✅ NLP extraction complete — {len(extracted_df_nlp)} studies. "
+                           f"Review and correct values as needed.")
+
+        # Show extracted table (from session state or from uploaded CSV that already has fields)
+        if byod_extracted_key in st.session_state:
+            extracted_df = st.session_state[byod_extracted_key]
+        else:
+            # Pre-fill from existing columns if the uploaded CSV already has schema fields
+            prefilled = pd.DataFrame([
+                {f: row.get(f, "") for f in schema_fields + ["Abstract", "Concepts"]}
+                for _, row in df.iterrows()
+            ])
+            extracted_df = prefilled
+
+        display_cols = [f for f in schema_fields if f in extracted_df.columns]
+        st.dataframe(extracted_df[display_cols], use_container_width=True)
+
         st.download_button(
-            "⬇️ Download extraction template",
-            template_df.to_csv(index=False).encode("utf-8"),
-            "byod_extraction_template.csv", "text/csv",
-            key="dl_byod_template",
+            "⬇️ Download extracted data (CSV)",
+            extracted_df.to_csv(index=False).encode("utf-8"),
+            "byod_extracted.csv", "text/csv",
+            key="dl_byod_extracted",
         )
 
+        # ── Temporal Analysis ─────────────────────────────────────────────────
         st.markdown("---")
         st.subheader("Temporal Analysis")
         if "Year" in df.columns:
@@ -1303,31 +1883,55 @@ columns) and define your extraction schema below. No coding required.
         else:
             st.info("Add a 'Year' column to your CSV to enable temporal analysis.")
 
+        # ── Keyword Co-occurrence Network ─────────────────────────────────────
         st.markdown("---")
-        st.subheader("Forest Plot (if you have effect size data)")
-        extracted_upload = st.file_uploader(
-            "Upload completed extraction CSV "
-            "(must have Effect_Size, CI_Lower, CI_Upper, Title columns)",
-            type=["csv"], key="byod_forest_upload",
+        render_pyvis_network(extracted_df, "byod")
+
+        # ── Forest Plot ───────────────────────────────────────────────────────
+        st.markdown("---")
+        st.subheader("Forest Plot")
+        forest_source = st.radio(
+            "Use data from:",
+            ["Auto-extracted data above", "Upload a separate extraction CSV"],
+            key="byod_forest_source",
+            horizontal=True,
         )
-        if extracted_upload is not None:
-            df_ext = pd.read_csv(extracted_upload)
+        if forest_source == "Auto-extracted data above":
+            df_ext = extracted_df
+        else:
+            extracted_upload = st.file_uploader(
+                "Upload extraction CSV (must have Effect_Size, CI_Lower, CI_Upper, Title columns)",
+                type=["csv"], key="byod_forest_upload",
+            )
+            df_ext = pd.read_csv(extracted_upload) if extracted_upload is not None else None
+
+        if df_ext is not None:
             required = {"Effect_Size", "CI_Lower", "CI_Upper", "Title"}
             if required.issubset(df_ext.columns):
-                effect_label = st.text_input("Effect size label", value="Effect Size")
-                png, pooled, plo, phi, i2, p_val = compute_forest(
-                    df_ext, "Effect_Size", "CI_Lower", "CI_Upper", effect_label, None
-                )
-                st.image(png, use_container_width=True)
-                col1, col2, col3 = st.columns(3)
-                col1.metric(f"Pooled {effect_label}", f"{pooled:.3f}", f"95% CI: [{plo:.3f}, {phi:.3f}]")
-                col2.metric("Heterogeneity (I²)", f"{i2:.1f}%", "0% = none, >75% = high", delta_color="off")
-                col3.metric("Cochran's Q (p-value)", f"{p_val:.3f}", "<0.05 = significant heterogeneity", delta_color="off")
-                st.download_button("⬇️ Download forest plot (PNG)", png,
-                                   "byod_forest.png", "image/png", key="dl_byod_forest")
+                # Convert to numeric, drop rows without effect size
+                df_forest = df_ext.copy()
+                for col in ["Effect_Size", "CI_Lower", "CI_Upper"]:
+                    df_forest[col] = pd.to_numeric(df_forest[col], errors="coerce")
+                df_forest = df_forest.dropna(subset=["Effect_Size", "CI_Lower", "CI_Upper"])
+                if len(df_forest) >= 2:
+                    effect_label = st.text_input("Effect size label", value="Effect Size", key="byod_effect_label")
+                    png, pooled, plo, phi, i2, p_val = compute_forest(
+                        df_forest, "Effect_Size", "CI_Lower", "CI_Upper", effect_label, None
+                    )
+                    st.image(png, use_container_width=True)
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric(f"Pooled {effect_label}", f"{pooled:.3f}", f"95% CI: [{plo:.3f}, {phi:.3f}]")
+                    col2.metric("Heterogeneity (I²)", f"{i2:.1f}%", "0% = none, >75% = high", delta_color="off")
+                    col3.metric("Cochran's Q (p-value)", f"{p_val:.3f}", "<0.05 = significant heterogeneity", delta_color="off")
+                    st.download_button("⬇️ Download forest plot (PNG)", png,
+                                       "byod_forest.png", "image/png", key="dl_byod_forest")
+                else:
+                    st.info("Not enough studies with numeric effect sizes to draw a forest plot. "
+                            "Run auto-extraction first, or upload a CSV with Effect_Size, CI_Lower, CI_Upper columns.")
             else:
                 missing = required - set(df_ext.columns)
-                st.error(f"Missing required columns: {missing}")
+                st.info(f"Forest plot requires: {', '.join(sorted(missing))}. "
+                        "Run auto-extraction first to populate these fields.")
 
         st.markdown("---")
         st.subheader("PRISMA Flow Diagram")
