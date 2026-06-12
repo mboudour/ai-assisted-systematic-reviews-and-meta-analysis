@@ -391,17 +391,6 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
   var edges = new vis.DataSet(edgesRaw);
   var container = document.getElementById('mynetwork');
 
-  // Create custom tooltip div and append to container
-  var tip = document.createElement('div');
-  tip.style.cssText = [
-    'position:absolute', 'display:none', 'pointer-events:none',
-    'background:#fff', 'border:1px solid #bbb', 'border-radius:5px',
-    'padding:6px 10px', 'font-size:13px', 'line-height:1.6',
-    'max-width:260px', 'box-shadow:2px 2px 6px rgba(0,0,0,.15)',
-    'z-index:9999', 'font-family:sans-serif'
-  ].join(';');
-  container.appendChild(tip);
-
   var options = {{
     physics: {{
       forceAtlas2Based: {{
@@ -420,6 +409,18 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
   }};
 
   var network = new vis.Network(container, {{ nodes: nodes, edges: edges }}, options);
+
+  // Create tooltip div AFTER vis.Network() — vis.js clears container innerHTML on init,
+  // so any div appended before this point would be destroyed.
+  var tip = document.createElement('div');
+  tip.style.cssText = [
+    'position:absolute', 'display:none', 'pointer-events:none',
+    'background:#fff', 'border:1px solid #bbb', 'border-radius:5px',
+    'padding:6px 10px', 'font-size:13px', 'line-height:1.6',
+    'max-width:260px', 'box-shadow:2px 2px 6px rgba(0,0,0,.15)',
+    'z-index:9999', 'font-family:sans-serif'
+  ].join(';');
+  container.appendChild(tip);
 
   // Use canvas mousemove + getNodeAt/getEdgeAt for reliable tooltip detection.
   // vis.js hoverNode/blurNode events require pointer events to propagate through
