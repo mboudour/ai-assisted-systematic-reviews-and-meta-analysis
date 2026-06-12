@@ -421,24 +421,59 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
 
   var network = new vis.Network(container, {{ nodes: nodes, edges: edges }}, options);
 
-  function showTip(html, event) {{
-    if (!html) return;
-    var pos = (event && (event.center || event.pointer && event.pointer.DOM)) || {{x:0, y:0}};
-    var rect = container.getBoundingClientRect();
-    tip.innerHTML = html;
-    tip.style.display = 'block';
-    var x = (pos.x || 0) - rect.left + 14;
-    var y = (pos.y || 0) - rect.top  - 14;
-    if (x + 270 > container.offsetWidth) x = x - 284;
-    if (y < 0) y = 4;
-    tip.style.left = x + 'px';
-    tip.style.top  = y + 'px';
+  // Use canvas mousemove + getNodeAt/getEdgeAt for reliable tooltip detection.
+  // vis.js hoverNode/blurNode events require pointer events to propagate through
+  // the Streamlit iframe stack; canvas-level mousemove is more reliable.
+  var canvas = container.querySelector('canvas');
+  var lastNodeId = null;
+  var lastEdgeId = null;
+
+  function positionTip(x, y) {{
+    var cx = x + 14;
+    var cy = y - 14;
+    if (cx + 270 > container.offsetWidth) cx = x - 270;
+    if (cy < 0) cy = 4;
+    tip.style.left = cx + 'px';
+    tip.style.top  = cy + 'px';
   }}
 
-  network.on('hoverNode', function(p) {{ showTip(nodeTooltip[p.node], p.event); }});
-  network.on('blurNode',  function()  {{ tip.style.display = 'none'; }});
-  network.on('hoverEdge', function(p) {{ showTip(edgeTooltip[p.edge], p.event); }});
-  network.on('blurEdge',  function()  {{ tip.style.display = 'none'; }});
+  // Wait for canvas to be ready (network may still be stabilizing)
+  function attachMouseHandlers() {{
+    var c = container.querySelector('canvas');
+    if (!c) {{ setTimeout(attachMouseHandlers, 100); return; }}
+    c.addEventListener('mousemove', function(e) {{
+      var rect = c.getBoundingClientRect();
+      var domPos = {{ x: e.clientX - rect.left, y: e.clientY - rect.top }};
+      var nodeId = network.getNodeAt(domPos);
+      var edgeId = nodeId ? null : network.getEdgeAt(domPos);
+      if (nodeId !== undefined && nodeId !== null) {{
+        var html = nodeTooltip[nodeId];
+        if (html) {{
+          tip.innerHTML = html;
+          tip.style.display = 'block';
+          positionTip(domPos.x, domPos.y);
+        }} else {{
+          tip.style.display = 'none';
+        }}
+        lastNodeId = nodeId; lastEdgeId = null;
+      }} else if (edgeId !== undefined && edgeId !== null) {{
+        var html = edgeTooltip[edgeId];
+        if (html) {{
+          tip.innerHTML = html;
+          tip.style.display = 'block';
+          positionTip(domPos.x, domPos.y);
+        }} else {{
+          tip.style.display = 'none';
+        }}
+        lastEdgeId = edgeId; lastNodeId = null;
+      }} else {{
+        tip.style.display = 'none';
+        lastNodeId = null; lastEdgeId = null;
+      }}
+    }});
+    c.addEventListener('mouseleave', function() {{ tip.style.display = 'none'; }});
+  }}
+  attachMouseHandlers();
 }})();
 </script>
 </body>
