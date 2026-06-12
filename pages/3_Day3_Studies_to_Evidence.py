@@ -261,10 +261,9 @@ def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
             "Try lowering the minimum co-occurrence threshold or using a larger corpus."
         )
 
-    # ── Louvain community detection ───────────────────────────────────────────
+    # ── Louvain community detection (via networkx built-in — no extra package) ──
     try:
         import networkx as nx
-        import community as community_louvain  # python-louvain
 
         G = nx.Graph()
         nodes_in_edges = set()
@@ -273,8 +272,15 @@ def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
             nodes_in_edges.add(b)
             G.add_edge(a, b, weight=cnt)
 
-        partition = community_louvain.best_partition(G, weight='weight', random_state=42)
-        num_communities = max(partition.values()) + 1 if partition else 1
+        # nx.community.louvain_communities is available in networkx >= 3.0
+        communities = nx.community.louvain_communities(G, weight='weight', seed=42)
+        # Sort communities by size descending so the largest gets colour 0
+        communities = sorted(communities, key=len, reverse=True)
+        partition = {}
+        for i, comm in enumerate(communities):
+            for node in comm:
+                partition[node] = i
+        num_communities = len(communities)
         PALETTE = [
             "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
             "#1abc9c", "#e67e22", "#34495e", "#e91e63", "#00bcd4",
@@ -289,10 +295,12 @@ def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
         for a, b, _ in edges:
             nodes_in_edges.add(a)
             nodes_in_edges.add(b)
-        sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
-        q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
-        q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
-        q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
+        # Use only the actually-drawn nodes (nodes_in_edges) for quartile thresholds
+        # so that community colours respond correctly to slider changes.
+        drawn_freqs = sorted([freq[kw] for kw in nodes_in_edges]) if nodes_in_edges else [1]
+        q1 = drawn_freqs[max(0, len(drawn_freqs) // 4)]
+        q2 = drawn_freqs[max(0, len(drawn_freqs) // 2)]
+        q3 = drawn_freqs[max(0, 3 * len(drawn_freqs) // 4)]
         def _freq_group(node):
             f = freq.get(node, 1)
             if f >= q3: return 3
