@@ -1432,18 +1432,127 @@ columns) and define your extraction schema below. No coding required.
 
         st.info(f"**Active schema:** {', '.join(schema_fields)}")
 
-        template_df = pd.DataFrame([
-            {f: row.get(f, "") for f in schema_fields}
-            for _, row in df.head(20).iterrows()
-        ])
-        st.dataframe(template_df, use_container_width=True)
+        # ── LLM Auto-Extraction ───────────────────────────────────────────────
+        st.markdown("""**Step 1 — Auto-extract fields using AI**  
+Click the button below to let the AI read each study's abstract and fill in the
+schema fields automatically. You can then review, correct, and download the result.
+""")
+
+        byod_extracted_key = f"byod_extracted_df_{schema_choice}"
+
+        if st.button("🤖 Auto-extract fields with AI", key="byod_run_extraction"):
+            import json as _json
+            import os as _os
+
+            # Build the field list excluding Title/Year (already in CSV)
+            extract_fields = [f for f in schema_fields if f not in ("Title", "Year")]
+
+            api_key = (
+                st.secrets.get("OPENAI_API_KEY", "")
+                or _os.environ.get("OPENAI_API_KEY", "")
+            )
+            if not api_key:
+                st.error("No OpenAI API key found. Add OPENAI_API_KEY to Streamlit secrets.")
+            else:
+                try:
+                    from litellm import completion as _llm_completion
+                except ImportError:
+                    try:
+                        from openai import OpenAI as _OpenAI
+                        _llm_completion = None
+                    except ImportError:
+                        _llm_completion = None
+
+                rows_out = []
+                progress = st.progress(0, text="Extracting…")
+                total = len(df)
+
+                for idx, (_, row) in enumerate(df.iterrows()):
+                    title = str(row.get("Title", "") or "")
+                    abstract = str(row.get("Abstract", "") or "")
+                    text_block = f"Title: {title}\n\nAbstract: {abstract[:1200]}"
+
+                    fields_desc = ", ".join(extract_fields)
+                    prompt = (
+                        f"You are a systematic review assistant. Extract the following fields "
+                        f"from the study text below. Return ONLY a JSON object with these keys: "
+                        f"{fields_desc}.\n"
+                        f"Rules:\n"
+                        f"- Use \"N/A\" if a field cannot be determined from the text.\n"
+                        f"- For Effect_Size, CI_Lower, CI_Upper, Sample_Size: return a number or N/A.\n"
+                        f"- Keep values concise (max 10 words per field).\n\n"
+                        f"{text_block}"
+                    )
+
+                    extracted = {f: "N/A" for f in extract_fields}
+                    try:
+                        if _llm_completion is not None:
+                            resp = _llm_completion(
+                                model="gpt-4o-mini",
+                                messages=[{"role": "user", "content": prompt}],
+                                api_key=api_key,
+                                max_tokens=300,
+                                temperature=0,
+                            )
+                            raw = resp.choices[0].message.content.strip()
+                        else:
+                            client = _OpenAI(api_key=api_key)
+                            resp = client.chat.completions.create(
+                                model="gpt-4o-mini",
+                                messages=[{"role": "user", "content": prompt}],
+                                max_tokens=300,
+                                temperature=0,
+                            )
+                            raw = resp.choices[0].message.content.strip()
+
+                        # Parse JSON from response
+                        raw = raw.strip()
+                        if raw.startswith("```"):
+                            raw = raw.split("```")[1]
+                            if raw.startswith("json"):
+                                raw = raw[4:]
+                        parsed = _json.loads(raw)
+                        for f in extract_fields:
+                            val = parsed.get(f, "N/A")
+                            extracted[f] = val if val not in ("", None) else "N/A"
+                    except Exception:
+                        pass  # keep N/A defaults
+
+                    out_row = {"Title": title, "Year": row.get("Year", "")}
+                    out_row.update(extracted)
+                    # Carry over Abstract and Concepts for keyword network
+                    out_row["Abstract"] = abstract
+                    out_row["Concepts"] = str(row.get("Concepts", "") or "")
+                    rows_out.append(out_row)
+                    progress.progress((idx + 1) / total, text=f"Extracting… {idx+1}/{total}")
+
+                progress.empty()
+                extracted_df = pd.DataFrame(rows_out)
+                st.session_state[byod_extracted_key] = extracted_df
+                st.success(f"✅ Extraction complete — {len(extracted_df)} studies.")
+
+        # Show extracted table (from session state or from uploaded CSV that already has fields)
+        if byod_extracted_key in st.session_state:
+            extracted_df = st.session_state[byod_extracted_key]
+        else:
+            # Pre-fill from existing columns if the uploaded CSV already has schema fields
+            prefilled = pd.DataFrame([
+                {f: row.get(f, "") for f in schema_fields + ["Abstract", "Concepts"]}
+                for _, row in df.iterrows()
+            ])
+            extracted_df = prefilled
+
+        display_cols = [f for f in schema_fields if f in extracted_df.columns]
+        st.dataframe(extracted_df[display_cols], use_container_width=True)
+
         st.download_button(
-            "⬇️ Download extraction template",
-            template_df.to_csv(index=False).encode("utf-8"),
-            "byod_extraction_template.csv", "text/csv",
-            key="dl_byod_template",
+            "⬇️ Download extracted data (CSV)",
+            extracted_df.to_csv(index=False).encode("utf-8"),
+            "byod_extracted.csv", "text/csv",
+            key="dl_byod_extracted",
         )
 
+        # ── Temporal Analysis ─────────────────────────────────────────────────
         st.markdown("---")
         st.subheader("Temporal Analysis")
         if "Year" in df.columns:
@@ -1464,31 +1573,55 @@ columns) and define your extraction schema below. No coding required.
         else:
             st.info("Add a 'Year' column to your CSV to enable temporal analysis.")
 
+        # ── Keyword Co-occurrence Network ─────────────────────────────────────
         st.markdown("---")
-        st.subheader("Forest Plot (if you have effect size data)")
-        extracted_upload = st.file_uploader(
-            "Upload completed extraction CSV "
-            "(must have Effect_Size, CI_Lower, CI_Upper, Title columns)",
-            type=["csv"], key="byod_forest_upload",
+        render_pyvis_network(extracted_df, "byod")
+
+        # ── Forest Plot ───────────────────────────────────────────────────────
+        st.markdown("---")
+        st.subheader("Forest Plot")
+        forest_source = st.radio(
+            "Use data from:",
+            ["Auto-extracted data above", "Upload a separate extraction CSV"],
+            key="byod_forest_source",
+            horizontal=True,
         )
-        if extracted_upload is not None:
-            df_ext = pd.read_csv(extracted_upload)
+        if forest_source == "Auto-extracted data above":
+            df_ext = extracted_df
+        else:
+            extracted_upload = st.file_uploader(
+                "Upload extraction CSV (must have Effect_Size, CI_Lower, CI_Upper, Title columns)",
+                type=["csv"], key="byod_forest_upload",
+            )
+            df_ext = pd.read_csv(extracted_upload) if extracted_upload is not None else None
+
+        if df_ext is not None:
             required = {"Effect_Size", "CI_Lower", "CI_Upper", "Title"}
             if required.issubset(df_ext.columns):
-                effect_label = st.text_input("Effect size label", value="Effect Size")
-                png, pooled, plo, phi, i2, p_val = compute_forest(
-                    df_ext, "Effect_Size", "CI_Lower", "CI_Upper", effect_label, None
-                )
-                st.image(png, use_container_width=True)
-                col1, col2, col3 = st.columns(3)
-                col1.metric(f"Pooled {effect_label}", f"{pooled:.3f}", f"95% CI: [{plo:.3f}, {phi:.3f}]")
-                col2.metric("Heterogeneity (I²)", f"{i2:.1f}%", "0% = none, >75% = high", delta_color="off")
-                col3.metric("Cochran's Q (p-value)", f"{p_val:.3f}", "<0.05 = significant heterogeneity", delta_color="off")
-                st.download_button("⬇️ Download forest plot (PNG)", png,
-                                   "byod_forest.png", "image/png", key="dl_byod_forest")
+                # Convert to numeric, drop rows without effect size
+                df_forest = df_ext.copy()
+                for col in ["Effect_Size", "CI_Lower", "CI_Upper"]:
+                    df_forest[col] = pd.to_numeric(df_forest[col], errors="coerce")
+                df_forest = df_forest.dropna(subset=["Effect_Size", "CI_Lower", "CI_Upper"])
+                if len(df_forest) >= 2:
+                    effect_label = st.text_input("Effect size label", value="Effect Size", key="byod_effect_label")
+                    png, pooled, plo, phi, i2, p_val = compute_forest(
+                        df_forest, "Effect_Size", "CI_Lower", "CI_Upper", effect_label, None
+                    )
+                    st.image(png, use_container_width=True)
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric(f"Pooled {effect_label}", f"{pooled:.3f}", f"95% CI: [{plo:.3f}, {phi:.3f}]")
+                    col2.metric("Heterogeneity (I²)", f"{i2:.1f}%", "0% = none, >75% = high", delta_color="off")
+                    col3.metric("Cochran's Q (p-value)", f"{p_val:.3f}", "<0.05 = significant heterogeneity", delta_color="off")
+                    st.download_button("⬇️ Download forest plot (PNG)", png,
+                                       "byod_forest.png", "image/png", key="dl_byod_forest")
+                else:
+                    st.info("Not enough studies with numeric effect sizes to draw a forest plot. "
+                            "Run auto-extraction first, or upload a CSV with Effect_Size, CI_Lower, CI_Upper columns.")
             else:
                 missing = required - set(df_ext.columns)
-                st.error(f"Missing required columns: {missing}")
+                st.info(f"Forest plot requires: {', '.join(sorted(missing))}. "
+                        "Run auto-extraction first to populate these fields.")
 
         st.markdown("---")
         st.subheader("PRISMA Flow Diagram")
