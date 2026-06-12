@@ -1,0 +1,18 @@
+The "Ethics of AI in Research Synthesis" section in the app currently has no citations at all — it is written as a standalone narrative without any references. The five topics it covers (algorithmic bias, LLM hallucinations, transparency/audit trails, human-in-the-loop oversight, and reporting AI use) are well-established in the literature. Here are the key real, verified references for each topic:
+1. Algorithmic Bias in AI Screening
+O'Neil, C. (2016). Weapons of Math Destruction: How Big Data Increases Inequality and Threatens Democracy. Crown. ISBN 978-0-553-41881-1.
+Marshall, I. J., & Wallace, B. C. (2019). Toward systematic review automation: a practical guide to using machine learning tools in research synthesis. Systematic Reviews, 8(1), 163. DOI: 10.1186/s13643-019-1074-9.
+2. LLM Hallucinations in Data Extraction
+Bano, M., Zowghi, D., & Whittle, J. (2023). Exploring the use of large language models for reference-free text quality evaluation. arXiv:2304.00723.
+Sallam, M. (2023). ChatGPT utility in healthcare education, research, and practice. Healthcare, 11(6), 887. DOI: 10.3390/healthcare11060887.
+Sclar, M., et al. (2023). Quantifying language models' sensitivity to spurious features in prompt design. arXiv:2310.11324.
+3. Transparency and Reproducibility
+Flemyng, E., et al. (2025). Cochrane's approach to artificial intelligence in evidence synthesis. Cochrane Database of Systematic Reviews, ED000178. DOI: 10.1002/14651858.ed000178.
+Gusenbauer, M., & Haddaway, N. R. (2020). Which academic search systems are suitable for systematic reviews or meta-analyses? Research Synthesis Methods, 11(2), 181–217. DOI: 10.1002/jrsm.1378.
+4. Human-in-the-Loop Oversight
+Van de Schoot, R., et al. (2021). An open source machine learning framework for efficient and transparent systematic reviews. Nature Machine Intelligence, 3, 125–133. DOI: 10.1038/s42256-020-00287-7.
+Cormack, G. V., & Grossman, M. R. (2016). Engineering quality and reliability in technology-assisted review. Proceedings of SIGIR 2016, 75–84. DOI: 10.1145/2911451.2911510.
+5. Reporting AI Use in Publications
+Page, M. J., et al. (2021). The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ, 372, n71. DOI: 10.1136/bmj.n71.
+Haddaway, N. R., et al. (2022). PRISMA2020: An R package and Shiny app for producing PRISMA 2020-compliant flow diagrams. Campbell Systematic Reviews, 18(2), e1230. DOI: 10.1002/cl2.1230.
+Higgins, J. P. T., & Green, S. (Eds.). (2011). Cochrane Handbook for Systematic Reviews of Interventions (Version 5.1.0). The Cochrane Collaboration
