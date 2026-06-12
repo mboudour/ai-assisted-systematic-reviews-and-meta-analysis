@@ -1447,89 +1447,101 @@ schema fields automatically. You can then review, correct, and download the resu
             # Build the field list excluding Title/Year (already in CSV)
             extract_fields = [f for f in schema_fields if f not in ("Title", "Year")]
 
-            api_key = (
-                st.secrets.get("OPENAI_API_KEY", "")
-                or _os.environ.get("OPENAI_API_KEY", "")
-            )
+            # Safely retrieve API key from Streamlit secrets or environment
+            api_key = ""
+            try:
+                api_key = st.secrets["OPENAI_API_KEY"]
+            except Exception:
+                api_key = _os.environ.get("OPENAI_API_KEY", "")
+
             if not api_key:
-                st.error("No OpenAI API key found. Add OPENAI_API_KEY to Streamlit secrets.")
+                st.error("❌ No OpenAI API key found. Add OPENAI_API_KEY to your Streamlit app secrets "
+                         "(Settings → Secrets in the Streamlit Community Cloud dashboard).")
             else:
+                # Import OpenAI client (litellm preferred, openai as fallback)
+                _llm_completion = None
+                _OpenAI = None
                 try:
                     from litellm import completion as _llm_completion
                 except ImportError:
                     try:
                         from openai import OpenAI as _OpenAI
-                        _llm_completion = None
                     except ImportError:
-                        _llm_completion = None
+                        st.error("❌ Neither litellm nor openai package is available. "
+                                 "Please check requirements.txt.")
 
-                rows_out = []
-                progress = st.progress(0, text="Extracting…")
-                total = len(df)
+                if _llm_completion is not None or _OpenAI is not None:
+                    rows_out = []
+                    errors = []
+                    progress = st.progress(0, text="Extracting…")
+                    total = len(df)
 
-                for idx, (_, row) in enumerate(df.iterrows()):
-                    title = str(row.get("Title", "") or "")
-                    abstract = str(row.get("Abstract", "") or "")
-                    text_block = f"Title: {title}\n\nAbstract: {abstract[:1200]}"
+                    for idx, (_, row) in enumerate(df.iterrows()):
+                        title = str(row.get("Title", "") or "")
+                        abstract = str(row.get("Abstract", "") or "")
+                        text_block = f"Title: {title}\n\nAbstract: {abstract[:1200]}"
 
-                    fields_desc = ", ".join(extract_fields)
-                    prompt = (
-                        f"You are a systematic review assistant. Extract the following fields "
-                        f"from the study text below. Return ONLY a JSON object with these keys: "
-                        f"{fields_desc}.\n"
-                        f"Rules:\n"
-                        f"- Use \"N/A\" if a field cannot be determined from the text.\n"
-                        f"- For Effect_Size, CI_Lower, CI_Upper, Sample_Size: return a number or N/A.\n"
-                        f"- Keep values concise (max 10 words per field).\n\n"
-                        f"{text_block}"
-                    )
+                        fields_desc = ", ".join(extract_fields)
+                        prompt = (
+                            f"You are a systematic review assistant. Extract the following fields "
+                            f"from the study text below. Return ONLY a JSON object with these keys: "
+                            f"{fields_desc}.\n"
+                            f"Rules:\n"
+                            f"- Use \"N/A\" if a field cannot be determined from the text.\n"
+                            f"- For Effect_Size, CI_Lower, CI_Upper, Sample_Size: return a number or N/A.\n"
+                            f"- Keep values concise (max 10 words per field).\n\n"
+                            f"{text_block}"
+                        )
 
-                    extracted = {f: "N/A" for f in extract_fields}
-                    try:
-                        if _llm_completion is not None:
-                            resp = _llm_completion(
-                                model="gpt-4o-mini",
-                                messages=[{"role": "user", "content": prompt}],
-                                api_key=api_key,
-                                max_tokens=300,
-                                temperature=0,
-                            )
-                            raw = resp.choices[0].message.content.strip()
-                        else:
-                            client = _OpenAI(api_key=api_key)
-                            resp = client.chat.completions.create(
-                                model="gpt-4o-mini",
-                                messages=[{"role": "user", "content": prompt}],
-                                max_tokens=300,
-                                temperature=0,
-                            )
-                            raw = resp.choices[0].message.content.strip()
+                        extracted = {f: "N/A" for f in extract_fields}
+                        try:
+                            if _llm_completion is not None:
+                                resp = _llm_completion(
+                                    model="gpt-4o-mini",
+                                    messages=[{"role": "user", "content": prompt}],
+                                    api_key=api_key,
+                                    max_tokens=300,
+                                    temperature=0,
+                                )
+                                raw = resp.choices[0].message.content.strip()
+                            else:
+                                client = _OpenAI(api_key=api_key)
+                                resp = client.chat.completions.create(
+                                    model="gpt-4o-mini",
+                                    messages=[{"role": "user", "content": prompt}],
+                                    max_tokens=300,
+                                    temperature=0,
+                                )
+                                raw = resp.choices[0].message.content.strip()
 
-                        # Parse JSON from response
-                        raw = raw.strip()
-                        if raw.startswith("```"):
-                            raw = raw.split("```")[1]
-                            if raw.startswith("json"):
-                                raw = raw[4:]
-                        parsed = _json.loads(raw)
-                        for f in extract_fields:
-                            val = parsed.get(f, "N/A")
-                            extracted[f] = val if val not in ("", None) else "N/A"
-                    except Exception:
-                        pass  # keep N/A defaults
+                            # Parse JSON from response
+                            raw = raw.strip()
+                            if raw.startswith("```"):
+                                raw = raw.split("```")[1]
+                                if raw.startswith("json"):
+                                    raw = raw[4:]
+                            parsed = _json.loads(raw)
+                            for f in extract_fields:
+                                val = parsed.get(f, "N/A")
+                                extracted[f] = val if val not in ("", None) else "N/A"
+                        except Exception as _e:
+                            errors.append(f"Row {idx}: {_e}")  # surface errors, don't silently swallow
 
-                    out_row = {"Title": title, "Year": row.get("Year", "")}
-                    out_row.update(extracted)
-                    # Carry over Abstract and Concepts for keyword network
-                    out_row["Abstract"] = abstract
-                    out_row["Concepts"] = str(row.get("Concepts", "") or "")
-                    rows_out.append(out_row)
-                    progress.progress((idx + 1) / total, text=f"Extracting… {idx+1}/{total}")
+                        out_row = {"Title": title, "Year": row.get("Year", "")}
+                        out_row.update(extracted)
+                        # Carry over Abstract and Concepts for keyword network
+                        out_row["Abstract"] = abstract
+                        out_row["Concepts"] = str(row.get("Concepts", "") or "")
+                        rows_out.append(out_row)
+                        progress.progress((idx + 1) / total, text=f"Extracting… {idx+1}/{total}")
 
-                progress.empty()
-                extracted_df = pd.DataFrame(rows_out)
-                st.session_state[byod_extracted_key] = extracted_df
-                st.success(f"✅ Extraction complete — {len(extracted_df)} studies.")
+                    progress.empty()
+                    extracted_df = pd.DataFrame(rows_out)
+                    st.session_state[byod_extracted_key] = extracted_df
+                    if errors:
+                        st.warning(f"⚠️ Extraction complete with {len(errors)} error(s): {errors[:3]}")
+                    else:
+                        st.success(f"✅ Extraction complete — {len(extracted_df)} studies.")
 
         # Show extracted table (from session state or from uploaded CSV that already has fields)
         if byod_extracted_key in st.session_state:
