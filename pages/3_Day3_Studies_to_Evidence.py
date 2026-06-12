@@ -1673,6 +1673,28 @@ You can then review, correct, and download the result.
 
         byod_extracted_key = f"byod_extracted_df_{schema_choice}"
 
+        # ── OpenAI API Key input ──────────────────────────────────────────────
+        # Try app secrets first; if not set, let the user paste their own key.
+        _secret_key = ""
+        try:
+            _secret_key = st.secrets["OPENAI_API_KEY"]
+        except Exception:
+            import os as _os_key
+            _secret_key = _os_key.environ.get("OPENAI_API_KEY", "")
+
+        if _secret_key:
+            # Key already configured server-side — no need to expose it
+            _user_api_key = _secret_key
+            st.info("🔑 OpenAI API key is configured in app secrets.")
+        else:
+            _user_api_key = st.text_input(
+                "🔑 Enter your OpenAI API key (required for AI extraction)",
+                type="password",
+                placeholder="sk-…",
+                help="Your key is used only for this extraction request and is never stored.",
+                key="byod_openai_api_key_input",
+            )
+
         if st.button("🤖 Auto-extract fields with AI", key="byod_run_extraction"):
             import json as _json
             import os as _os
@@ -1680,16 +1702,11 @@ You can then review, correct, and download the result.
             # Build the field list excluding Title/Year (already in CSV)
             extract_fields = [f for f in schema_fields if f not in ("Title", "Year")]
 
-            # Safely retrieve API key from Streamlit secrets or environment
-            api_key = ""
-            try:
-                api_key = st.secrets["OPENAI_API_KEY"]
-            except Exception:
-                api_key = _os.environ.get("OPENAI_API_KEY", "")
+            api_key = _user_api_key
 
             if not api_key:
-                st.error("❌ No OpenAI API key found. Add OPENAI_API_KEY to your Streamlit app secrets "
-                         "(Settings → Secrets in the Streamlit Community Cloud dashboard).")
+                st.error("❌ No OpenAI API key provided. Enter your key in the field above, or add "
+                         "OPENAI_API_KEY to the Streamlit app secrets.")
             else:
                 # Import OpenAI client (litellm preferred, openai as fallback)
                 _llm_completion = None
