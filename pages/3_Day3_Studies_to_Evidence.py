@@ -482,7 +482,7 @@ GUIDED_EXAMPLES = [
 
 **Research Question (Thematic Synthesis):** What are the empirically measured outcomes of Universal Basic Income (UBI) programmes and pilots in terms of employment, poverty, and well-being?
 
-**Corpus & Screening:** 150 records retrieved via Semantic Scholar. 12 empirical evaluations of UBI or guaranteed income pilots were included after excluding opinion pieces and theoretical models. Screening performance: Recall = 0.92, Precision = 0.67.
+**Corpus & Screening:** 150 records retrieved via OpenAlex. 12 empirical evaluations of UBI or guaranteed income pilots were included after excluding opinion pieces and theoretical models. Screening performance: Recall = 0.92, Precision = 0.67.
 
 **Key Findings (Thematic Synthesis):** Three cross-cutting themes emerge: (1) *Employment neutrality* — UBI does not produce significant declines in labor market participation; (2) *Well-being gains* — nearly all studies report reductions in psychological distress and income volatility; (3) *Poverty reduction* — material deprivation indicators improve consistently across contexts.
 

@@ -5,8 +5,9 @@ Guided examples load exclusively from pre-cached CSVs — no live API calls requ
 All outputs render immediately when the expander is opened — no button click needed.
 No coding required.
 
-APIs covered: OpenAlex, Crossref, Semantic Scholar, Europe PMC
-BYOD inputs: Boolean query (4 APIs), RIS/BibTeX file upload, Zotero connection
+APIs covered: OpenAlex, Crossref, Europe PMC
+(Semantic Scholar removed due to strict public API rate limits; OpenAlex recommended for STEM/CS)
+BYOD inputs: Boolean query (3 APIs), RIS/BibTeX file upload, Zotero connection
 Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network link,
          pyvis interactive keyword co-occurrence network
 """
@@ -1009,7 +1010,9 @@ how to automatically deduplicate records — all in a **no-code** environment.
 The first day introduces the logic of programmatic literature collection. The session
 begins with the formulation of search strategies — such as the **PICO framework** for
 health sciences or **SPIDER** for social sciences — and the identification of suitable
-open APIs, including **OpenAlex**, **Crossref**, **Semantic Scholar**, and **Europe PMC**.
+open APIs, including **OpenAlex**, **Crossref**, and **Europe PMC**.
+(Semantic Scholar is not available for live queries due to strict public API rate limits;
+OpenAlex is recommended for STEM and CS topics.)
 
 Participants are shown how API-based retrieval differs from manual database searching
 and how it facilitates reproducibility. Because APIs evolve and results may change over
@@ -1022,7 +1025,6 @@ supports automatically.
 |-----|-----------------|-----------|
 | **OpenAlex** | All disciplines | 250M+ works, fully open, rich metadata including concepts and citations |
 | **Crossref** | All disciplines | DOI-centric, strong for journal articles and conference papers |
-| **Semantic Scholar** | STEM, CS, Biomedical | AI-extracted concepts, citation graphs, open access links |
 | **Europe PMC** | Life sciences, health | Full-text access for many articles, strong for biomedical reviews |
 
 ### Session Structure
@@ -1030,7 +1032,7 @@ supports automatically.
 | Hour | Content |
 |------|---------|
 | **Hour 1** | Introduce the logic of programmatic literature collection. Clarify the difference between manual database searches and open API retrieval. Present discipline-spanning examples and explain how query timestamps are logged for reproducibility. |
-| **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into Boolean queries and retrieve metadata from OpenAlex, Crossref, Semantic Scholar, and Europe PMC. |
+| **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into Boolean queries and retrieve metadata from OpenAlex, Crossref, and Europe PMC. (Semantic Scholar is not available due to rate limits; OpenAlex covers the same STEM/CS literature.) |
 | **Hour 3** | Use the Streamlit app to run automated deduplication. Participants inspect the output, compare field completeness, explore the corpus using the **interactive keyword co-occurrence network** (pyvis), export a clean CSV or RIS file, and create a **VOSviewer** bibliometric map. |
 
 ### Input Flexibility: Multiple Entry Points
@@ -1177,8 +1179,6 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                             df = openalex_to_df(records)
                         elif "Crossref" in api_choice:
                             df = query_crossref_live(query_input.strip(), per_page=per_page)
-                        elif "Semantic Scholar" in api_choice:
-                            df = query_semantic_scholar_live(query_input.strip(), per_page=per_page)
                         elif "Europe PMC" in api_choice:
                             df = query_europepmc_live(query_input.strip(), per_page=per_page)
                         else:

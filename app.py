@@ -77,7 +77,7 @@ enters only in **Extract**.
 
 | Module | Function | What Participants Can Do |
 |--------|----------|--------------------------|
-| **1. Search & Collect** | Retrieve metadata via open APIs | Enter Boolean queries, ping OpenAlex / Crossref / Semantic Scholar / Europe PMC, and retrieve records |
+| **1. Search & Collect** | Retrieve metadata via open APIs | Enter Boolean queries, ping OpenAlex / Crossref / Europe PMC, and retrieve records |
 | **2. Deduplicate** | Clean the corpus | Upload RIS/CSV files or process API results to remove duplicates |
 | **3. Screen** | Active Learning & LLM screening | Connect to Zotero or upload data, iteratively label training sets, and apply exclusion prompts |
 | **4. Extract** | Pull data from full texts | Upload PDFs, select a discipline-specific schema (PICO, Thematic Synthesis, or custom), and generate a structured table |
@@ -126,10 +126,12 @@ st.markdown("""
 Each day includes a dedicated **BYOD extension** so participants can apply the workflow
 to their own research question in real time.
 
-**Day 1 BYOD:** Enter any Boolean query, select from OpenAlex, Crossref, Semantic Scholar,
-or Europe PMC, retrieve and deduplicate your own corpus, and download a timestamped
-query log for reproducibility. Alternatively, upload an existing **RIS/BibTeX file** from
-your reference manager or connect your **Zotero** library directly.
+**Day 1 BYOD:** Enter any Boolean query, select from OpenAlex, Crossref, or Europe PMC,
+retrieve and deduplicate your own corpus, and download a timestamped query log for
+reproducibility. (Semantic Scholar is not available for live queries due to strict public
+API rate limits; OpenAlex is recommended for STEM and CS topics.) Alternatively, upload
+an existing **RIS/BibTeX file** from your reference manager or connect your **Zotero**
+library directly.
 
 **Day 2 BYOD:** Upload the CSV from Day 1 (or a RIS/BibTeX file), enter your own
 inclusion and exclusion criteria, and screen your corpus using **Active Learning**,

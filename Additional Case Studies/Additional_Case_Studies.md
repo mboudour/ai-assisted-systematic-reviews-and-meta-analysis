@@ -29,7 +29,7 @@ of each case study against the Day 2 screening and Day 3 synthesis workflows.
 
 | Parameter | Where it appears in the app | Notes |
 |---|---|---|
-| **API** | "Select API" dropdown | OpenAlex, Crossref, Semantic Scholar, or Europe PMC |
+| **API** | "Select API" dropdown | OpenAlex, Crossref, or Europe PMC |
 | **Boolean Query** | "Enter your search query" text box | Paste exactly as written |
 | **Records per page** | Slider (10–100) | Controls how many records are fetched per API page |
 | **Number of pages** | Slider (1–5, OpenAlex only) | Multiplies total records retrieved |
@@ -126,7 +126,7 @@ bridging these clusters are typically comparative policy evaluations.
 | Parameter | Value |
 |---|---|
 | **Discipline** | Computer Science / Biomedical Informatics |
-| **API** | Semantic Scholar |
+| **API** | OpenAlex |
 | **Boolean Query** | `large language models clinical decision support healthcare GPT` |
 | **Records per page** | 50 |
 | **Number of pages** | 1 |
@@ -139,8 +139,9 @@ systems in healthcare settings?
 
 **Why this topic?** An extremely fast-moving literature (most papers published after 2022),
 making it an ideal demonstration of how the year distribution chart reveals an emerging
-field. Semantic Scholar is preferred because it has strong coverage of arXiv preprints and
-AI conference proceedings (NeurIPS, ICML, ACL) that are underrepresented in other APIs.
+field. OpenAlex is used here; it provides strong coverage of CS and AI literature and
+does not impose the strict rate limits that led to Semantic Scholar being removed from
+the app's BYOD interface.
 
 **What to look for in the keyword network:** A single large cluster dominated by *GPT*,
 *ChatGPT*, *natural language processing*, and *electronic health records*. The near-absence
@@ -319,7 +320,7 @@ present, with acceleration after 2012 (the Finch Report and RCUK mandate).
 | 1 | Education Sciences | Technology-enhanced learning & academic achievement | OpenAlex | `technology enhanced learning academic achievement student outcomes` | 50 | 3 |
 | 2 | Psychology / Public Health | Mindfulness-based interventions & anxiety (RCTs) | Europe PMC | `mindfulness meditation anxiety reduction randomized controlled trial` | 50 | 1 |
 | 3 | Environmental Science | Carbon pricing & emissions reduction effectiveness | OpenAlex | `carbon pricing emissions trading scheme greenhouse gas reduction effectiveness` | 50 | 2 |
-| 4 | Computer Science / AI | LLMs in clinical decision support | Semantic Scholar | `large language models clinical decision support healthcare GPT` | 50 | 1 |
+| 4 | Computer Science / AI | LLMs in clinical decision support | OpenAlex | `large language models clinical decision support healthcare GPT` | 50 | 1 |
 | 5 | Development Economics | Microfinance & household poverty reduction | OpenAlex | `microfinance microcredit household poverty income developing countries` | 50 | 3 |
 | 6 | Nursing / Allied Health | Nurse staffing ratios & patient safety | Europe PMC | `nurse staffing patient ratio mortality hospital safety outcomes` | 50 | 1 |
 | 7 | Political Science | Social media & political polarisation | OpenAlex | `social media political polarisation echo chamber filter bubble empirical` | 50 | 2 |
@@ -331,15 +332,15 @@ present, with acceleration after 2012 (the Finch Report and RCUK mandate).
 
 ## Notes on API Selection
 
-The four APIs available in the app each have different strengths. The case studies above
+The three APIs available in the app each have different strengths. The case studies above
 were assigned to APIs deliberately to showcase this diversity:
 
 - **OpenAlex** is used for broad, cross-disciplinary topics where concept tagging and
-  citation counts are important (Cases 1, 3, 5, 7, 10).
+  citation counts are important (Cases 1, 3, 4, 5, 7, 10). It is also the recommended
+  alternative for CS and AI topics (Case 4), replacing Semantic Scholar which was removed
+  from the app due to strict public API rate limits.
 - **Europe PMC** is used for biomedical and clinical topics where full-text access and
   clinical trial indexing are valuable (Cases 2, 6, 9).
-- **Semantic Scholar** is used for AI and computer science topics where arXiv preprint
-  coverage is essential (Case 4).
 - **Crossref** is used to demonstrate its strength in engineering and interdisciplinary
   conference proceedings (Case 8).
 
