@@ -262,17 +262,20 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
         for a, b, _ in edges:
             nodes_in_edges.add(a)
             nodes_in_edges.add(b)
-        partition = {}
         sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
         q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
         q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
         q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
-        def community_color(node):
+        def _freq_group(node):
             f = freq.get(node, 1)
-            if f >= q3: return "#e74c3c"
-            if f >= q2: return "#e67e22"
-            if f >= q1: return "#3498db"
-            return "#95a5a6"
+            if f >= q3: return 3
+            if f >= q2: return 2
+            if f >= q1: return 1
+            return 0
+        partition = {n: _freq_group(n) for n in nodes_in_edges}
+        def community_color(node):
+            g = partition.get(node, 0)
+            return ["#95a5a6", "#3498db", "#e67e22", "#e74c3c"][g]
         num_communities = 4
 
     # ── Build node / edge data as JSON ────────────────────────────────────────
@@ -291,15 +294,19 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
         size = max(10, min(45, 8 + f * 2))
         cid = partition.get(kw, 0)
         color = community_color(kw)
+        # Always include Community — use Louvain id when available,
+        # otherwise use the frequency-quartile group (1-4) as a proxy.
         if louvain_ok:
-            tooltip = (
-                f"<b>{kw}</b><br/>"
-                f"Frequency: {f}<br/>"
-                f"Degree: {deg}<br/>"
-                f"Community: {cid + 1}"
-            )
+            community_label = cid + 1
         else:
-            tooltip = f"<b>{kw}</b><br/>Frequency: {f}<br/>Degree: {deg}"
+            # frequency-quartile group already encoded in color choice (1-4)
+            community_label = cid + 1  # cid set below via partition fallback
+        tooltip = (
+            f"<b>{kw}</b><br/>"
+            f"Frequency: {f}<br/>"
+            f"Degree: {deg}<br/>"
+            f"Community: {community_label}"
+        )
         nodes_data.append({
             "id": kw, "label": kw, "title": tooltip,
             "size": size,
