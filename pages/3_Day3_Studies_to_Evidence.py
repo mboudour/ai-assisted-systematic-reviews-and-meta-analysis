@@ -181,6 +181,238 @@ def df_to_ris(df):
     return "\n".join(lines)
 
 
+# ── NLP PICO extraction helper (no API key required) ──────────────────────────
+
+def _nlp_extract_pico(title: str, abstract: str) -> dict:
+    """Extract PICO fields from title + abstract using spaCy NER and regex.
+
+    No API key required.  Uses the lightweight en_core_web_sm model for
+    named-entity recognition (GPE/LOC for Country, NORP for Population) and
+    hand-crafted regex patterns for Sample_Size, Effect_Size, Intervention,
+    Comparison, and Outcome.
+
+    Falls back gracefully if spaCy is unavailable or the model is missing.
+    """
+    import sys as _sys
+
+    text = f"{title}. {abstract}"
+
+    result = {
+        "Country": "N/A",
+        "Population": "N/A",
+        "Intervention": "N/A",
+        "Comparison": "N/A",
+        "Outcome": "N/A",
+        "Effect_Size": "N/A",
+        "Sample_Size": "N/A",
+    }
+
+    # ── spaCy NER (Country + Population) ─────────────────────────────────────
+    try:
+        import spacy as _spacy
+        try:
+            _nlp = _spacy.load("en_core_web_sm")
+        except OSError:
+            import subprocess as _sp
+            _sp.run([_sys.executable, "-m", "spacy", "download", "en_core_web_sm"],
+                    capture_output=True, check=False)
+            _nlp = _spacy.load("en_core_web_sm")
+
+        doc = _nlp(text[:2000])
+
+        # Country: GPE / LOC entities
+        countries = list(dict.fromkeys([
+            ent.text for ent in doc.ents
+            if ent.label_ in ("GPE", "LOC") and len(ent.text) > 2
+        ]))
+        if countries:
+            result["Country"] = "; ".join(countries[:3])
+
+        # Population: NORP entities + clinical keyword regex
+        pop_kws = [ent.text for ent in doc.ents if ent.label_ == "NORP"]
+        pop_matches = re.findall(
+            r'\b(nurses?|patients?|adults?|children|elderly|women|men|infants?|'
+            r'neonates?|adolescents?|participants?|subjects?|staff|workers?|'
+            r'healthcare workers?|clinicians?|physicians?|surgeons?)\b',
+            text, re.IGNORECASE,
+        )
+        pop_kws.extend(pop_matches)
+        if pop_kws:
+            seen_pop: set = set()
+            unique_pop = []
+            for p in pop_kws:
+                pl = p.lower()
+                if pl not in seen_pop:
+                    seen_pop.add(pl)
+                    unique_pop.append(p)
+            result["Population"] = "; ".join(unique_pop[:3])
+
+    except Exception:
+        pass  # spaCy unavailable — Country/Population remain "N/A"
+
+    # ── Sample Size ───────────────────────────────────────────────────────────
+    for _pat in [
+        r'[nN]\s*=\s*([0-9,]+)',
+        r'([0-9,]+)\s+(?:patients?|participants?|subjects?|individuals?|cases?|studies)',
+        r'sample\s+(?:size|of)\s+(?:was\s+)?([0-9,]+)',
+        r'total\s+of\s+([0-9,]+)',
+        r'included\s+([0-9,]+)\s+(?:patients?|participants?|studies?|trials?)',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _val = _m.group(1).replace(",", "")
+            if _val.isdigit() and int(_val) > 1:
+                result["Sample_Size"] = _val
+                break
+
+    # ── Effect Size ───────────────────────────────────────────────────────────
+    for _pat in [
+        r'\b(?:OR|RR|HR|SMD|MD|WMD|beta|d)\s*[=:]\s*([\u2212\-]?\d+\.?\d*)',
+        r'\b(?:odds ratio|risk ratio|hazard ratio|mean difference)\s+(?:of\s+|was\s+|=\s*)?([\u2212\-]?\d+\.?\d*)',
+        r'\beffect\s+size\s+(?:of\s+|was\s+|=\s*)?([\u2212\-]?\d+\.?\d*)',
+        r"\b(?:SMD|Cohen'?s?\s+d)\s*[=:]\s*([\u2212\-]?\d+\.?\d*)",
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            result["Effect_Size"] = _m.group(1)
+            break
+
+    # ── Intervention ──────────────────────────────────────────────────────────
+    for _pat in [
+        r'[Ii]ntervention[:\s]+([^.]{10,80})',
+        r'(?:mandatory|minimum|fixed)\s+(?:nurse[- ]to[- ]patient\s+)?(?:staffing\s+)?ratio[s]?\s+(?:of\s+)?([^.]{5,60})',
+        r'(?:treatment|intervention|program|protocol|strategy)\s+(?:was|included|consisted of)\s+([^.]{10,80})',
+        r'(?:assigned to|received|underwent)\s+([^.]{10,60})',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _v = _m.group(1).strip().rstrip(",;")
+            if len(_v) > 5:
+                result["Intervention"] = _v[:100]
+                break
+
+    # ── Comparison ────────────────────────────────────────────────────────────
+    for _pat in [
+        r'(?:compared to|versus|vs\.?)\s+([^.]{5,80})',
+        r'[Cc]omparison[:\s]+([^.]{10,80})',
+        r'(?:control|comparator)\s+(?:group|arm|condition)\s+(?:was|received|had)\s+([^.]{5,60})',
+        r'(?:standard care|usual care|placebo|control)\s+([^.]{0,60})',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _v = _m.group(1).strip().rstrip(",;")
+            if len(_v) > 3:
+                result["Comparison"] = _v[:100]
+                break
+
+    # ── Outcome ───────────────────────────────────────────────────────────────
+    for _pat in [
+        r'(?:primary\s+)?[Oo]utcome[s]?\s+(?:was|were|included|measured)\s+([^.]{10,80})',
+        r'(?:mortality|morbidity|adverse events?|falls?|errors?|readmission|'
+        r'complications?|infections?|satisfaction|length of stay)\b[^.]{0,60}',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _v = _m.group(0).strip().rstrip(",;")
+            if len(_v) > 5:
+                result["Outcome"] = _v[:100]
+                break
+
+    return result
+
+
+def _nlp_extract_thematic(title: str, abstract: str) -> dict:
+    """Extract Thematic Synthesis fields from title + abstract using NLP/regex."""
+    text = f"{title}. {abstract}"
+
+    result = {
+        "Country": "N/A",
+        "Methodology": "N/A",
+        "Sample_Size": "N/A",
+        "Theme_1": "N/A",
+        "Theme_2": "N/A",
+        "Theme_3": "N/A",
+        "Evidence_Strength": "N/A",
+    }
+
+    # Country via spaCy
+    try:
+        import spacy as _spacy
+        import sys as _sys
+        try:
+            _nlp = _spacy.load("en_core_web_sm")
+        except OSError:
+            import subprocess as _sp
+            _sp.run([_sys.executable, "-m", "spacy", "download", "en_core_web_sm"],
+                    capture_output=True, check=False)
+            _nlp = _spacy.load("en_core_web_sm")
+        doc = _nlp(text[:2000])
+        countries = list(dict.fromkeys([
+            ent.text for ent in doc.ents
+            if ent.label_ in ("GPE", "LOC") and len(ent.text) > 2
+        ]))
+        if countries:
+            result["Country"] = "; ".join(countries[:3])
+        # Themes: top noun chunks from spaCy
+        noun_chunks = [chunk.text.strip() for chunk in doc.noun_chunks
+                       if len(chunk.text.strip()) > 4
+                       and chunk.text.strip().lower() not in _STOPWORDS]
+        chunk_freq = Counter(nc.lower() for nc in noun_chunks)
+        top_themes = [nc for nc, _ in chunk_freq.most_common(5)]
+        if len(top_themes) >= 1:
+            result["Theme_1"] = top_themes[0][:60]
+        if len(top_themes) >= 2:
+            result["Theme_2"] = top_themes[1][:60]
+        if len(top_themes) >= 3:
+            result["Theme_3"] = top_themes[2][:60]
+    except Exception:
+        pass
+
+    # Methodology: study design keywords
+    method_map = [
+        (r'\b(systematic review|meta.?analysis)\b', "Systematic Review/Meta-analysis"),
+        (r'\b(randomis?ed|RCT|randomized controlled trial)\b', "RCT"),
+        (r'\b(qualitative|thematic analysis|grounded theory|ethnograph)\b', "Qualitative"),
+        (r'\b(cohort|longitudinal|prospective|retrospective)\b', "Cohort/Longitudinal"),
+        (r'\b(cross.?sectional|survey)\b', "Cross-sectional/Survey"),
+        (r'\b(case.?control)\b', "Case-control"),
+        (r'\b(mixed.?method)\b', "Mixed Methods"),
+    ]
+    for _pat, _label in method_map:
+        if re.search(_pat, text, re.IGNORECASE):
+            result["Methodology"] = _label
+            break
+
+    # Sample Size
+    for _pat in [
+        r'[nN]\s*=\s*([0-9,]+)',
+        r'([0-9,]+)\s+(?:patients?|participants?|subjects?|individuals?|cases?|studies)',
+        r'total\s+of\s+([0-9,]+)',
+    ]:
+        _m = re.search(_pat, text, re.IGNORECASE)
+        if _m:
+            _val = _m.group(1).replace(",", "")
+            if _val.isdigit() and int(_val) > 1:
+                result["Sample_Size"] = _val
+                break
+
+    # Evidence Strength
+    ev_map = [
+        (r'\b(systematic review|meta.?analysis)\b', "High"),
+        (r'\b(RCT|randomis?ed controlled)\b', "High"),
+        (r'\b(cohort|longitudinal)\b', "Moderate"),
+        (r'\b(cross.?sectional|survey)\b', "Moderate"),
+        (r'\b(case.?control)\b', "Moderate"),
+        (r'\b(qualitative|case study|case report)\b', "Low"),
+    ]
+    for _pat, _level in ev_map:
+        if re.search(_pat, text, re.IGNORECASE):
+            result["Evidence_Strength"] = _level
+            break
+
+    return result
+
+
 def render_vosviewer_section(df, session_key):
     """Render VOSviewer bibliometric network section for included/extracted studies."""
     st.markdown("#### \U0001f52c Bibliometric Network Map \u2014 VOSviewer (Included Studies)")
@@ -1432,10 +1664,11 @@ columns) and define your extraction schema below. No coding required.
 
         st.info(f"**Active schema:** {', '.join(schema_fields)}")
 
-        # ── LLM Auto-Extraction ───────────────────────────────────────────────
-        st.markdown("""**Step 1 — Auto-extract fields using AI**  
-Click the button below to let the AI read each study's abstract and fill in the
-schema fields automatically. You can then review, correct, and download the result.
+        # ── Auto-Extraction ───────────────────────────────────────────────────
+        st.markdown("""**Step 1 — Auto-extract fields**  
+Choose an extraction method below. The **AI** method uses an OpenAI API key for
+higher accuracy; the **NLP** method uses spaCy + regex and requires no API key.
+You can then review, correct, and download the result.
 """)
 
         byod_extracted_key = f"byod_extracted_df_{schema_choice}"
@@ -1542,6 +1775,54 @@ schema fields automatically. You can then review, correct, and download the resu
                         st.warning(f"⚠️ Extraction complete with {len(errors)} error(s): {errors[:3]}")
                     else:
                         st.success(f"✅ Extraction complete — {len(extracted_df)} studies.")
+
+        # ── NLP Extraction (no API key) ───────────────────────────────────────────
+        if st.button("🔬 Extract with NLP (no API key)", key="byod_run_nlp_extraction",
+                     help="Uses spaCy named-entity recognition + regex patterns. "
+                          "No OpenAI API key required."):
+            extract_fields_nlp = [f for f in schema_fields if f not in ("Title", "Year")]
+            rows_out_nlp = []
+            errors_nlp = []
+            progress_nlp = st.progress(0, text="Extracting with NLP…")
+            total_nlp = len(df)
+
+            for idx_nlp, (_, row_nlp) in enumerate(df.iterrows()):
+                title_nlp = str(row_nlp.get("Title", "") or "")
+                abstract_nlp = str(row_nlp.get("Abstract", "") or "")
+                try:
+                    if schema_choice == "PICO (Health Sciences)":
+                        extracted_nlp = _nlp_extract_pico(title_nlp, abstract_nlp)
+                    elif schema_choice == "Thematic Synthesis (Social Sciences / Humanities)":
+                        extracted_nlp = _nlp_extract_thematic(title_nlp, abstract_nlp)
+                    else:
+                        # Custom schema: use PICO extraction as best-effort base,
+                        # then map available keys; unknown fields default to "N/A"
+                        _base = _nlp_extract_pico(title_nlp, abstract_nlp)
+                        extracted_nlp = {f: _base.get(f, "N/A") for f in extract_fields_nlp}
+                except Exception as _e_nlp:
+                    extracted_nlp = {f: "N/A" for f in extract_fields_nlp}
+                    errors_nlp.append(f"Row {idx_nlp}: {_e_nlp}")
+
+                out_row_nlp = {"Title": title_nlp, "Year": row_nlp.get("Year", "")}
+                # Only include fields that are in the schema
+                for _f in extract_fields_nlp:
+                    out_row_nlp[_f] = extracted_nlp.get(_f, "N/A")
+                # Carry over Abstract and Concepts for keyword network
+                out_row_nlp["Abstract"] = abstract_nlp
+                out_row_nlp["Concepts"] = str(row_nlp.get("Concepts", "") or "")
+                rows_out_nlp.append(out_row_nlp)
+                progress_nlp.progress((idx_nlp + 1) / total_nlp,
+                                      text=f"Extracting with NLP… {idx_nlp+1}/{total_nlp}")
+
+            progress_nlp.empty()
+            extracted_df_nlp = pd.DataFrame(rows_out_nlp)
+            st.session_state[byod_extracted_key] = extracted_df_nlp
+            if errors_nlp:
+                st.warning(f"⚠️ NLP extraction complete with {len(errors_nlp)} error(s): "
+                           f"{errors_nlp[:3]}")
+            else:
+                st.success(f"✅ NLP extraction complete — {len(extracted_df_nlp)} studies. "
+                           f"Review and correct values as needed.")
 
         # Show extracted table (from session state or from uploaded CSV that already has fields)
         if byod_extracted_key in st.session_state:
