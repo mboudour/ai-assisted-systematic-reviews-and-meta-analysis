@@ -277,16 +277,29 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
 
     # ── Build node / edge data as JSON ────────────────────────────────────────
     import json as _json
+
+    # Pre-compute degree (number of distinct neighbours) for each node
+    _degree: dict = {}
+    for a, b, _ in edges:
+        _degree[a] = _degree.get(a, 0) + 1
+        _degree[b] = _degree.get(b, 0) + 1
+
     nodes_data = []
     for kw in nodes_in_edges:
         f = freq.get(kw, 1)
+        deg = _degree.get(kw, 0)
         size = max(10, min(45, 8 + f * 2))
         cid = partition.get(kw, 0)
         color = community_color(kw)
         if louvain_ok:
-            tooltip = f"<b>{kw}</b><br/>Frequency: {f}<br/>Community: {cid + 1}"
+            tooltip = (
+                f"<b>{kw}</b><br/>"
+                f"Frequency: {f}<br/>"
+                f"Degree: {deg}<br/>"
+                f"Community: {cid + 1}"
+            )
         else:
-            tooltip = f"<b>{kw}</b><br/>Frequency: {f}"
+            tooltip = f"<b>{kw}</b><br/>Frequency: {f}<br/>Degree: {deg}"
         nodes_data.append({
             "id": kw, "label": kw, "title": tooltip,
             "size": size,
