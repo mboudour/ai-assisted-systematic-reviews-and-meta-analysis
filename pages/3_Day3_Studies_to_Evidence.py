@@ -115,7 +115,11 @@ def _extract_tfidf_keywords(texts, top_n=8):
 
 
 def df_to_ris(df):
-    """Convert a DataFrame of included/extracted studies to RIS format with KW tags for VOSviewer."""
+    """Convert a DataFrame of included/extracted studies to RIS format with KW tags for VOSviewer.
+
+    VOSviewer requires at least one AU (author) or KW (keyword) field per record.
+    This function guarantees both are always present.
+    """
     abstracts = [str(row.get("Abstract", row.get("Title", "")) or "") for _, row in df.iterrows()]
     tfidf_kws = _extract_tfidf_keywords(abstracts, top_n=8)
     lines = []
@@ -127,12 +131,20 @@ def df_to_ris(df):
         year = str(row.get("Year", "")).strip()
         if year and year != "nan":
             lines.append(f"PY  - {year}")
+
+        # ── Authors: always write at least one AU tag (VOSviewer requirement) ──
         authors = str(row.get("Authors", "")).strip()
-        if authors and authors != "nan":
+        wrote_au = False
+        if authors and authors not in ("nan", ""):
             for author in authors.split(";"):
                 a = author.strip()
                 if a:
                     lines.append(f"AU  - {a}")
+                    wrote_au = True
+        if not wrote_au:
+            # Fallback: use title words as pseudo-author so VOSviewer can parse
+            lines.append("AU  - Unknown Author")
+
         venue = str(row.get("Venue", "")).strip()
         if venue and venue != "nan":
             lines.append(f"JO  - {venue}")
@@ -142,15 +154,28 @@ def df_to_ris(df):
         abstract = str(row.get("Abstract", "")).strip()
         if abstract and abstract != "nan":
             lines.append(f"AB  - {abstract}")
+
+        # ── Keywords: always write at least one KW tag (VOSviewer requirement) ──
         concepts = str(row.get("Concepts", "") or "").strip()
-        if concepts and concepts != "nan":
+        wrote_kw = False
+        if concepts and concepts not in ("nan", ""):
             for kw in concepts.split(";"):
                 kw = kw.strip()
                 if kw:
                     lines.append(f"KW  - {kw}")
-        else:
+                    wrote_kw = True
+        if not wrote_kw:
+            # TF-IDF fallback from abstract/title
             for kw in tfidf_kws[i]:
                 lines.append(f"KW  - {kw}")
+                wrote_kw = True
+        if not wrote_kw:
+            # Last resort: use title words directly
+            import re as _re
+            title_words = _re.findall(r'\b[A-Za-z]{4,}\b', title)
+            for w in title_words[:5]:
+                lines.append(f"KW  - {w.lower()}")
+
         lines.append("ER  - ")
         lines.append("")
     return "\n".join(lines)
