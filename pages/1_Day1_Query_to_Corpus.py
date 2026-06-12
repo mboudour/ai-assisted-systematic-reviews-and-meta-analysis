@@ -328,8 +328,33 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
                      color={"opacity": opacity})
 
     legend_note = f" ({num_communities} Louvain communities detected)" if louvain_ok else ""
-    # Inject a small legend note into the HTML
+    # ── Post-process the generated HTML ─────────────────────────────────────
     html = net.generate_html()
+
+    # Fix 1: pyvis always emits <script src="lib/bindings/utils.js"> which is a
+    # *local* relative path that does not exist inside the Streamlit iframe
+    # sandbox — this causes a silent JS load error that prevents drawGraph()
+    # from ever executing, resulting in a completely empty canvas.
+    # Solution: inline the utils.js content directly.
+    import pathlib as _pl
+    _utils_path = _pl.Path(__file__).resolve().parent.parent / "utils_inline.js"
+    if not _utils_path.exists():
+        # Fall back to pyvis package copy
+        import pyvis as _pyvis_mod
+        _utils_src = (
+            _pl.Path(_pyvis_mod.__file__).parent
+            / "templates" / "lib" / "bindings" / "utils.js"
+        )
+        _utils_js = _utils_src.read_text() if _utils_src.exists() else ""
+    else:
+        _utils_js = _utils_path.read_text()
+
+    html = html.replace(
+        '<script src="lib/bindings/utils.js"></script>',
+        f'<script type="text/javascript">\n{_utils_js}\n</script>',
+    )
+
+    # Fix 2: inject legend note
     html = html.replace(
         "</body>",
         f'<div style="position:absolute;bottom:8px;left:12px;font-size:11px;'
