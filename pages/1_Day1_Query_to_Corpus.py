@@ -371,13 +371,13 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
   Node colour = Louvain community{legend_note}. Node size = keyword frequency.
 </div>
 <script type="text/javascript">
-document.addEventListener('DOMContentLoaded', function() {{
-  // Store tooltip HTML in _tooltip field; keep title undefined so vis.js
-  // does NOT try to render its own (broken) tooltip.
+(function() {{
+  // Script runs synchronously at end of <body> — DOM is already ready.
+  // Store tooltip HTML strings in a lookup; leave node.title undefined so
+  // vis.js does NOT attempt its own (broken) tooltip rendering.
   var nodesRaw = {nodes_json};
   var edgesRaw = {edges_json};
 
-  // Move tooltip HTML to _tooltip; clear title so vis.js ignores it
   var nodeTooltip = {{}};
   nodesRaw.forEach(function(n) {{
     if (n.title) {{ nodeTooltip[n.id] = n.title; n.title = undefined; }}
@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {{
   var edges = new vis.DataSet(edgesRaw);
   var container = document.getElementById('mynetwork');
 
-  // Custom tooltip element
+  // Create custom tooltip div and append to container
   var tip = document.createElement('div');
   tip.style.cssText = [
     'position:absolute', 'display:none', 'pointer-events:none',
@@ -400,7 +400,6 @@ document.addEventListener('DOMContentLoaded', function() {{
     'max-width:260px', 'box-shadow:2px 2px 6px rgba(0,0,0,.15)',
     'z-index:9999', 'font-family:sans-serif'
   ].join(';');
-  container.style.position = 'relative';
   container.appendChild(tip);
 
   var options = {{
@@ -417,40 +416,30 @@ document.addEventListener('DOMContentLoaded', function() {{
     }},
     nodes: {{ font: {{ size: 13, color: '#222222' }}, borderWidth: 2, borderWidthSelected: 3 }},
     edges: {{ color: {{ opacity: 0.4 }}, smooth: {{ type: 'continuous' }} }},
-    interaction: {{ hover: true, tooltipDelay: 200 }}
+    interaction: {{ hover: true, tooltipDelay: 150 }}
   }};
 
   var network = new vis.Network(container, {{ nodes: nodes, edges: edges }}, options);
 
-  // Show custom tooltip on node/edge hover
-  network.on('hoverNode', function(params) {{
-    var html = nodeTooltip[params.node];
+  function showTip(html, event) {{
     if (!html) return;
-    var pos = params.event.center || params.event;
+    var pos = (event && (event.center || event.pointer && event.pointer.DOM)) || {{x:0, y:0}};
     var rect = container.getBoundingClientRect();
     tip.innerHTML = html;
     tip.style.display = 'block';
-    var x = (pos.x || 0) - rect.left + 12;
-    var y = (pos.y || 0) - rect.top - 10;
-    // keep inside container
-    if (x + 270 > container.offsetWidth) x = x - 280;
+    var x = (pos.x || 0) - rect.left + 14;
+    var y = (pos.y || 0) - rect.top  - 14;
+    if (x + 270 > container.offsetWidth) x = x - 284;
     if (y < 0) y = 4;
     tip.style.left = x + 'px';
     tip.style.top  = y + 'px';
-  }});
-  network.on('blurNode',  function() {{ tip.style.display = 'none'; }});
-  network.on('hoverEdge', function(params) {{
-    var html = edgeTooltip[params.edge];
-    if (!html) return;
-    var pos = params.event.center || params.event;
-    var rect = container.getBoundingClientRect();
-    tip.innerHTML = html;
-    tip.style.display = 'block';
-    tip.style.left = ((pos.x || 0) - rect.left + 12) + 'px';
-    tip.style.top  = ((pos.y || 0) - rect.top  - 10) + 'px';
-  }});
-  network.on('blurEdge',  function() {{ tip.style.display = 'none'; }});
-}});
+  }}
+
+  network.on('hoverNode', function(p) {{ showTip(nodeTooltip[p.node], p.event); }});
+  network.on('blurNode',  function()  {{ tip.style.display = 'none'; }});
+  network.on('hoverEdge', function(p) {{ showTip(edgeTooltip[p.edge], p.event); }});
+  network.on('blurEdge',  function()  {{ tip.style.display = 'none'; }});
+}})();
 </script>
 </body>
 </html>"""
