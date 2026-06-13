@@ -88,8 +88,11 @@ A manuscript describing the workshope is available here:
 ## Workshop Slides
 
 - [Day 1: From Query to Corpus](./slides/day1_slides.pdf)
+- [Day 1 additional slides](./slides/additional_slides_day1.pdf)
 - [Day 2: From Corpus to Included Studies](./slides/day2_slides.pdf)
+- [Day 2 additional slides](./slides/additional_slides_day2.pdf)
 - [Day 3: From Studies to Evidence](./slides/day3_slides.pdf)
+- [Day 3 additional slides](./slides/additional_slides_day3.pdf)
 
 ---
 
