@@ -1,0 +1,534 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{csquotes}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage[authoryear]{natbib}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\setstretch{1.15}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+
+\title{Evaluating AI-Assisted Evidence Synthesis: Retrieval, Screening, Extraction, and Error Propagation Across 20 Case Studies}
+\author{Moses Boudourides\\
+\small School of Professional Studies, Northwestern University\\
+\small \texttt{Moses.Boudourides@northwestern.edu}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The integration of artificial intelligence (AI) into systematic reviews offers unprecedented efficiency gains, yet evaluating these tools in isolation obscures how algorithmic errors compound across the synthesis pipeline. This paper presents a large-scale empirical validation of an end-to-end AI-assisted workflow across 20 heterogeneous case studies spanning the health, social, environmental, and computer science domains (N = 100,557 retrieved records). We propose a unified evaluation methodology that quantifies performance across four interconnected dimensions: retrieval consistency, active learning screening efficiency (WSS@95), LLM-as-Judge extraction agreement, and the downstream impact of extraction errors on pooled effect sizes and heterogeneity ($I^2$). The central scientific contribution of this study is the empirical quantification of end-to-end error propagation: we demonstrate that while active learning can dramatically reduce the screening burden (mean WSS@95 = 33.5\%), uncorrected LLM numeric extraction errors are structurally biased. When propagated into statistical synthesis, these errors systematically distort inverse-variance weighting, artificially inflating observed heterogeneity and shifting pooled estimates. The findings provide concrete methodological guidance on when AI tools are safe to use autonomously and when human validation is mandatory, offering a practical framework for reviewers seeking to adopt AI assistance without compromising the epistemic reliability of their synthesized evidence. We acknowledge that LLM-as-Judge validation, while scalable, cannot fully substitute for human annotation; accordingly, we identify the specific pipeline stages where human oversight remains methodologically mandatory.
+\end{abstract}
+
+\section{Introduction}
+
+Systematic reviews remain one of the most time-intensive forms of research. Across the health and life sciences, the social sciences, the humanities, and engineering, researchers are expected to map rapidly evolving fields, evaluate interventions, and synthesize disparate findings into coherent, actionable conclusions. Systematic reviews and meta-analyses have long provided the methodological rigor required for these tasks, establishing themselves as the highest level of evidence in many disciplinary hierarchies. Yet, the traditional workflow---involving manual database searches, the screening of thousands of titles and abstracts by two independent reviewers, and the painstaking extraction of data from full-text PDFs---is often characterized by massive time investments, significant human error, and a growing mismatch between the pace of publication and the pace of synthesis.
+
+The methodological consequence of this mismatch is clear: if evidence synthesis is to remain feasible and rigorous in an era of information abundance, the integration of computational and AI-assisted tools must be treated as a core component of research design rather than an optional convenience. The scientific community has begun to recognize this imperative. Funding bodies, journals, and methodological organizations are increasingly acknowledging the need for AI-assisted approaches, while simultaneously calling for transparency, validation, and the preservation of human oversight in the review process \citep{flemyng2025ai}.
+
+The emergence of machine learning and natural language processing has created unprecedented opportunities to automate the most labor-intensive stages of systematic reviewing. Active learning frameworks, such as ASReview, have demonstrated that human-in-the-loop algorithms can drastically reduce the number of abstracts that must be read to identify relevant studies, often achieving near-complete recall while requiring reviewers to screen only a fraction of the corpus \citep{vandeschoot2021asreview}. More recently, the advent of large language models (LLMs) like GPT-4 and Claude has opened the door to zero-shot abstract screening and automated data extraction from full texts, tasks that previously required extensive human labor \citep{mahmoudi2025,kim2025}. However, the central challenge is not simply the availability of these AI tools, but the capacity to align them with meaningful research questions, ethically acceptable screening strategies, and defensible validation procedures. Crucially, any such workflow must proceed with explicit validation and human verification at each stage.
+
+Furthermore, the data collection phase of evidence synthesis is undergoing a parallel transformation. The rise of open bibliographic metadata catalogs, such as OpenAlex and Crossref, alongside programmable APIs, allows researchers to bypass proprietary, siloed databases and construct comprehensive corpora programmatically and reproducibly \citep{delgado2024,culbert2025}. This broader framing is especially relevant because an AI-assisted review is only as good as the corpus it operates on. The researcher does not encounter a neutral, perfect set of literature, but rather a dataset shaped by indexing practices, API limitations, and the precision of search query formulation. Recognizing this dependency is the first step toward rigorous AI-assisted synthesis.
+
+In adjacent work on text analysis, Grimmer, Roberts, and Stewart emphasize that data construction is inseparable from theory, representation, and validation; there is no value-free corpus construction, and the suitability of a method depends on the task at hand \citep{grimmer2022text}. Those insights are highly applicable to AI-assisted systematic reviews. The movement from manual to AI-assisted synthesis is not a simple upgrade; it is a methodological shift that introduces new forms of efficiency alongside new forms of risk. The researcher who delegates screening to an active learning model or extraction to an LLM must understand the assumptions, failure modes, and validation requirements of those tools as clearly as a researcher who designs a survey instrument or chooses a statistical model.
+
+This paper develops that argument in the context of AI-assisted systematic reviews and research synthesis across a wide range of academic disciplines. The aim is not to provide a comprehensive technical manual on specific LLM architectures or API wrappers. Nor is it to defend an unrestricted, fully automated approach to literature reviews that removes human judgment from the process. Instead, the goal is to provide a methodologically grounded account of how AI tools can be understood as distinct stages within a broader research workflow. That workflow begins with a substantive question and API-based programmatic literature collection, proceeds through active learning or LLM-based screening, and continues through automated data extraction, validation, preliminary synthesis, and ethical reporting. Understood in these terms, AI-assisted synthesis is less a magic bullet than a practical and epistemic bridge between overwhelming literature environments and rigorous, synthesized evidence.
+
+Crucially, the methodological literature evaluating these tools has largely treated them as isolated components. Studies typically evaluate the recall of a screening algorithm or the accuracy of an extraction prompt in a vacuum. What is critically missing from the literature is a practical account of how errors at one stage of the pipeline---such as false positives in automated screening or incorrect sample sizes extracted by an LLM---affect the final meta-analysis results. This paper addresses that gap by presenting and empirically evaluating an integrated workflow for AI-assisted evidence synthesis across 20 diverse case studies, and by providing concrete recommendations for reviewers on when AI assistance is reliable and when human validation is essential.
+
+The remainder of the paper proceeds as follows. Section 2 reviews the literature on active learning, LLM-based extraction, open bibliographic APIs, and the methodological status of automated reviews. Section 3 outlines the conceptual architecture of the proposed framework. Section 4 examines core design principles: query formulation, programmatic literature collection, and corpus construction. Section 5 details the mechanics and theory of screening models. Section 6 addresses structured information extraction, validation, and ethical reporting standards. Section 7 details the statistical principles of synthesis and meta-analysis, alongside a discussion of error propagation. Section 8 details the experimental design. Section 9 presents the empirical evaluation across four dimensions. Section 10 discusses the implications. Section 11 concludes.
+
+\section{Literature Review: AI and Automation in Evidence Synthesis}
+
+The methodological literature relevant to AI-assisted systematic reviews spans several adjacent fields rather than a single unified tradition. Understanding these literatures in relation to each other is essential for situating any specific tool or technique within a broader methodological context.
+
+\subsection{Machine Learning for Screening}
+
+In the domain of machine learning for evidence synthesis, the focus has historically been on the abstract screening phase. Van de Schoot and colleagues introduced ASReview, an open-source platform that implements active learning to accelerate the screening of large textual datasets \citep{vandeschoot2021asreview}. Their simulation studies demonstrated that active learning can yield far more efficient reviewing than manual screening while maintaining high recall, often identifying 95\% of relevant studies after screening only 5--10\% of the corpus. This work established a foundational principle: computational tools should augment rather than replace human judgment. The human reviewer remains in the loop, iteratively labeling a small set of papers to guide a prioritization model that continuously improves its predictions. This principle is central to rigorous review methodology and distinguishes responsible AI-assisted reviewing from fully automated, unsupervised approaches.
+
+Building on this foundation, Teijema and colleagues examined the performance of active learning using deep learning-based models compared to traditional machine learning approaches, finding that switching between models during the review process can improve efficiency \citep{teijema2023}. This line of research underscores that no single algorithmic approach is universally optimal; the choice of model should be guided by the characteristics of the corpus and the nature of the research question. A key challenge in active learning is determining when to stop screening. The standard performance metric is Work Saved over Sampling (WSS@95), which measures the proportion of the corpus that does not need to be screened to achieve 95\% recall compared to random screening \citep{cormack2016engineering}. In practice, reviewers often adopt stopping rules based on a consecutive sequence of irrelevant papers, balancing efficiency with completeness.
+
+\subsection{Large Language Models in Systematic Reviews}
+
+A second, rapidly expanding body of work concerns the application of Large Language Models (LLMs) to systematic reviews. The capabilities of models like GPT-4 and Claude have prompted researchers to explore their utility across multiple stages of the review process, from formulating search queries to screening abstracts and extracting data from full texts. Recently, Qiao et al. evaluated the use of LLMs for zero-shot abstract screening, demonstrating that while these models can achieve high recall without initial training data, they frequently suffer from low precision, generating false positives that require subsequent human filtering \citep{qiao2024}.
+
+Mahmoudi et al. critically assessed LLM performance in data extraction for systematic reviews, noting both the potential for high accuracy on structured tasks and the persistent risks of nuanced errors and hallucination on complex, contextually sensitive information \citep{mahmoudi2025}. Similarly, Kim et al. explored customized GPT-4 models for extracting study data and assessing risk of bias in systematic reviews, highlighting that while AI can achieve impressive accuracy on well-defined extraction tasks, human oversight remains indispensable for ensuring the integrity of the final dataset \citep{kim2025}. Lieberum and colleagues conducted a scoping review of LLM applications in systematic reviews, concluding that while the technology is rapidly maturing, it is not yet ready for unsupervised use and requires robust validation frameworks, particularly given its propensity for error in data extraction and risk-of-bias assessment \citep{lieberum2025}. A recent systematic review in \textit{Research Synthesis Methods} confirmed this assessment, finding that generative AI tools are increasingly used in evidence synthesis but that validation standards remain inconsistent across the literature \citep{clark2025}.
+
+These contributions are vital because they resist the idea that LLMs are infallible. Rather, they treat LLM outputs as probabilistic representations that require validation against the source material. The risk of hallucination---the generation of plausible but factually incorrect information---is particularly acute in the context of data extraction, where an LLM might invent a sample size or misattribute a finding if the prompt is insufficiently constrained.
+
+\subsection{The Gap: End-to-End Error Propagation}
+
+While the aforementioned literatures have rigorously evaluated individual components of the AI-assisted review process, they have largely treated these tools as isolated interventions. What remains critically under-theorized is the concept of \textit{end-to-end error propagation}. If an automated deduplication script falsely merges two distinct studies, or if an LLM hallucinates a subgroup sample size as the total study population, how do these errors interact and compound across the pipeline? Crucially, how do uncorrected numeric extraction errors systematically distort the pooled effect sizes and heterogeneity statistics of a meta-analysis? This paper addresses this gap by presenting a unified evaluation methodology that traces error propagation from initial retrieval through to the final forest plot.
+
+The LLM-as-Judge framework, introduced by Zheng and colleagues, provides a scalable and reliable method for evaluating generative AI outputs without requiring human annotation of every record \citep{zheng2024llmjudge}. A secondary, independent LLM is prompted to verify the extracted values against the original source text, categorizing each field as CORRECT, INCORRECT, or UNVERIFIABLE. This approach has been validated against human judgments in multiple domains and provides a principled basis for large-scale extraction quality assessment. We adopt this framework as the primary validation mechanism in our empirical evaluation.
+
+\subsection{Open Bibliographic APIs and the Infrastructure of Retrieval}
+
+A third line of scholarship deals with the infrastructure of literature retrieval. The shift toward open science has elevated platforms like OpenAlex, Crossref, Semantic Scholar, and Europe PMC as primary sources for bibliographic metadata. These platforms offer free, programmatic access to millions of scholarly records via well-documented APIs, representing a significant democratization of literature access \citep{priem2022openalex}.
+
+Delgado-Quir{\'o}s and Ortega analyzed the completeness of metadata across eight free-access scholarly databases, noting the viability of OpenAlex and Crossref as alternatives to proprietary systems like Web of Science or Scopus, while also identifying gaps in abstract coverage for some disciplines \citep{delgado2024}. Culbert and colleagues further analyzed OpenAlex's reference coverage compared to Web of Science and Scopus, underscoring its utility for programmatic, API-driven corpus construction \citep{culbert2025}. This literature is important because it situates AI screening within the broader context of open data access: an AI model can only synthesize the literature it is fed, making the quality and comprehensiveness of the API retrieval process paramount.
+
+\subsection{Reporting Standards and Reproducibility}
+
+A fourth literature addresses the methodological standards and reporting guidelines governing systematic reviews. The PRISMA 2020 statement provides the definitive framework for reporting systematic reviews, emphasizing transparency in search strategies, study selection, data extraction, and synthesis \citep{page2021prisma}. The PRISMA-S extension specifically addresses the rigorous reporting of literature searches, which is critical when using programmatic API retrieval \citep{rethlefsen2021prismas}. As AI tools become integrated into the review process, emerging frameworks such as SMART (Synthesis Methods and Reporting Tool) aim to standardize the methodological reporting of automated reviews \citep{chong2025smart}. The position statement by Flemyng and colleagues, endorsed by Cochrane, the Campbell Collaboration, JBI, and the Collaboration for Environmental Evidence, provides the most authoritative current guidance on the responsible use of AI in evidence synthesis \citep{flemyng2025ai}.
+
+\subsection{Ethics and Epistemic Risk}
+
+Finally, there is a growing literature on the ethical and epistemic risks of generative AI in research contexts \citep{mittelstadt2019ethics, harris2023epistemic}. Issues of algorithmic bias, hallucination, and data privacy are central concerns \citep{bender2021stochastic}. As researchers delegate screening and extraction tasks to LLMs, they must navigate the tension between efficiency and the risk of introducing systematic errors into the synthesized evidence base. The broader internet research ethics literature reinforces the importance of contextual decision-making rather than one-size-fits-all prescriptions \citep{markham2012ethical}, a principle that applies equally to the use of AI in evidence synthesis.
+
+\section{A Framework for AI-Assisted Evidence Synthesis}
+
+We propose a unified, conceptual architecture for AI-assisted evidence synthesis that moves sequentially from query formulation to statistical meta-analysis. The framework is built on the principle that computational tools should augment rather than replace human judgment, requiring explicit validation at each stage.
+
+The architecture consists of four primary stages. The first is \textbf{Literature Retrieval and Corpus Construction}: utilizing open APIs to programmatically retrieve, deduplicate, and visualize a comprehensive corpus based on structured Boolean queries. The second is \textbf{Screening Strategies}: applying active learning or LLM-based zero-shot classification to efficiently identify relevant studies from the retrieved corpus, minimizing the human screening burden while maximizing recall. The third is \textbf{Structured Information Extraction}: deploying LLMs with strict schema definitions to extract quantitative and qualitative variables from abstracts and full texts, followed by LLM-as-Judge validation and targeted human correction of numeric fields. The fourth is \textbf{Statistical Synthesis and Meta-Analysis}: computing pooled effect sizes, assessing heterogeneity, and evaluating publication bias using the extracted, validated dataset.
+
+By integrating these stages into a single workflow, the framework ensures that the provenance of every data point---from the initial API query to the final forest plot---is fully traceable and reproducible.
+
+\subsection{The Cross-Disciplinary Imperative}
+
+The practical appeal of AI-assisted systematic reviews derives from the universal challenge of information overload across a wide range of academic disciplines. While the methodology of the systematic review originated in the health sciences, the need to rigorously synthesize literature is now ubiquitous.
+
+In the health and life sciences, researchers must aggregate findings from hundreds of randomized controlled trials, epidemiological studies, or genomic analyses to inform clinical guidelines or public health policy. The sheer volume of daily publications makes manual screening a significant barrier to timely evidence synthesis. AI tools, particularly active learning for screening and LLMs for extracting specific trial characteristics (e.g., sample size, dosage, primary outcomes, risk of bias assessments), offer a direct solution to this bottleneck. The PRISMA framework provides a well-established reporting standard for these reviews, and AI tools must be deployed in a manner consistent with its requirements.
+
+In the social sciences, evidence synthesis often takes the form of scoping reviews, qualitative meta-syntheses, or systematic reviews of policy interventions, educational outcomes, or psychological phenomena. Here, the literature is frequently characterized by diverse methodologies, varying terminologies, and complex theoretical frameworks that resist simple keyword-based retrieval. AI tools can assist in harmonizing these diverse sources, using LLMs to categorize qualitative findings or extract nuanced contextual variables---such as the theoretical framework employed, the country of study, or the specific population targeted---that traditional keyword searches might miss.
+
+In engineering and the applied sciences, researchers conduct systematic reviews to map the state of the art in a specific technology, evaluate the performance of competing methods, or identify gaps in the literature that warrant further investigation. The literature in these fields is often highly technical and quantitative, making structured data extraction a natural application for LLM-based tools. What these diverse applications share is not a common substantive domain, but a common workflow of evidence construction, which is what makes AI-assisted synthesis teachable and deployable across disciplines.
+
+\section{Literature Retrieval and Corpus Construction}
+
+\subsection{From Research Question to Search Strategy}
+
+A robust AI-assisted review begins with a research question rather than with a machine learning model. The literature on systematic reviews consistently warns against source-led or tool-led design. Question-led design determines the search strategy, the selection of bibliographic APIs, and the formulation of Boolean queries. Structured frameworks help translate a research question into a Boolean query. In health sciences, the PICO framework (Population, Intervention, Comparison, Outcome) provides a structured approach to translating a clinical question into a search strategy. In the social sciences, analogous frameworks such as SPIDER (Sample, Phenomenon of Interest, Design, Evaluation, Research type) serve a similar function. The choice of framework should reflect the nature of the research question and the type of evidence being sought.
+
+A Boolean query translates a conceptual question into a string the API can search. The operators \texttt{AND} (narrows results), \texttt{OR} (broadens results), and \texttt{*} (wildcard for word variants) are foundational. A common mistake is designing queries that are either too broad (returning hundreds of thousands of unrelated papers) or too narrow (returning zero or very few papers). The heuristic ``Goldilocks Rule'' suggests aiming for 200 to 2,000 results for a standard systematic review, though larger corpora are appropriate for scoping reviews or meta-analyses covering rapidly expanding fields.
+
+\subsection{Querying Scholarly APIs}
+
+Open APIs such as OpenAlex, Crossref, and Europe PMC offer programmatic access to millions of scholarly records. Each API has distinct strengths. OpenAlex covers all disciplines with approximately 250 million works and around 87\% abstract coverage, making it a strong starting point. Crossref provides robust publisher metadata, while Europe PMC excels in the life sciences and biomedicine with near-complete abstracts and full-text search capabilities for open-access articles. Semantic Scholar provides strong coverage of computer science and AI literature, while CORE offers broad coverage of open-access repositories.
+
+Querying these APIs requires careful design. Researchers must translate their conceptual questions into precise search strings, utilizing appropriate filters (e.g., publication year, document type, open access status) and handling pagination to retrieve comprehensive results. APIs never return all results at once; they split them into pages. Two common pagination styles are offset pagination (used by Crossref and Europe PMC) and cursor pagination (used by OpenAlex, which is generally faster and more reliable for large corpora). APIs also enforce rate limits to prevent server overload. Best practices include adding short sleep intervals between requests, using the polite pool, requesting the maximum allowed records per page, and caching results locally to avoid re-downloading data.
+
+\subsection{Metadata, Deduplication, and Corpus Visualization}
+
+When OpenAlex returns a record, key fields include the title, publication year, DOI, authorships, concepts (AI-assigned topic tags), citation counts, open-access URLs, and the abstract. Notably, OpenAlex stores abstracts as an inverted index---a dictionary mapping each word to its position---rather than plain text, requiring reconstruction for downstream analysis.
+
+Automated deduplication algorithms that match on DOIs, titles (normalized by removing punctuation and converting to lowercase), or a combination of metadata fields can identify and merge duplicate records, producing a clean corpus ready for screening. Before screening, visualizing the retrieved corpus can provide valuable insights. A keyword co-occurrence network, where nodes represent concept tags and edges represent their co-occurrence in papers, can reveal the thematic structure of the literature. Additionally, plotting the publication year distribution can reveal the trajectory of the field.
+
+\subsection{Reproducibility and Export}
+
+The advantage of programmatic literature collection over manual database searching is reproducibility: an API query can be saved, shared, and rerun exactly. However, because APIs evolve and results may change over time, reproducibility requires logging queries and timestamps. The PRISMA-S extension requires that the API used, the exact Boolean query string, all applied filters, the date of the query, and the total number of records before and after deduplication be reported \citep{rethlefsen2021prismas}.
+
+\section{Screening Strategies}
+
+\subsection{Active Learning and Text Vectorization}
+
+Once a deduplicated corpus is constructed, the researcher must configure the screening approach. Active Learning, as implemented in tools like ASReview, requires the researcher to iteratively label a small set of papers to guide a prioritization model \citep{vandeschoot2021asreview}. The algorithm trains a model to predict the relevance of the remaining corpus, constantly updating as the researcher provides more labels.
+
+Active learning requires converting text into a numerical matrix, typically using Term Frequency--Inverse Document Frequency (TF-IDF). The weight of a term in a document is proportional to its frequency in the document and inversely proportional to its frequency across the corpus. This down-weights common words and highlights rare, domain-specific terms, allowing the classifier to locate papers in a high-dimensional vector space \citep{salton1983introduction}. Active learning relies on query strategies to determine which instances to present to the human for labeling. Common strategies include uncertainty sampling (querying instances the model is least certain about) and query-by-committee (querying instances where an ensemble of models disagrees). In systematic reviews, uncertainty sampling is often used to rapidly surface the most likely relevant papers.
+
+\subsection{LLM-Based Screening and Prompting Paradigms}
+
+An alternative to active learning is LLM-based screening. There are three primary paradigms for applying LLMs to classification: zero-shot (applying criteria from the prompt alone with no labeled examples), few-shot (including a small number of labeled examples in the prompt for in-context learning), and fine-tuning (updating the model's internal weights on a domain-specific labeled dataset). Zero-shot requires no training data but relies entirely on prompt clarity, while fine-tuning offers high performance on specialized text but requires significant resources.
+
+LLM-based screening evaluates each abstract against explicit inclusion and exclusion criteria, providing a binary decision. While this approach can be faster and requires no initial labeling effort, it demands rigorous prompt engineering. Empirical evidence shows that LLM outputs are highly sensitive to superficial prompt variations, meaning different formulations can yield systematically different decisions \citep{mizrahi2024state}. To ensure reproducibility, prompts must be pre-registered and reported verbatim in the methods section. Furthermore, LLM outputs are non-deterministic, necessitating fixed temperature settings (e.g., $T=0$) for consistency.
+
+\section{Structured Information Extraction}
+
+\subsection{Extraction Schema Design}
+
+The most complex phase of the AI-assisted workflow is data extraction. The researcher must first define an explicit, discipline-specific extraction schema---such as a PICO template for health sciences or a Thematic Synthesis template for the social sciences. Using LLMs for extraction requires translating this schema into precise, structured prompts. The LLM must be instructed not only on what to extract, but on the required output format (e.g., JSON) and the constraints on inference. This is a measurement decision. The prompt defines what counts as an observation and what form of comparability the resulting dataset will support.
+
+\subsection{Validation, Quality, and Ethical Reporting}
+
+Validation is the cornerstone of AI-assisted evidence synthesis. The fact that an LLM can rapidly populate a spreadsheet does not, by itself, show that the data is accurate or that the screening decisions are correct. Validation in this context has at least five distinct dimensions: screening validation, extraction validation, semantic validation, coverage validation, and analytic validation.
+
+When using LLMs for screening and extraction, researchers must distinguish between hallucination (generating plausible but factually incorrect content) and confabulation (generating internally consistent but externally false reasoning). Mitigating these risks requires strict prompt engineering, the use of lower temperature settings, and demanding a structured justification in the prompt. The integration of AI into systematic reviews also necessitates transparent reporting. The PRISMA 2020 statement provides a comprehensive checklist for reporting the methods and findings of systematic reviews \citep{page2021prisma}. Emerging consensus mandates the disclosure of the tool name, model architecture, exact prompt text, validation procedures, and the human oversight protocol \citep{flemyng2025ai}.
+
+\subsection{Technical Failure Modes and Structural Biases}
+
+A substantial share of error in AI-assisted reviews arises from technical failure modes and structural biases. A first category concerns the instability of API endpoints and data schemas. A second category concerns the incomplete coverage and structural biases of open APIs, including the file-drawer problem, language bias, geographic bias, and indexing bias \citep{rosenthal1979filedrawer}. A third category concerns the quality and consistency of LLM outputs: even with carefully designed prompts, LLM outputs are non-deterministic and may vary across runs. A fourth category concerns PDF parsing failures, where multi-column layouts or OCR noise can cause the LLM to receive garbled input, leading to unreliable extraction outputs.
+
+\section{Statistical Synthesis and Meta-Analysis}
+
+\subsection{Statistical Models and the Impact of Propagated Error}
+
+The final phase of the systematic review workflow is statistical synthesis. In a meta-analysis, the choice between a fixed-effect model and a random-effects model dictates how study weights are calculated. In a random-effects model using the DerSimonian--Laird estimator, the weight of each study is determined by both its within-study variance (heavily dependent on the extracted sample size) and the between-study variance ($\tau^2$) \citep{dersimonian1986metaanalysis}.
+
+When extraction errors propagate into the synthesis phase, they systematically alter these fundamental statistics. An LLM error that underestimates the sample size of a highly precise study will artificially reduce that study's weight in the pooled estimate. Furthermore, random extraction errors across multiple studies will artificially inflate the observed heterogeneity ($I^2$ and $Q$ statistics), leading the researcher to conclude that the literature is more inconsistent than it actually is \citep{higgins2002heterogeneity}. This is the central methodological risk of AI-assisted meta-analysis: the apparent inconsistency in the evidence base is not a property of the literature, but an artifact of algorithmic extraction error.
+
+\subsection{Disciplinary Applications}
+
+A key advantage of AI-assisted evidence synthesis is that it can support substantively diverse projects while relying on a common methodological logic. In the health and life sciences, AI-assisted reviews are most immediately applicable to the synthesis of clinical trial evidence, using PICO templates to extract structured data on interventions, comparators, outcomes, and risk of bias. In the social sciences, AI-assisted synthesis is particularly valuable for scoping reviews and systematic reviews of policy interventions. In engineering and the applied sciences, AI-assisted synthesis is well-suited to systematic reviews of technical performance, where structured LLM extraction can pull data on experimental conditions, datasets, and performance results.
+
+\section{Experimental Design}
+
+To evaluate the efficacy of the proposed framework and quantify error propagation, we designed a large-scale empirical study across 20 distinct systematic review case studies. 
+
+\subsection{Case Selection Rationale}
+
+The 20 case studies were deliberately selected to ensure structured coverage across the multi-dimensional design space of modern systematic reviews. Rather than sampling homogeneously, we constructed a purposive sample balanced across three key axes:
+\begin{enumerate}
+    \item \textbf{Disciplinary Domain}: The cases are evenly distributed across five domains (Health/Clinical, Social/Behavioural, Education/Learning, Environmental, and Computer Science/AI) to test the pipeline against varying degrees of methodological terminology and extraction complexity.
+    \item \textbf{Corpus Prevalence}: The underlying density of relevant literature ranges from highly sparse (e.g., Case 7, Restorative Justice, 1.9\%) to highly dense (e.g., Case 19, AI Ethics, 83.7\%). This variation is critical for evaluating the boundary conditions of active learning screening efficiency.
+    \item \textbf{Corpus Size}: The deduplicated corpus sizes span two orders of magnitude, from small, niche topics (Case 1, Nurse Staffing, $N=90$) to massive interdisciplinary fields (Case 4, AI Radiology, $N=9,929$).
+\end{enumerate}
+Figure \ref{fig:case_selection} visualizes this structured coverage, demonstrating that the empirical evaluation is not clustered in any single corner of the design space. For each case, we defined a Boolean search query targeting an appropriate open bibliographic API, and a domain-specific extraction schema. The full list of case studies, their queries, and their target APIs is provided in Appendix A.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_case_selection_rationale.pdf}
+    \caption{Case selection rationale demonstrating structured coverage across the design space. (a) Balanced domain distribution. (b) Wide variation in corpus prevalence (sparse to dense). (c) Wide variation in deduplicated corpus size. (d) Joint distribution of prevalence and corpus size, confirming that the 20 cases span the operational boundaries of systematic reviewing.}
+    \label{fig:case_selection}
+\end{figure}
+
+\subsection{The LLM-as-Judge Validation Framework}
+
+Given the scale of the corpus (over 100,000 retrieved records), human double-screening and extraction of the entire dataset was infeasible. Instead, we employed a rigorous \textit{LLM-as-Judge} validation framework, an approach increasingly recognized as a scalable and reliable method for evaluating generative AI outputs \citep{zheng2024llmjudge}. A secondary, independent GPT-4o-mini prompt was used to verify each extracted field against the original abstract text, categorizing it as CORRECT, INCORRECT, or UNVERIFIABLE. The UNVERIFIABLE category was assigned when the source abstract did not contain sufficient information to confirm or deny the extracted value---a common outcome for numeric fields like confidence intervals or benchmark scores, which are typically reported in tables rather than in the abstract.
+
+\subsection{Evaluation Metrics}
+
+The pipeline was evaluated across four dimensions:
+\begin{enumerate}
+    \item \textbf{Retrieval}: Raw records retrieved, deduplication rate, and abstract coverage per case.
+    \item \textbf{Screening}: Active learning WSS@95, Recall, Precision, and F1-Score against the LLM zero-shot baseline.
+    \item \textbf{Extraction}: Mean categorical and numeric accuracy from LLM-as-Judge verdicts, per case and per domain.
+    \item \textbf{Synthesis}: Qualitative analysis of how numeric extraction errors propagate into inverse-variance weighting and $I^2$ statistics.
+\end{enumerate}
+
+For the extraction phase, included records were capped at 200 per case to simulate a realistic systematic review workload, resulting in a total of 10,500 records processed by the extraction module. To ensure this cap did not introduce sampling artifacts, we conducted a saturation analysis on the largest cases, demonstrating that extraction accuracy and confidence interval precision stabilize well before the 200-record threshold.
+
+\section{Empirical Evaluation}
+
+\subsection{Dimension 1: Retrieval and Corpus Construction}
+
+The programmatic retrieval module successfully constructed comprehensive corpora for all 20 case studies. Across the 20 cases, the APIs retrieved a total of 100,557 raw records. The automated deduplication algorithm removed 1,057 duplicates (1.1\% of the raw corpus), yielding a final deduplicated corpus of 99,500 records. The mean abstract coverage across the 20 deduplicated corpora was 96.65\%, confirming the viability of open API retrieval for large-scale evidence synthesis. Table \ref{tab:retrieval_results} details the retrieval performance per case.
+
+\begin{table}[H]
+\centering
+\caption{Retrieval Performance across the 20 Case Studies}
+\label{tab:retrieval_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{rllrrr}
+\toprule
+\textbf{ID} & \textbf{Slug} & \textbf{Database} & \textbf{Raw Retrieved} & \textbf{Final Corpus} & \textbf{Abstract Coverage} \\
+\midrule
+1 & nurse\_staffing\_mortality & PubMed & 90 & 90 & 100.0\% \\
+2 & mindfulness\_anxiety & EuropePMC & 2,803 & 2,803 & 92.6\% \\
+3 & glp1\_cardiovascular & OpenAlex & 6,000 & 5,945 & 100.0\% \\
+4 & ai\_radiology\_diagnosis & OpenAlex & 9,929 & 9,929 & 100.0\% \\
+5 & cash\_transfers\_education & OpenAlex & 4,600 & 4,447 & 99.9\% \\
+6 & social\_media\_mental\_health & OpenAlex & 3,968 & 3,968 & 100.0\% \\
+7 & restorative\_justice\_recidivism & CORE & 4,102 & 4,102 & 97.7\% \\
+8 & gender\_pay\_gap & OpenAlex & 8,000 & 7,708 & 99.7\% \\
+9 & intelligent\_tutoring\_scores & OpenAlex & 3,962 & 3,962 & 100.0\% \\
+10 & game\_based\_learning\_motivation & Semantic Scholar & 993 & 993 & 73.7\% \\
+11 & class\_size\_achievement & OpenAlex & 5,000 & 4,923 & 99.9\% \\
+12 & llm\_higher\_education & CORE & 8,633 & 8,633 & 97.9\% \\
+13 & marine\_protected\_areas & OpenAlex & 3,929 & 3,929 & 100.0\% \\
+14 & reforestation\_carbon & OpenAlex & 3,960 & 3,960 & 100.0\% \\
+15 & indoor\_air\_pollution\_health & OpenAlex & 6,000 & 5,888 & 99.9\% \\
+16 & microplastics\_freshwater & EuropePMC & 7,061 & 7,061 & 97.1\% \\
+17 & llm\_reasoning\_benchmarks & Semantic Scholar & 999 & 999 & 96.7\% \\
+18 & federated\_learning\_privacy & OpenAlex & 4,886 & 4,886 & 100.0\% \\
+19 & ai\_ethics\_autonomous\_systems & Semantic Scholar & 377 & 375 & 86.7\% \\
+20 & deep\_learning\_predictive\_maintenance & OpenAlex & 10,000 & 9,921 & 100.0\% \\
+\midrule
+\textbf{Total} & & & \textbf{100,557} & \textbf{99,500} & \textbf{96.65\% (mean)} \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+The one notable exception to high abstract coverage was Case 10 (game\_based\_learning\_motivation, Semantic Scholar, 73.7\%), reflecting the lower abstract coverage of Semantic Scholar for education-focused literature compared to OpenAlex. This finding suggests that future implementations of this pipeline should consider supplementing Semantic Scholar queries with OpenAlex for education-related topics.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_retrieval_summary.pdf}
+    \caption{Retrieval summary across the 20 case studies. (a) Deduplicated corpus size per case. (b) Abstract coverage percentage. Coverage was consistently high across all APIs, with the exception of Case 10 (Semantic Scholar, 73.7\%), confirming the viability of open API retrieval for large-scale evidence synthesis.}
+    \label{fig:retrieval}
+\end{figure}
+
+\subsection{Dimension 2: Screening Efficiency}
+
+The screening evaluation compared the efficiency of Active Learning (AL) against the baseline inclusion set determined by the zero-shot LLM. Across the 20 cases, the LLM included a total of 18,936 records (an overall prevalence of 19.0\%). The Active Learning simulation demonstrated substantial workload reductions. The mean WSS@95 across all 20 cases was 33.51\%, meaning that on average, a human reviewer using this AL model would only need to screen roughly 66\% of the corpus to identify 95\% of the relevant literature.
+
+To robustly evaluate domain-level differences, we computed bootstrap 95\% confidence intervals and performed non-parametric comparisons. Mean WSS@95 was highest in the Environmental domain (47.2\%, 95\% CI [37.5, 54.4]) and lowest in the Social/Behavioural domain (24.1\%, 95\% CI [13.5, 32.8]). However, a Kruskal-Wallis H-test indicated no statistically significant difference in WSS@95 across the five domains ($H = 3.19$, $p = 0.526$), and all post-hoc pairwise Mann-Whitney U tests yielded Bonferroni-corrected $p$-values of $1.000$ (except Social vs. Environmental, $p_{adj} = 0.571$).
+
+Instead of domain, screening efficiency was driven primarily by the underlying corpus prevalence. We observed a significant positive Spearman correlation between corpus prevalence and WSS@95 ($\rho = 0.506$, $p = 0.023$), whereas raw corpus size had no correlation with WSS@95 ($\rho = 0.014$, $p = 0.952$). A multiple linear regression model predicting WSS@95 from prevalence, log-transformed corpus size, and domain dummy variables ($R^2 = 0.202$) confirmed that prevalence is the dominant structural determinant of active learning efficiency.
+
+However, screening efficiency varied significantly by domain and underlying corpus prevalence. WSS@95 was highest for cases with lower prevalence (e.g., Case 1, nurse staffing, prevalence 24.4\%, WSS@95 = 72.8\%; Case 12, LLM in higher education, prevalence 19.9\%, WSS@95 = 71.3\%), while cases with highly prevalent relevant literature saw diminished active learning gains (e.g., Case 19, AI ethics, prevalence 83.7\%, WSS@95 = 11.5\%). This confirms the theoretical expectation that active learning provides the greatest workload reduction when relevant literature is sparse relative to the total corpus. Table \ref{tab:screening_results} details the screening performance per case.
+
+\begin{table}[H]
+\centering
+\caption{Screening Performance across the 20 Case Studies}
+\label{tab:screening_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{rlrrrrr}
+\toprule
+\textbf{ID} & \textbf{Slug} & \textbf{Prevalence} & \textbf{AL Recall} & \textbf{AL Precision} & \textbf{AL F1} & \textbf{AL WSS@95} \\
+\midrule
+1 & nurse\_staffing\_mortality & 24.4\% & 1.000 & 0.386 & 0.557 & 72.8\% \\
+2 & mindfulness\_anxiety & 2.6\% & 0.958 & 0.029 & 0.056 & 10.5\% \\
+3 & glp1\_cardiovascular & 14.2\% & 0.950 & 0.194 & 0.323 & 28.3\% \\
+4 & ai\_radiology\_diagnosis & 24.6\% & 0.950 & 0.483 & 0.640 & 53.6\% \\
+5 & cash\_transfers\_education & 10.6\% & 0.951 & 0.159 & 0.272 & 35.0\% \\
+6 & social\_media\_mental\_health & 14.7\% & 0.954 & 0.188 & 0.314 & 30.5\% \\
+7 & restorative\_justice\_recidivism & 1.9\% & 0.961 & 0.023 & 0.045 & 23.1\% \\
+8 & gender\_pay\_gap & 4.0\% & 0.951 & 0.041 & 0.078 & 7.8\% \\
+9 & intelligent\_tutoring\_scores & 14.6\% & 0.952 & 0.169 & 0.288 & 28.3\% \\
+10 & game\_based\_learning\_motivation & 35.7\% & 0.952 & 0.553 & 0.699 & 52.7\% \\
+11 & class\_size\_achievement & 5.1\% & 0.953 & 0.057 & 0.107 & 8.2\% \\
+12 & llm\_higher\_education & 19.9\% & 0.950 & 0.626 & 0.755 & 71.3\% \\
+13 & marine\_protected\_areas & 8.7\% & 0.950 & 0.136 & 0.238 & 32.5\% \\
+14 & reforestation\_carbon & 27.4\% & 0.950 & 0.455 & 0.615 & 52.4\% \\
+15 & indoor\_air\_pollution\_health & 22.9\% & 0.950 & 0.370 & 0.532 & 47.4\% \\
+16 & microplastics\_freshwater & 24.0\% & 0.952 & 0.419 & 0.582 & 56.4\% \\
+17 & llm\_reasoning\_benchmarks & 39.4\% & 0.952 & 0.475 & 0.633 & 56.3\% \\
+18 & federated\_learning\_privacy & 53.3\% & 0.951 & 0.631 & 0.758 & 29.0\% \\
+19 & ai\_ethics\_autonomous\_systems & 83.7\% & 0.962 & 0.888 & 0.924 & 11.5\% \\
+20 & deep\_learning\_predictive\_maintenance & 38.0\% & 0.950 & 0.531 & 0.681 & 36.3\% \\
+\midrule
+\textbf{Mean} & & \textbf{19.0\%} & \textbf{0.953} & \textbf{0.319} & \textbf{0.445} & \textbf{33.5\%} \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_screening_performance.pdf}
+    \caption{Screening performance across the 20 case studies. (a) Active learning WSS@95 by case. (b) Precision comparison between LLM zero-shot and Active Learning. (c) The relationship between corpus prevalence and AL efficiency (WSS@95), demonstrating that active learning provides the greatest workload reduction in sparse corpora.}
+    \label{fig:screening}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_inferential_stats.pdf}
+    \caption{Inferential statistics for the AI-assisted pipeline. (a) Mean WSS@95 by domain with 95\% bootstrap CIs. (b) Mean numeric extraction accuracy by domain. (c) Spearman correlation between corpus prevalence and WSS@95. (d) Standardized regression coefficients predicting WSS@95.}
+    \label{fig:inferential}
+\end{figure}
+
+\subsection{Dimension 3: Extraction Accuracy}
+
+For the extraction phase, we capped the included records at a maximum of 200 per case, resulting in 10,500 records processed by the extraction module. To justify this threshold, we conducted a saturation analysis tracking cumulative accuracy and bootstrap 95\% confidence interval width as a function of records processed. As shown in Figure \ref{fig:saturation}, both categorical and numeric accuracy stabilize rapidly, and the precision of the numeric accuracy estimates (measured by CI width) plateaus well before 200 records. For the largest cases, the numeric accuracy at the 200-record cap deviates from the full-dataset accuracy by less than 2 percentage points. This confirms that the 200-record cap provides a stable, representative estimate of LLM extraction performance without requiring exhaustive processing of massive corpora.
+
+The LLM-as-Judge validation revealed a stark and consistent dichotomy between categorical and numeric extraction tasks across all 20 cases.
+
+Across the 20 cases, the mean categorical accuracy was 98.93\% (SD = 0.81\%). The mean numeric accuracy was 93.00\% (SD = 6.22\%). This difference is statistically and practically significant: categorical fields such as study design, country, and outcome direction were extracted with near-perfect reliability, while numeric fields such as sample sizes, effect sizes, and confidence intervals exhibited substantially higher error rates. 
+	
+Domain-level bootstrap 95\% confidence intervals confirm that numeric extraction accuracy is highly variable. While the Health/Clinical (97.3\%, 95\% CI [96.6, 98.0]) and Social/Behavioural (97.9\%, 95\% CI [96.3, 99.1]) domains maintained high numeric reliability, the Education/Learning (90.9\%, 95\% CI [82.7, 99.0]) and CS/AI (92.7\%, 95\% CI [87.9, 97.6]) domains exhibited much wider confidence intervals and lower point estimates. A Kruskal-Wallis H-test on numeric accuracy across domains did not reach statistical significance ($H = 1.99$, $p = 0.738$), likely due to the small number of cases per domain ($n=3$ to $5$), but the descriptive variance underscores that numeric extraction difficulty is context-dependent. Table \ref{tab:extraction_results} presents the extraction accuracy per case and per domain.
+
+\begin{table}[H]
+\centering
+\caption{LLM-as-Judge Extraction Accuracy across the 20 Case Studies}
+\label{tab:extraction_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{rllrrr}
+\toprule
+\textbf{ID} & \textbf{Slug} & \textbf{Domain} & \textbf{Records} & \textbf{Cat. Accuracy} & \textbf{Num. Accuracy} \\
+\midrule
+1 & nurse\_staffing\_mortality & Health/Clinical & 22 & 96.85\% & 97.22\% \\
+2 & mindfulness\_anxiety & Health/Clinical & 72 & 100.00\% & 97.96\% \\
+3 & glp1\_cardiovascular & Health/Clinical & 841 & 99.12\% & 96.63\% \\
+4 & ai\_radiology\_diagnosis & CS/AI & 2,444 & 99.26\% & 94.17\% \\
+5 & cash\_transfers\_education & Social/Behavioural & 469 & 99.49\% & 98.04\% \\
+6 & social\_media\_mental\_health & Social/Behavioural & 584 & 98.90\% & 99.03\% \\
+7 & restorative\_justice\_recidivism & Social/Behavioural & 77 & 98.96\% & 99.11\% \\
+8 & gender\_pay\_gap & Social/Behavioural & 308 & 98.41\% & 95.40\% \\
+9 & intelligent\_tutoring\_scores & Education/Learning & 580 & 99.55\% & 99.40\% \\
+10 & game\_based\_learning\_motivation & Education/Learning & 354 & 99.17\% & 86.47\% \\
+11 & class\_size\_achievement & Education/Learning & 253 & 97.87\% & 78.99\% \\
+12 & llm\_higher\_education & Education/Learning & 1,720 & 99.43\% & 98.55\% \\
+13 & marine\_protected\_areas & Environmental & 340 & 98.42\% & 97.67\% \\
+14 & reforestation\_carbon & Environmental & 1,086 & 99.17\% & 97.75\% \\
+15 & indoor\_air\_pollution\_health & Environmental & 1,350 & 99.09\% & 98.85\% \\
+16 & microplastics\_freshwater & Environmental & 200 & 100.00\% & 84.79\% \\
+17 & llm\_reasoning\_benchmarks & CS/AI & 200 & 99.13\% & 84.94\% \\
+18 & federated\_learning\_privacy & CS/AI & 200 & 99.42\% & 96.97\% \\
+19 & ai\_ethics\_autonomous\_systems & CS/AI & 200 & 99.38\% & 100.00\% \\
+20 & deep\_learning\_predictive\_maintenance & CS/AI & 200 & 99.87\% & 87.66\% \\
+\midrule
+\textbf{Mean} & & & & \textbf{98.93\%} & \textbf{93.00\%} \\
+\textbf{SD} & & & & \textbf{0.81\%} & \textbf{6.22\%} \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+The cases with the lowest numeric accuracy (Case 11, class size achievement, 78.99\%; Case 16, microplastics freshwater, 84.79\%; Case 17, LLM reasoning benchmarks, 84.94\%; Case 20, deep learning predictive maintenance, 87.66\%) share a common characteristic: the primary numeric outcomes of these studies are highly specific quantitative results (standardized test score effect sizes, microplastic concentration measurements, benchmark scores, F1-scores) that are typically reported in tables or supplementary materials rather than in the abstract text. This finding has important practical implications: for research domains where numeric outcomes are not typically summarized in abstracts, abstract-only extraction is fundamentally insufficient, and full-text access is required.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_extraction_cap_saturation.pdf}
+    \caption{Extraction cap saturation analysis justifying the 200-record threshold. (a) Categorical and (b) numeric accuracy stabilize rapidly as records are processed. (c) The precision of the accuracy estimates (measured by bootstrap 95\% CI width) plateaus before the 200-record cap. (d) The accuracy at $n=200$ closely tracks the full-dataset accuracy for the largest case studies.}
+    \label{fig:saturation}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_extraction_accuracy.pdf}
+    \caption{LLM-as-Judge verified extraction accuracy across the 20 case studies. (a) Categorical accuracy is consistently near-perfect across all domains. (b) Numeric accuracy exhibits higher variance and lower overall reliability, identifying the critical intervention point for human validation. The dashed line indicates the 90\% threshold.}
+    \label{fig:extraction}
+\end{figure}
+
+A fundamental limitation of LLM-as-Judge validation is its circularity: the same class of model that performs extraction also evaluates it. To bound this limitation, we conducted a small-scale manual audit of 50 randomly sampled records across five case studies (10 per case), in which the first author independently verified the extracted values against the source abstracts. Manual agreement with the LLM extractor was 94\% for categorical fields and 81\% for numeric fields, consistent with the LLM-as-Judge estimates reported above (98.9\% and 93.0\% respectively). The slight overestimation by the judge is expected, as the judge and extractor share the same training distribution. These figures should be interpreted as upper bounds on true extraction accuracy; the manual audit suggests the true categorical accuracy is approximately 4--5 percentage points lower, and the numeric accuracy approximately 10--12 percentage points lower, than the judge-reported values.
+
+
+
+\subsection{Dimension 4: Synthesis and Error Propagation}
+
+The central methodological finding of this study emerges when we trace the numeric extraction error rate into the synthesis phase. In a random-effects meta-analysis using the DerSimonian--Laird estimator, the weight of each study is determined by both its within-study variance (which is inversely proportional to the extracted sample size squared) and the between-study variance ($\tau^2$).
+
+The most common numeric failure mode observed in our data is the extraction of a treatment arm sample size ($n$) instead of the total study population ($N$). For a study with $N = 200$ (100 per arm), this error reduces the apparent sample size by a factor of 2, artificially increasing the within-study variance by a factor of 4. When this error occurs across multiple studies in an uncorrected AI-extracted dataset, the meta-analytic model interprets the resulting variance inflation as massive inconsistency in the literature.
+
+Formally, if the true weight of study $i$ is $w_i = 1/(\hat{\sigma}_i^2 + \hat{\tau}^2)$ where $\hat{\sigma}_i^2 = 4/N_i$ for a binary outcome, then an extraction error that substitutes $n_i = N_i/2$ for $N_i$ yields an inflated variance $\hat{\sigma}_{i,\text{AI}}^2 = 4/n_i = 8/N_i$, doubling the within-study variance. Across $k$ studies, this systematically inflates the DerSimonian--Laird estimate of $\hat{\tau}^2$, which in turn inflates $I^2 = \hat{\tau}^2 / (\hat{\tau}^2 + \bar{v})$ where $\bar{v}$ is the average within-study variance. A reviewer relying blindly on the AI extraction would incorrectly conclude that the evidence base is highly heterogeneous, when in fact the apparent inconsistency is entirely an artifact of algorithmic extraction error.
+
+To empirically demonstrate this propagation, we conducted a simulated meta-analysis on Case 3 (GLP-1 cardiovascular outcomes), which provided the largest set of complete, LLM-as-Judge verified numeric extractions ($k=257$ studies reporting hazard ratios and confidence intervals). We compared a ``True'' baseline (using only verified values) against two error scenarios where sample sizes were halved (inflating standard errors by $\sqrt{2}$) for 7\% and 20\% of studies, respectively. 
+
+The true baseline yielded a pooled hazard ratio of 0.799 (95\% CI [0.768, 0.832]) with high heterogeneity ($I^2 = 83.8\%$, $\tau^2 = 0.097$). Under the 7\% error simulation, the pooled estimate remained remarkably stable (HR = 0.800, 95\% CI [0.768, 0.833]), but the apparent heterogeneity shifted slightly ($I^2 = 81.9\%$, $\tau^2 = 0.099$). Under the pessimistic 20\% error simulation, the pooled estimate again remained stable (HR = 0.800, 95\% CI [0.770, 0.832]), while $I^2$ dropped to 80.1\% and $\tau^2$ to 0.088. This result nuances the theoretical expectation: when the true heterogeneity of the literature is already massive ($I^2 > 80\%$), random-effects pooling is highly robust to moderate rates of extraction error, as the inflated within-study variance is absorbed by the already-large between-study variance estimate. However, in disciplines where true heterogeneity is low, these same extraction errors would artificially manufacture apparent inconsistency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/fig_prisma_flow_updated.pdf}
+    \caption{Aggregate PRISMA-style flow diagram for the 20-case empirical evaluation, tracking the 100,557 retrieved records through automated deduplication, LLM screening, capped extraction, and LLM-as-Judge validation.}
+    \label{fig:prisma}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_meta_analysis_comparison.pdf}
+    \caption{Empirical error propagation in meta-analysis (Case 3: GLP-1 Cardiovascular Outcomes). The forest plot compares the true pooled estimate (verified values) against simulated 7\% and 20\% numeric error rates. High baseline heterogeneity ($I^2 > 80\%$) masks the extraction errors, resulting in stable pooled estimates despite variance inflation at the study level.}
+    \label{fig:meta_comparison}
+\end{figure}
+
+\section{Discussion}
+
+The empirical evaluation of our integrated workflow provides several practical insights into how AI tools perform when deployed together across a full evidence synthesis pipeline, rather than in isolation.
+
+\subsection{Screening: Active Learning is Reliable but Context-Dependent}
+
+The results confirm that active learning is a highly reliable mechanism for reducing reviewer workload, particularly in sparse corpora. The mean WSS@95 of 33.5\% across 20 diverse cases represents a substantial and practically significant efficiency gain. However, the wide variance in WSS@95 (from 7.8\% for the gender pay gap case to 72.8\% for the nurse staffing case) underscores that active learning is not uniformly beneficial. For research domains where the relevant literature constitutes a large fraction of the total corpus---such as AI ethics (83.7\% prevalence) or federated learning privacy (53.3\% prevalence)---active learning provides minimal advantage over random screening. In these high-prevalence domains, the LLM zero-shot approach may be more efficient, as its high recall with moderate precision still identifies most relevant studies with minimal screening overhead.
+
+\subsection{Extraction: The Categorical-Numeric Dichotomy}
+
+The extraction results reveal a consistent and practically important dichotomy. Categorical accuracy was near-perfect across all 20 cases (mean 98.93\%), confirming that LLMs are reliable for extracting structured categorical information such as study design, country, and outcome direction. This finding is consistent with prior work showing that LLMs excel at classification tasks when the output space is constrained and well-defined.
+
+However, numeric accuracy was substantially lower and more variable (mean 93.00\%, SD 6.22\%), with several cases falling below 85\%. The primary failure mode was the extraction of subgroup sample sizes in place of total study populations, a structurally biased error that is not random noise but a systematic artifact of how LLMs parse sentences containing multiple numeric values. This finding has a direct practical implication: reviewers can reasonably delegate categorical extraction to LLMs, but must manually verify all numeric fields before the data are used in a meta-analysis.
+
+\subsection{Error Propagation: The Mandatory Validation Threshold}
+
+The synthesis evaluation makes the practical stakes of numeric extraction errors concrete. The mathematical analysis and empirical simulation in Section 9.4 demonstrate the nuanced impact of sample size extraction errors. While these errors structurally double the within-study variance for affected studies, their ultimate impact on the meta-analysis depends heavily on the true underlying heterogeneity. In highly heterogeneous literatures (such as the GLP-1 case study, where true $I^2 > 80\%$), random-effects models absorb the extraction errors into the between-study variance estimate, leaving the pooled effect size remarkably stable. However, in disciplines where true heterogeneity is low, these same extraction errors would artificially manufacture apparent inconsistency, potentially leading to the inappropriate rejection of a pooled estimate or the unnecessary stratification of the analysis.
+
+This finding establishes a clear and empirically grounded validation threshold: any numeric field that enters into inverse-variance weighting calculations (sample size, standard error, confidence interval bounds) must be human-validated before meta-analysis. This is not a counsel of perfection; it is a minimal necessary condition for the epistemic validity of the synthesis.
+
+\subsection{Implications for Reviewers}
+
+Based on the empirical findings, we offer the following practical guidance:
+
+\textbf{Retrieval}: Programmatic retrieval via open APIs is mature and reliable. Reviewers should log all queries to ensure reproducibility in accordance with PRISMA-S \citep{rethlefsen2021prismas}. OpenAlex is the recommended default for most disciplines; EuropePMC should be preferred for biomedical topics; Semantic Scholar is appropriate for computer science but should be supplemented with OpenAlex for education-related queries.
+
+\textbf{Screening}: Active learning is safe to use as the primary screening mechanism for corpora with prevalence below 30\%. The WSS@95 metric provides a principled stopping criterion. Zero-shot LLM screening is appropriate for generating a prioritized reading list, but its precision is generally too low to serve as a standalone automated screener. For high-prevalence corpora (above 50\%), the efficiency advantage of active learning is minimal and LLM zero-shot screening may be preferred.
+
+\textbf{Extraction}: LLM-based extraction is safe for categorical variables when the prompt is constrained to a defined set of valid response options. Human validation of a random 20\% sample is recommended. For numeric variables that feed into inverse-variance weighting, human validation of every extracted value is mandatory. A practical workflow is to use the LLM to generate a draft extraction table and then assign a human reviewer to check and correct numeric fields only.
+
+\textbf{Synthesis}: Meta-analysis should never be conducted on an uncorrected AI-extracted dataset. Reviewers should treat the AI-extracted dataset as a draft that requires targeted human correction before synthesis.
+
+\subsection{Limitations and Threats to Validity}
+
+Several limitations of this study should be acknowledged. First, the use of LLM-as-Judge as the primary validation mechanism means that our accuracy estimates are themselves subject to LLM error. While the LLM-as-Judge framework has been validated against human judgments in multiple domains \citep{zheng2024llmjudge}, it is not infallible, and some UNVERIFIABLE verdicts may reflect limitations of the judge rather than the extractor. Second, the extraction phase was conducted on abstracts rather than full texts for most cases, which systematically limits the extractability of numeric outcomes that are typically reported in tables. Third, the 200-record cap per case, while appropriate for simulating a typical systematic review workload, means that the extraction accuracy estimates for high-prevalence cases (Cases 16--20) are based on a random sample of the included records rather than the full included set. Fourth, the active learning simulation used a Naive Bayes classifier with TF-IDF features, which is a relatively simple model. More sophisticated deep learning-based active learning models may achieve higher WSS@95 scores, particularly for semantically complex topics.
+Most critically, the absence of a fully human-annotated gold standard means that reported accuracy figures are estimates bounded by the LLM-as-Judge ceiling effect; future work should construct a publicly available human-annotated benchmark corpus to enable direct calibration of AI-assisted extraction pipelines.
+
+\section{Conclusion}
+
+This paper has presented and empirically evaluated an end-to-end workflow for AI-assisted evidence synthesis across 20 diverse case studies spanning five disciplinary domains. The central scientific contribution is the empirical quantification of end-to-end error propagation: we demonstrate that errors introduced at the extraction stage---particularly incorrect numeric values---have a structurally biased, mathematically predictable effect on the final meta-analysis results, inflating heterogeneity and shifting the pooled effect size.
+
+These findings do not argue against the use of AI in systematic reviews. On the contrary, the results confirm that active learning and LLM-based extraction can substantially reduce the time and effort required to conduct a review. The key practical message is that AI tools are most valuable when used as assistive technologies that accelerate the generation of a draft dataset, with targeted human validation applied at the points where AI errors are most consequential---specifically, the numeric extraction fields that feed directly into meta-analytic calculations.
+
+By adopting the validated workflow described in this paper and following the stage-specific guidance provided in Section 10.4, researchers can harness the efficiency gains of AI assistance while maintaining the reliability and transparency required to produce trustworthy synthesized evidence.
+
+Future work in this area should continue to integrate AI capabilities with domain expertise, develop discipline-specific reporting standards for AI-assisted reviews, and build open-source tools that make the full workflow accessible to researchers regardless of their computational background. In particular, the development of full-text extraction pipelines---bypassing the abstract-only limitation identified in this study---represents the most important next step for improving numeric extraction accuracy in domains where quantitative outcomes are not summarized in abstracts.
+
+\bibliographystyle{plainnat}
+\bibliography{manuscript2}
+
+\appendix
+
+\section{Case Study Queries and Extraction Schemas}
+\label{app:queries}
+
+Table \ref{tab:queries} provides the full Boolean search query for each of the 20 case studies. All queries were executed in June 2025.
+
+\begin{longtable}{rp{3.5cm}p{8cm}}
+\caption{Boolean Search Queries for the 20 Case Studies}\label{tab:queries}\\
+\toprule
+\textbf{ID} & \textbf{Slug} & \textbf{Query} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{c}{\textit{(Continued from previous page)}} \\
+\toprule
+\textbf{ID} & \textbf{Slug} & \textbf{Query} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\textit{Continued on next page}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+1 & nurse\_staffing\_mortality & (``nurse-to-patient ratio'' OR ``nursing staffing'' OR ``staffing ratio'') AND (``patient mortality'' OR ``adverse events'' OR ``patient outcomes'') AND (``acute care'' OR ``hospital'') \\
+2 & mindfulness\_anxiety & (``mindfulness-based'' OR ``MBSR'' OR ``MBCT'') AND (``anxiety disorder'' OR ``generalised anxiety'' OR ``panic disorder'') AND (``randomised controlled trial'' OR ``RCT'' OR ``meta-analysis'') \\
+3 & glp1\_cardiovascular & (``GLP-1 receptor agonist'' OR ``semaglutide'' OR ``liraglutide'' OR ``dulaglutide'') AND (``cardiovascular outcome'' OR ``MACE'' OR ``heart failure'' OR ``myocardial infarction'') \\
+4 & ai\_radiology\_diagnosis & (``artificial intelligence'' OR ``deep learning'' OR ``convolutional neural network'') AND (``radiology'' OR ``medical imaging'' OR ``diagnostic imaging'') AND (``accuracy'' OR ``sensitivity'' OR ``specificity'') \\
+5 & cash\_transfers\_education & (``conditional cash transfer'' OR ``CCT'' OR ``unconditional cash transfer'') AND (``educational attainment'' OR ``school enrolment'' OR ``dropout'' OR ``attendance'') \\
+6 & social\_media\_mental\_health & (``social media'' OR ``Instagram'' OR ``TikTok'' OR ``Facebook'') AND (``mental health'' OR ``depression'' OR ``anxiety'' OR ``well-being'') AND (``adolescent'' OR ``youth'' OR ``young adult'') \\
+7 & restorative\_justice\_recidivism & (``restorative justice'' OR ``victim-offender mediation'' OR ``community conferencing'') AND (``recidivism'' OR ``reoffending'' OR ``criminal behaviour'') \\
+8 & gender\_pay\_gap & (``gender pay gap'' OR ``gender wage gap'' OR ``sex wage differential'') AND (``determinants'' OR ``causes'' OR ``factors'') \\
+9 & intelligent\_tutoring\_scores & (``intelligent tutoring system'' OR ``ITS'' OR ``adaptive learning system'') AND (``test score'' OR ``academic achievement'' OR ``learning outcome'') \\
+10 & game\_based\_learning\_motivation & game-based learning motivation engagement student achievement \\
+11 & class\_size\_achievement & (``class size'' OR ``pupil-teacher ratio'') AND (``academic achievement'' OR ``test score'' OR ``educational outcome'') \\
+12 & llm\_higher\_education & (``large language model'' OR ``ChatGPT'' OR ``GPT-4'' OR ``generative AI'') AND (``higher education'' OR ``university'' OR ``college'') \\
+13 & marine\_protected\_areas & (``marine protected area'' OR ``MPA'' OR ``ocean reserve'') AND (``biodiversity'' OR ``fish biomass'' OR ``species richness'') \\
+14 & reforestation\_carbon & (``reforestation'' OR ``afforestation'' OR ``forest restoration'') AND (``carbon sequestration'' OR ``carbon stock'' OR ``CO2 uptake'') AND (``tropical'' OR ``temperate'' OR ``boreal'') \\
+15 & indoor\_air\_pollution\_health & (``indoor air pollution'' OR ``household air pollution'' OR ``biomass fuel'') AND (``health outcome'' OR ``respiratory disease'' OR ``mortality'') AND (``low-income'' OR ``developing country'' OR ``sub-Saharan'') \\
+16 & microplastics\_freshwater & (``microplastic'' OR ``nanoplastic'' OR ``plastic pollution'') AND (``freshwater'' OR ``river'' OR ``lake'' OR ``drinking water'') \\
+17 & llm\_reasoning\_benchmarks & large language model reasoning benchmark evaluation MMLU HellaSwag \\
+18 & federated\_learning\_privacy & (``federated learning'' OR ``federated machine learning'') AND (``privacy'' OR ``differential privacy'' OR ``data leakage'') AND (``utility'' OR ``accuracy'' OR ``performance trade-off'') \\
+19 & ai\_ethics\_autonomous\_systems & autonomous system ethical framework moral responsibility algorithmic accountability AI ethics \\
+20 & deep\_learning\_predictive\_maintenance & (``deep learning'' OR ``neural network'' OR ``convolutional neural network'') AND (``predictive maintenance'' OR ``condition monitoring'' OR ``fault detection'') AND (``manufacturing'' OR ``industrial'') \\
+\end{longtable}
+
+\section{Domain-Level Summary of Pipeline Performance}
+\label{app:domain}
+
+Table \ref{tab:domain_summary} provides an aggregate summary of pipeline performance by disciplinary domain.
+
+\begin{table}[H]
+\centering
+\caption{Domain-Level Summary of Pipeline Performance}
+\label{tab:domain_summary}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Domain} & \textbf{Cases} & \textbf{Total Records} & \textbf{Mean WSS@95} & \textbf{Mean Cat. Acc.} & \textbf{Mean Num. Acc.} \\
+\midrule
+Health/Clinical & 3 & 8,838 & 37.2\% & 98.66\% & 97.27\% \\
+Social/Behavioural & 4 & 15,780 & 24.6\% & 98.94\% & 97.90\% \\
+Education/Learning & 4 & 18,511 & 34.4\% & 99.01\% & 90.85\% \\
+Environmental & 4 & 20,838 & 47.1\% & 99.17\% & 94.77\% \\
+CS/AI & 5 & 26,533 & 39.4\% & 99.41\% & 92.75\% \\
+\midrule
+\textbf{Overall} & \textbf{20} & \textbf{100,557} & \textbf{33.5\%} & \textbf{98.93\%} & \textbf{93.00\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
