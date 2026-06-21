@@ -78,11 +78,12 @@ def draw_box(cx, cy, x1, x2, bh, lines, color, fnt):
 def draw_varrow(y_top_centre, y_bot_centre, bh, color="#333333"):
     """Vertical arrow from bottom of upper box to top of lower box."""
     x = MCX
-    y1 = y_top_centre + bh // 2 + 2
-    y2 = y_bot_centre - bh // 2 - 2
+    y1 = y_top_centre + bh // 2 + 4   # start just below bottom edge
+    y2 = y_bot_centre - bh // 2 - 18  # stop well above top edge (arrowhead is 14px)
     draw.line([(x, y1), (x, y2)], fill=color, width=3)
-    # Arrowhead
-    draw.polygon([(x-8, y2), (x+8, y2), (x, y2+14)], fill=color)
+    # Arrowhead pointing down — tip lands exactly at box top edge
+    tip = y_bot_centre - bh // 2 - 2
+    draw.polygon([(x-8, tip-14), (x+8, tip-14), (x, tip)], fill=color)
 
 def draw_harrow(y_centre, color):
     """Horizontal arrow from right edge of main box to left edge of side box."""
@@ -150,6 +151,16 @@ draw_box(SCX, YS[4], SX1, SX2, BH,
           "200 records/case",
           "(20 cases)"],
          C["ext"], font_small)
+
+# ── Arrow from Cap side box down to Validation box ───────────────────────────
+# Side box bottom edge: YS[4] + BH//2 = 760+35 = 795
+# Validation box top edge: YS[5] - BH//2 = 920-35 = 885
+cap_arrow_x = SCX
+cap_y1 = YS[4] + BH // 2 + 4
+cap_y2 = YS[5] - BH // 2 - 18
+draw.line([(cap_arrow_x, cap_y1), (cap_arrow_x, cap_y2)], fill=C["ext"], width=3)
+cap_tip = YS[5] - BH // 2 - 2
+draw.polygon([(cap_arrow_x-8, cap_tip-14), (cap_arrow_x+8, cap_tip-14), (cap_arrow_x, cap_tip)], fill=C["ext"])
 
 # ── Stage labels ──────────────────────────────────────────────────────────────
 stage_labels = [
