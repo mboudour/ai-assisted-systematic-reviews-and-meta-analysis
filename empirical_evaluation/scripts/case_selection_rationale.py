@@ -87,9 +87,9 @@ API_COLORS = {
 }
 
 # ── Figure ────────────────────────────────────────────────────────────────────
-fig = plt.figure(figsize=(16, 12))
+fig = plt.figure(figsize=(10, 6))
 fig.patch.set_facecolor("white")
-gs = gridspec.GridSpec(2, 2, figure=fig, hspace=0.44, wspace=0.36)
+gs = gridspec.GridSpec(2, 2, figure=fig, hspace=0.55, wspace=0.38)
 
 ax_a = fig.add_subplot(gs[0, 0])  # Domain distribution (bar)
 ax_b = fig.add_subplot(gs[0, 1])  # Prevalence histogram
@@ -103,12 +103,12 @@ bars = ax_a.bar(range(len(DOMAIN_ORDER)), domain_counts.values,
                 color=colors_a, width=0.6, edgecolor="white", linewidth=1.2, alpha=0.88)
 for bar, val in zip(bars, domain_counts.values):
     ax_a.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.05,
-              str(val), ha="center", va="bottom", fontsize=11, fontweight="bold")
+              str(val), ha="center", va="bottom", fontsize=8, fontweight="bold")
 ax_a.set_xticks(range(len(DOMAIN_ORDER)))
-ax_a.set_xticklabels([d.replace("/", "/\n") for d in DOMAIN_ORDER], fontsize=9)
-ax_a.set_ylabel("Number of Case Studies", fontsize=10)
+ax_a.set_xticklabels([d.replace("/", "/\n") for d in DOMAIN_ORDER], fontsize=7)
+ax_a.set_ylabel("Case Studies", fontsize=8)
 ax_a.set_ylim(0, 7)
-ax_a.set_title("(a) Domain Distribution\n(balanced across 5 disciplines)", fontsize=11, fontweight="bold")
+ax_a.set_title("(a) Domain Distribution", fontsize=9, fontweight="bold")
 ax_a.spines[["top", "right"]].set_visible(False)
 ax_a.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
@@ -120,19 +120,18 @@ ax_b.axvline(data["prevalence_pct"].mean(), color="#d62728", lw=1.8, ls="--",
              label=f"Mean = {data['prevalence_pct'].mean():.1f}%")
 ax_b.axvline(data["prevalence_pct"].median(), color="#2ca02c", lw=1.8, ls=":",
              label=f"Median = {data['prevalence_pct'].median():.1f}%")
-ax_b.set_xlabel("Corpus Prevalence (%)", fontsize=10)
-ax_b.set_ylabel("Number of Case Studies", fontsize=10)
-ax_b.set_title("(b) Prevalence Distribution\n(sparse to dense, full range covered)",
-               fontsize=11, fontweight="bold")
-ax_b.legend(fontsize=9, frameon=True, framealpha=0.9)
+ax_b.set_xlabel("Corpus Prevalence (%)", fontsize=8)
+ax_b.set_ylabel("Case Studies", fontsize=8)
+ax_b.set_title("(b) Prevalence Distribution", fontsize=9, fontweight="bold")
+ax_b.legend(fontsize=7, frameon=True, framealpha=0.9)
 ax_b.spines[["top", "right"]].set_visible(False)
 ax_b.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
 # Annotate range
 ax_b.text(0.97, 0.97,
-          f"Range: {data['prevalence_pct'].min():.1f}% – {data['prevalence_pct'].max():.1f}%\nSD = {data['prevalence_pct'].std():.1f}%",
-          transform=ax_b.transAxes, ha="right", va="top", fontsize=8.5,
-          bbox=dict(boxstyle="round,pad=0.4", fc="#f5f5f5", ec="#cccccc"))
+          f"Range: {data['prevalence_pct'].min():.1f}%–{data['prevalence_pct'].max():.1f}%",
+          transform=ax_b.transAxes, ha="right", va="top", fontsize=7,
+          bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="#cccccc"))
 
 # ── Panel (c): Corpus size histogram ─────────────────────────────────────────
 bins_corp = [0, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10500]
@@ -142,19 +141,18 @@ ax_c.axvline(data["corpus_size"].mean(), color="#d62728", lw=1.8, ls="--",
              label=f"Mean = {data['corpus_size'].mean():,.0f}")
 ax_c.axvline(data["corpus_size"].median(), color="#2ca02c", lw=1.8, ls=":",
              label=f"Median = {data['corpus_size'].median():,.0f}")
-ax_c.set_xlabel("Deduplicated Corpus Size (records)", fontsize=10)
-ax_c.set_ylabel("Number of Case Studies", fontsize=10)
-ax_c.set_title("(c) Corpus Size Distribution\n(small niche topics to large interdisciplinary fields)",
-               fontsize=11, fontweight="bold")
-ax_c.legend(fontsize=9, frameon=True, framealpha=0.9)
+ax_c.set_xlabel("Corpus Size (records)", fontsize=8)
+ax_c.set_ylabel("Case Studies", fontsize=8)
+ax_c.set_title("(c) Corpus Size Distribution", fontsize=9, fontweight="bold")
+ax_c.legend(fontsize=7, frameon=True, framealpha=0.9)
 ax_c.spines[["top", "right"]].set_visible(False)
 ax_c.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 ax_c.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
 
 ax_c.text(0.97, 0.97,
-          f"Range: {data['corpus_size'].min():,} – {data['corpus_size'].max():,}\nSD = {data['corpus_size'].std():,.0f}",
-          transform=ax_c.transAxes, ha="right", va="top", fontsize=8.5,
-          bbox=dict(boxstyle="round,pad=0.4", fc="#f5f5f5", ec="#cccccc"))
+          f"Range: {data['corpus_size'].min():,}–{data['corpus_size'].max():,}",
+          transform=ax_c.transAxes, ha="right", va="top", fontsize=7,
+          bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="#cccccc"))
 
 # ── Panel (d): Bubble chart ───────────────────────────────────────────────────
 for _, row in data.iterrows():
@@ -167,23 +165,21 @@ for _, row in data.iterrows():
                   textcoords="offset points", xytext=(5, 3),
                   fontsize=7.5, color="#333333")
 
-ax_d.set_xlabel("Corpus Prevalence (%)", fontsize=10)
-ax_d.set_ylabel("Deduplicated Corpus Size (records)", fontsize=10)
-ax_d.set_title("(d) Joint Design Space Coverage\n(prevalence × corpus size, coloured by domain)",
-               fontsize=11, fontweight="bold")
+ax_d.set_xlabel("Corpus Prevalence (%)", fontsize=8)
+ax_d.set_ylabel("Corpus Size (records)", fontsize=8)
+ax_d.set_title("(d) Joint Design Space", fontsize=9, fontweight="bold")
 ax_d.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
 ax_d.spines[["top", "right"]].set_visible(False)
 
 # Domain legend
 legend_patches = [mpatches.Patch(color=DOMAIN_COLORS[d], label=d) for d in DOMAIN_ORDER]
-ax_d.legend(handles=legend_patches, fontsize=8, loc="upper right",
+ax_d.legend(handles=legend_patches, fontsize=6.5, loc="upper right",
             frameon=True, framealpha=0.9)
 
 # ── Suptitle ──────────────────────────────────────────────────────────────────
 fig.suptitle(
-    "Case Selection Rationale: Structured Coverage Across Domain, Prevalence, and Corpus Size\n"
-    "(20 case studies spanning 5 disciplines, prevalence 1.9%–83.7%, corpus size 90–9,929 records)",
-    fontsize=12, fontweight="bold", y=1.01
+    "Case Selection Rationale: Coverage Across Domain, Prevalence, and Corpus Size",
+    fontsize=10, fontweight="bold", y=1.01
 )
 
 out_pdf = os.path.join(OUT_DIR, "fig_case_selection_rationale.pdf")

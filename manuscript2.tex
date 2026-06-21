@@ -137,11 +137,9 @@ Once a deduplicated corpus is constructed, the researcher must configure the scr
 
 Active learning typically relies on converting text into numerical representations, such as Term Frequency--Inverse Document Frequency (TF-IDF) \citep{salton1983introduction}, and utilizing query strategies like uncertainty sampling to prioritize instances that will maximally improve the classifier's boundary. In systematic reviews, this approach rapidly surfaces the most likely relevant papers while minimizing human annotation effort.
 
-\subsection{LLM-Based Screening and Prompting Paradigms}
+\subsection{LLM-Based Screening}
 
-An alternative to active learning is LLM-based screening. There are three primary paradigms for applying LLMs to classification: zero-shot (applying criteria from the prompt alone with no labeled examples), few-shot (including a small number of labeled examples in the prompt for in-context learning), and fine-tuning (updating the model's internal weights on a domain-specific labeled dataset). Zero-shot requires no training data but relies entirely on prompt clarity, while fine-tuning offers high performance on specialized text but requires significant resources.
-
-LLM-based screening evaluates each abstract against explicit inclusion and exclusion criteria, providing a binary decision. While this approach can be faster and requires no initial labeling effort, it demands rigorous prompt engineering. Empirical evidence shows that LLM outputs are highly sensitive to superficial prompt variations, meaning different formulations can yield systematically different decisions \citep{mizrahi2024state}. To ensure reproducibility, prompts must be pre-registered and reported verbatim in the methods section. Furthermore, LLM outputs are non-deterministic, necessitating fixed temperature settings (e.g., $T=0$) for consistency.
+An alternative to active learning is zero-shot LLM-based screening, which evaluates each abstract against explicit inclusion and exclusion criteria directly from the prompt without requiring labeled training data. While this approach requires no initial labeling effort, empirical evidence shows that LLM outputs are highly sensitive to superficial prompt variations \citep{mizrahi2024state}. To ensure reproducibility, prompts must be pre-registered and reported verbatim in the methods section, and models must be run at fixed temperature settings (e.g., $T=0$) to enforce deterministic outputs.
 
 \section{Structured Information Extraction}
 
@@ -185,7 +183,7 @@ The 20 case studies were deliberately selected to ensure structured coverage acr
 \end{enumerate}
 Figure \ref{fig:case_selection_rationale} visualizes this structured coverage. For each case, we defined a Boolean search query targeting an appropriate open bibliographic API, and a domain-specific extraction schema. The full list of case studies, their queries, and their target APIs is provided in Appendix A. 
 
-\textbf{Methodological Note on Data Provenance:} All performance metrics reported in this evaluation (e.g., mean categorical accuracy = 98.93\%, mean numeric accuracy = 93.00\%, mean WSS@95 = 33.5\%) are derived empirically from the raw outputs of the AI pipeline running on real scholarly corpora, not from synthetic or simulated datasets. The complete set of 20 extraction CSV files, alongside the Python scripts used to compute the summary statistics and generate the figures, is publicly available in the accompanying repository to enable independent verification.
+\textbf{Methodological Note on Data Provenance:} All performance metrics reported in this evaluation are derived empirically from the raw outputs of the AI pipeline running on real scholarly corpora, not from synthetic or simulated datasets. Summary statistics across the 20 cases (e.g., mean categorical accuracy = 98.93\%, mean numeric accuracy = 93.00\%, mean WSS@95 = 33.51\%) are computed as unweighted macro-averages (i.e., the metric is calculated per case, and those 20 case-level values are then averaged) to ensure that massive cases do not dominate the performance estimates of smaller niche topics. The complete set of 20 extraction CSV files, alongside the Python scripts used to compute the summary statistics and generate the figures, is publicly available in the accompanying repository to enable independent verification.
 
 \begin{figure}[H]
     \centering
@@ -205,10 +203,10 @@ The pipeline was evaluated across four dimensions:
     \item \textbf{Retrieval}: Raw records retrieved, deduplication rate, and abstract coverage per case.
     \item \textbf{Screening}: Active learning WSS@95, Recall, Precision, and F1-Score against the LLM zero-shot baseline.
     \item \textbf{Extraction}: Mean categorical and numeric accuracy from LLM-as-Judge verdicts, per case and per domain.
-    \item \textbf{Synthesis}: Qualitative analysis of how numeric extraction errors propagate into inverse-variance weighting and $I^2$ statistics.
+    \item \textbf{Synthesis}: Quantitative empirical analysis of how numeric extraction errors propagate into inverse-variance weighting, pooled effect sizes, and $I^2$ statistics across real extracted datasets.
 \end{enumerate}
 
-For the extraction phase, included records were capped at 200 per case to simulate a realistic systematic review workload, resulting in a total of 11,500 records processed by the extraction module. To ensure this cap did not introduce sampling artifacts, we conducted a saturation analysis on the largest cases, demonstrating that extraction accuracy and confidence interval precision stabilize well before the 200-record threshold.
+For the extraction phase, the number of records processed by the LLM was capped at 200 per case to simulate a realistic systematic review workload, resulting in a total of 11,500 records processed by the extraction module. Note that while Table \ref{tab:screening_results} reports the total number of relevant (included) records identified by the screening module---which exceeds 200 for several high-prevalence cases---the downstream extraction module only processed a random sample of up to 200 records per case. To ensure this cap did not introduce sampling artifacts, we conducted a saturation analysis on the largest cases, demonstrating that extraction accuracy and confidence interval precision stabilize well before the 200-record threshold.
 
 \section{Empirical Evaluation}
 
@@ -269,7 +267,7 @@ To robustly evaluate domain-level differences, we computed bootstrap 95\% confid
 
 Instead of domain, screening efficiency was driven primarily by the underlying corpus prevalence. We observed a significant positive Spearman correlation between corpus prevalence and WSS@95 ($\rho = 0.506$, $p = 0.023$), whereas raw corpus size had no correlation with WSS@95 ($\rho = 0.014$, $p = 0.952$). A multiple linear regression model predicting WSS@95 from prevalence, log-transformed corpus size, and domain dummy variables ($R^2 = 0.202$) confirmed that prevalence is the dominant structural determinant of active learning efficiency.
 
-However, screening efficiency varied significantly by domain and underlying corpus prevalence. WSS@95 was highest for cases with lower prevalence (e.g., Case 1, nurse staffing, prevalence 24.4\%, WSS@95 = 72.8\%; Case 12, LLM in higher education, prevalence 19.9\%, WSS@95 = 71.3\%), while cases with highly prevalent relevant literature saw diminished active learning gains (e.g., Case 19, AI ethics, prevalence 83.7\%, WSS@95 = 11.5\%). This confirms the theoretical expectation that active learning provides the greatest workload reduction when relevant literature is sparse relative to the total corpus. Table \ref{tab:screening_results} details the screening performance per case.
+However, screening efficiency varied descriptively by domain and significantly by underlying corpus prevalence. WSS@95 was highest for cases with lower prevalence (e.g., Case 1, nurse staffing, prevalence 24.4\%, WSS@95 = 72.8\%; Case 12, LLM in higher education, prevalence 19.9\%, WSS@95 = 71.3\%), while cases with highly prevalent relevant literature saw diminished active learning gains (e.g., Case 19, AI ethics, prevalence 83.7\%, WSS@95 = 11.5\%). This confirms the theoretical expectation that active learning provides the greatest workload reduction when relevant literature is sparse relative to the total corpus. Table \ref{tab:screening_results} details the screening performance per case.
 
 \begin{table}[H]
 \centering
@@ -450,13 +448,19 @@ Based on the empirical findings, we offer the following practical guidance:
 
 \subsection{Threats to Validity}
 
-Several limitations and threats to validity should be acknowledged. First, the extraction phase was conducted on abstracts rather than full texts for most cases, which systematically limits the extractability of numeric outcomes that are typically reported in tables or supplementary materials. Second, the 200-record cap per case, while appropriate for simulating a typical systematic review workload, means that the extraction accuracy estimates for high-prevalence cases are based on a random sample of the included records rather than the full included set. Third, the active learning simulation used a Naive Bayes classifier with TF-IDF features, which is a relatively simple baseline model. More sophisticated deep learning-based active learning models may achieve higher WSS@95 scores, particularly for semantically complex topics.
+Several limitations and threats to validity should be acknowledged.
 
-\subsubsection{Human Benchmark Validation}
+\textbf{1. Absence of a Full Human Gold Standard and LLM-as-Judge Bias}: Most critically, the primary threat to the validity of the extraction accuracy metrics is the reliance on LLM-as-Judge validation. Because the judge and the extractor share the same underlying architecture, they are susceptible to correlated errors---the judge may fail to penalize the extractor for mistakes it would also make. While we conducted a manual audit of 50 records (showing 94\% categorical and 81\% numeric agreement), the reported extraction accuracies throughout this paper should be interpreted strictly as agreement with an independent LLM evaluator rather than direct agreement with expert human annotation.
 
-Most critically, the primary threat to the validity of the extraction accuracy metrics is the reliance on LLM-as-Judge validation. While the LLM-as-Judge framework has been validated against human judgments in multiple domains \citep{zheng2024llmjudge}, it is not infallible. Because the judge and the extractor share the same underlying architecture and training distribution, they are susceptible to correlated errors---the judge may fail to penalize the extractor for mistakes it would also make. 
+\textbf{2. Abstract-Only Extraction}: The extraction phase was conducted on abstracts rather than full texts for most cases. This systematically limits the extractability of numeric outcomes that are typically reported in tables or supplementary materials, likely resulting in a higher proportion of UNVERIFIABLE verdicts than would be observed in a full-text pipeline.
 
-To empirically bound this limitation, we conducted a manual audit of 50 randomly sampled records across five case studies (10 per case), in which the first author independently verified the extracted values against the source abstracts. Manual agreement with the LLM extractor was 94\% for categorical fields and 81\% for numeric fields. These figures confirm the categorical-numeric dichotomy but suggest that the LLM-as-Judge metrics (98.9\% and 93.0\% respectively) represent an upper bound on true accuracy. The true categorical accuracy is likely 4--5 percentage points lower, and the numeric accuracy approximately 10--12 percentage points lower, than the judge-reported values. Future methodological work must construct a publicly available, fully human-annotated benchmark corpus of systematic review extractions to enable direct calibration of AI-assisted pipelines without relying on LLM-as-Judge proxies.
+\textbf{3. API Coverage Bias}: While OpenAlex, Crossref, and EuropePMC provide massive coverage, no single API indexes the entirety of the published literature. Certain disciplines, particularly in the humanities or non-English language publications, may be underrepresented in the retrieved corpora.
+
+\textbf{4. Non-Random Case Selection and Domain Imbalance}: The 20 case studies were purposively selected to ensure coverage across five domains, prevalence rates, and corpus sizes. However, this is not a random sample of all possible systematic reviews. The domains themselves are broad categorizations, and the specific cases chosen may not perfectly represent the average difficulty of reviews within those disciplines.
+
+\textbf{5. Active Learning Baseline}: The active learning simulation used a Naive Bayes classifier with TF-IDF features. While this provides a robust and computationally efficient baseline, more sophisticated deep learning-based active learning models (e.g., fine-tuned BERT variants) may achieve higher WSS@95 scores, particularly for semantically complex topics.
+
+\textbf{6. The 200-Record Extraction Cap}: While appropriate for simulating a typical systematic review workload, capping extraction at 200 records means that the extraction accuracy estimates for high-prevalence cases (e.g., Cases 4, 12, 14, 15) are based on a random sample of the included records rather than the full included set. While our saturation analysis (Figure \ref{fig:extraction_cap_saturation}) suggests accuracy stabilizes before 200 records, processing the full datasets might reveal rare failure modes not captured in the capped samples.
 
 \section{Conclusion}
 
