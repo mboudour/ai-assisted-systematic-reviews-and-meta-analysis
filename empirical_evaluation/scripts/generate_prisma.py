@@ -1,7 +1,7 @@
 """
-generate_prisma.py
-Regenerate fig_prisma_flow_updated.pdf with correct non-overlapping layout
-and properly directed arrows.
+generate_prisma.py  –  PRISMA flow diagram using explicit data coordinates.
+Uses a 10×18 inch figure with a 0–100 x-axis and 0–180 y-axis so every
+measurement is in plain integers, making overlap impossible to hide.
 """
 import matplotlib
 matplotlib.use("Agg")
@@ -10,74 +10,69 @@ import matplotlib.patches as mpatches
 
 OUTDIR = "/home/ubuntu/repo_push/empirical_evaluation/figures/"
 
-plt.rcParams.update({
-    "font.family": "serif",
-    "font.size": 10,
-    "figure.dpi": 150,
-    "savefig.dpi": 300,
-    "savefig.bbox": "tight",
-})
+# ── Numbers ───────────────────────────────────────────────────────────────────
+total_raw       = 100_557
+total_dedup     = 99_500
+total_included  = 18_936
+total_excluded  = total_dedup - total_included   # 80,564
+total_extracted = 4_000
+total_validated = total_extracted
 
-fig, ax = plt.subplots(figsize=(9, 12))
+# ── Canvas ────────────────────────────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(10, 18))
+ax.set_xlim(0, 100)
+ax.set_ylim(0, 180)
 ax.axis("off")
 
-# ── Numbers ───────────────────────────────────────────────────────────────────
-total_raw         = 100_557
-total_dedup       = 99_500
-total_included    = 18_936
-total_excluded    = total_dedup - total_included   # 80,564
-total_extracted   = 4_000    # 20 cases × 200 cap
-total_validated   = total_extracted
+plt.rcParams.update({"font.family": "serif", "savefig.dpi": 300,
+                     "savefig.bbox": "tight"})
 
-# ── Layout constants ──────────────────────────────────────────────────────────
-# Main column: centre x = 0.40
-# Side column: centre x = 0.83
-# 6 main boxes at y = 0.90, 0.74, 0.58, 0.42, 0.26, 0.10
-# Box full height = 0.08  →  half = 0.04
-# Vertical gap between boxes = 0.16 - 0.08 = 0.08  (no overlap)
+# ── Layout (all in data units) ────────────────────────────────────────────────
+# Main column: centred at x=42, width=52, height=10
+# Side column: centred at x=82, width=26, height=10
+# 6 main boxes at y_centres: 165, 135, 105, 75, 45, 15
+# Gap between boxes = 30 - 10 = 20 units  (no overlap possible)
 
-MX  = 0.40   # main column x
-SX  = 0.83   # side column x
-BW  = 0.58   # main box width
-SW  = 0.24   # side box width
-BH  = 0.08   # box full height
-HBH = BH / 2 # half box height
-FS  = 9      # main font size
-SFS = 8      # side font size
+MX, BW, BH = 42, 52, 10   # main centre-x, width, height
+SX, SW     = 82, 26        # side centre-x, width  (same BH)
+HBH        = BH / 2        # 5 units
 
-YS = [0.90, 0.74, 0.58, 0.42, 0.26, 0.10]   # main box y-centres
+YS = [165, 135, 105, 75, 45, 15]   # main box y-centres (top to bottom)
 
 COLORS = {
-    "id":    "#2166ac",
-    "scr":   "#4dac26",
-    "ext":   "#762a83",
-    "val":   "#8856a7",
-    "excl":  "#d73027",
+    "id":   "#2166ac",
+    "scr":  "#4dac26",
+    "ext":  "#762a83",
+    "val":  "#8856a7",
+    "excl": "#d73027",
 }
 
-# ── Helper functions ──────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def pbox(cx, cy, w, h, text, color, fs=9):
     rect = mpatches.FancyBboxPatch(
         (cx - w/2, cy - h/2), w, h,
-        boxstyle="round,pad=0.015",
-        facecolor="white", edgecolor=color, linewidth=1.8)
+        boxstyle="round,pad=0.5",
+        facecolor="white", edgecolor=color, linewidth=2,
+        transform=ax.transData, clip_on=False)
     ax.add_patch(rect)
     ax.text(cx, cy, text, ha="center", va="center",
-            fontsize=fs, multialignment="center")
+            fontsize=fs, multialignment="center", transform=ax.transData)
 
-def varrow(y_top_centre, y_bot_centre):
-    """Vertical arrow from bottom edge of upper box to top edge of lower box."""
+def varrow(y_upper_centre, y_lower_centre):
+    """Downward arrow from bottom of upper box to top of lower box."""
     ax.annotate("",
-        xy=(MX, y_bot_centre + HBH),
-        xytext=(MX, y_top_centre - HBH),
-        arrowprops=dict(arrowstyle="->", color="black", lw=1.3))
+        xy=(MX, y_lower_centre + HBH),
+        xytext=(MX, y_upper_centre - HBH),
+        arrowprops=dict(arrowstyle="->", color="black", lw=1.5),
+        annotation_clip=False)
 
 def harrow(y_centre, color):
-    """Horizontal arrow from right edge of main box to left edge of side box."""
+    """Rightward arrow from right edge of main box to left edge of side box."""
     ax.annotate("",
         xy=(SX - SW/2, y_centre),
         xytext=(MX + BW/2, y_centre),
-        arrowprops=dict(arrowstyle="->", color=color, lw=1.3))
+        arrowprops=dict(arrowstyle="->", color=color, lw=1.5),
+        annotation_clip=False)
 
 # ── Main boxes ────────────────────────────────────────────────────────────────
 pbox(MX, YS[0], BW, BH,
@@ -101,7 +96,7 @@ pbox(MX, YS[3], BW, BH,
 
 varrow(YS[3], YS[4])
 pbox(MX, YS[4], BW, BH,
-     f"Records with structured extraction\n(n = {total_extracted:,}; capped 200/case × 20 cases)",
+     f"Records with structured extraction\n(n = {total_extracted:,}; capped 200/case \u00d7 20 cases)",
      COLORS["ext"])
 
 varrow(YS[4], YS[5])
@@ -110,31 +105,29 @@ pbox(MX, YS[5], BW, BH,
      COLORS["val"])
 
 # ── Side boxes ────────────────────────────────────────────────────────────────
-# Excluded: beside Screening box (YS[2])
+# Excluded: beside Screening box (YS[2] = 105)
 pbox(SX, YS[2], SW, BH,
      f"Records excluded\n(n = {total_excluded:,})",
-     COLORS["excl"], fs=SFS)
+     COLORS["excl"], fs=8)
 harrow(YS[2], COLORS["excl"])
 
-# Cap note: beside Extraction box (YS[4])
+# Cap note: beside Extraction box (YS[4] = 45)
 pbox(SX, YS[4], SW, BH,
      f"Cap applied:\n200 records/case\n(20 cases)",
-     COLORS["ext"], fs=SFS)
+     COLORS["ext"], fs=8)
 harrow(YS[4], COLORS["ext"])
 
-# ── Stage labels ──────────────────────────────────────────────────────────────
+# ── Stage labels (left margin) ────────────────────────────────────────────────
 stage_labels = [
     "Identification", "Deduplication", "Screening",
     "Inclusion", "Extraction", "Validation"
 ]
 for y, lbl in zip(YS, stage_labels):
-    ax.text(0.01, y, lbl, fontsize=8.5, color="gray",
-            style="italic", va="center")
+    ax.text(1, y, lbl, fontsize=8.5, color="gray",
+            style="italic", va="center", ha="left")
 
-ax.set_xlim(0, 1.05)
-ax.set_ylim(0.02, 1.0)
 ax.set_title("PRISMA-style flow diagram (20-case evaluation)",
-             fontsize=11, pad=10)
+             fontsize=12, pad=14)
 plt.tight_layout()
 plt.savefig(OUTDIR + "fig_prisma_flow_updated.pdf")
 plt.close()
