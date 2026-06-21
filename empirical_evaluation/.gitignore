@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+data/raw/
+data/screened/
+data/extracted/
+api_keys.env
+.cache_scopus/
+temp/
