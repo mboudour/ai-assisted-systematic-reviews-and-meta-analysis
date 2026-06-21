@@ -183,13 +183,13 @@ The 20 case studies were deliberately selected to ensure structured coverage acr
     \item \textbf{Corpus Prevalence}: The underlying density of relevant literature ranges from highly sparse (e.g., Case 7, Restorative Justice, 1.9\%) to highly dense (e.g., Case 19, AI Ethics, 83.7\%). This variation is critical for evaluating the boundary conditions of active learning screening efficiency.
     \item \textbf{Corpus Size}: The deduplicated corpus sizes span two orders of magnitude, from small, niche topics (Case 1, Nurse Staffing, $N=90$) to massive interdisciplinary fields (Case 4, AI Radiology, $N=9,929$).
 \end{enumerate}
-Figure \ref{fig:case_selection} visualizes this structured coverage, demonstrating that the empirical evaluation is not clustered in any single corner of the design space. For each case, we defined a Boolean search query targeting an appropriate open bibliographic API, and a domain-specific extraction schema. The full list of case studies, their queries, and their target APIs is provided in Appendix A.
+Figure \ref{fig:case_selection_rationale} visualizes this structured coverage, demonstrating that the empirical evaluation is not clustered in any single corner of the design space. For each case, we defined a Boolean search query targeting an appropriate open bibliographic API, and a domain-specific extraction schema. The full list of case studies, their queries, and their target APIs is provided in Appendix A.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figures/fig_case_selection_rationale.pdf}
     \caption{Case selection rationale demonstrating structured coverage across the design space. (a) Balanced domain distribution. (b) Wide variation in corpus prevalence (sparse to dense). (c) Wide variation in deduplicated corpus size. (d) Joint distribution of prevalence and corpus size, confirming that the 20 cases span the operational boundaries of systematic reviewing.}
-    \label{fig:case_selection}
+    \label{fig:case_selection_rationale}
 \end{figure}
 
 \subsection{The LLM-as-Judge Validation Framework}
@@ -206,7 +206,7 @@ The pipeline was evaluated across four dimensions:
     \item \textbf{Synthesis}: Qualitative analysis of how numeric extraction errors propagate into inverse-variance weighting and $I^2$ statistics.
 \end{enumerate}
 
-For the extraction phase, included records were capped at 200 per case to simulate a realistic systematic review workload, resulting in a total of 10,500 records processed by the extraction module. To ensure this cap did not introduce sampling artifacts, we conducted a saturation analysis on the largest cases, demonstrating that extraction accuracy and confidence interval precision stabilize well before the 200-record threshold.
+For the extraction phase, included records were capped at 200 per case to simulate a realistic systematic review workload, resulting in a total of 11,500 records processed by the extraction module. To ensure this cap did not introduce sampling artifacts, we conducted a saturation analysis on the largest cases, demonstrating that extraction accuracy and confidence interval precision stabilize well before the 200-record threshold.
 
 \section{Empirical Evaluation}
 
@@ -321,7 +321,7 @@ However, screening efficiency varied significantly by domain and underlying corp
 
 \subsection{Dimension 3: Extraction Accuracy}
 
-For the extraction phase, we capped the included records at a maximum of 200 per case, resulting in 10,500 records processed by the extraction module. To justify this threshold, we conducted a saturation analysis tracking cumulative accuracy and bootstrap 95\% confidence interval width as a function of records processed. As shown in Figure \ref{fig:saturation}, both categorical and numeric accuracy stabilize rapidly, and the precision of the numeric accuracy estimates (measured by CI width) plateaus well before 200 records. For the largest cases, the numeric accuracy at the 200-record cap deviates from the full-dataset accuracy by less than 2 percentage points. This confirms that the 200-record cap provides a stable, representative estimate of LLM extraction performance without requiring exhaustive processing of massive corpora.
+For the extraction phase, we capped the included records at a maximum of 200 per case, resulting in 11,500 records processed by the extraction module. To justify this threshold, we conducted a saturation analysis tracking cumulative accuracy and bootstrap 95\% confidence interval width as a function of records processed. As shown in Figure \ref{fig:extraction_cap_saturation}, both categorical and numeric accuracy stabilize rapidly, and the precision of the numeric accuracy estimates (measured by CI width) plateaus well before 200 records. For the largest cases, the numeric accuracy at the 200-record cap deviates from the full-dataset accuracy by less than 2 percentage points. This confirms that the 200-record cap provides a stable, representative estimate of LLM extraction performance without requiring exhaustive processing of massive corpora.
 
 The LLM-as-Judge validation revealed a stark and consistent dichotomy between categorical and numeric extraction tasks across all 20 cases.
 
@@ -372,7 +372,7 @@ The cases with the lowest numeric accuracy (Case 11, class size achievement, 78.
     \centering
     \includegraphics[width=\textwidth]{figures/fig_extraction_cap_saturation.pdf}
     \caption{Extraction cap saturation analysis justifying the 200-record threshold. (a) Categorical and (b) numeric accuracy stabilize rapidly as records are processed. (c) The precision of the accuracy estimates (measured by bootstrap 95\% CI width) plateaus before the 200-record cap. (d) The accuracy at $n=200$ closely tracks the full-dataset accuracy for the largest case studies.}
-    \label{fig:saturation}
+    \label{fig:extraction_cap_saturation}
 \end{figure}
 
 \begin{figure}[H]

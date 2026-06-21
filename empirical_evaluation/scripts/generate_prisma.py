@@ -14,7 +14,7 @@ total_raw       = 100_557
 total_dedup     = 99_500
 total_included  = 18_936
 total_excluded  = total_dedup - total_included   # 80,564
-total_extracted = 4_000
+total_extracted = 11_500
 total_validated = total_extracted
 
 # ── Canvas size ───────────────────────────────────────────────────────────────
@@ -152,15 +152,18 @@ draw_box(SCX, YS[4], SX1, SX2, BH,
           "(20 cases)"],
          C["ext"], font_small)
 
-# ── Arrow from Cap side box down to Validation box ───────────────────────────
-# Side box bottom edge: YS[4] + BH//2 = 760+35 = 795
-# Validation box top edge: YS[5] - BH//2 = 920-35 = 885
+# ── Arrow from Cap side box back to main flow ───────────────────────────
+# Draw an arrow from the bottom of the Cap box pointing down to the main flow line
+# that goes from Extraction to Validation
 cap_arrow_x = SCX
 cap_y1 = YS[4] + BH // 2 + 4
-cap_y2 = YS[5] - BH // 2 - 18
+cap_y2 = YS[4] + BH // 2 + 50
+# Draw vertical line down from cap box
 draw.line([(cap_arrow_x, cap_y1), (cap_arrow_x, cap_y2)], fill=C["ext"], width=3)
-cap_tip = YS[5] - BH // 2 - 2
-draw.polygon([(cap_arrow_x-8, cap_tip-14), (cap_arrow_x+8, cap_tip-14), (cap_arrow_x, cap_tip)], fill=C["ext"])
+# Draw horizontal line left to join the main vertical arrow
+draw.line([(cap_arrow_x, cap_y2), (MCX + 4, cap_y2)], fill=C["ext"], width=3)
+# Draw arrowhead on the main vertical line
+draw.polygon([(MCX+14, cap_y2-8), (MCX+14, cap_y2+8), (MCX, cap_y2)], fill=C["ext"])
 
 # ── Stage labels ──────────────────────────────────────────────────────────────
 stage_labels = [
