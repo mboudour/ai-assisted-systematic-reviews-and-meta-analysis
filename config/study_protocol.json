@@ -1,0 +1,387 @@
+{
+  "amendment_policy": {
+    "allowed": true,
+    "prohibited": "silent editing of frozen decisions",
+    "requirements": [
+      "append-only amendment record",
+      "timestamp and author",
+      "reason and affected protocol fields",
+      "classification as before or after viewing relevant outcome",
+      "new semantic protocol version"
+    ]
+  },
+  "analysis_invariants": [
+    "Archived historical files are immutable.",
+    "No technical failure is converted to an analytical label or null value.",
+    "No same-model verdict is described as accuracy without human reference.",
+    "UNVERIFIABLE is reported with its own denominator.",
+    "No placeholder or random analytical result is generated when inputs are absent.",
+    "No meta-analysis proceeds before common estimand and study independence checks.",
+    "Case and domain summaries disclose weighting and remain descriptive for purposive cases."
+  ],
+  "data_quality_dimensions": [
+    {
+      "name": "completeness",
+      "operationalization": "presence of required metadata, source text, and synthesis fields"
+    },
+    {
+      "name": "accuracy",
+      "operationalization": "agreement with adjudicated human reference data"
+    },
+    {
+      "name": "validity_and_conformance",
+      "operationalization": "type, range, unit, logical ordering, and schema checks"
+    },
+    {
+      "name": "consistency",
+      "operationalization": "agreement among linked values such as estimate and interval"
+    },
+    {
+      "name": "uniqueness",
+      "operationalization": "report deduplication and underlying-study linkage accuracy"
+    },
+    {
+      "name": "provenance",
+      "operationalization": "traceability to source record, text, prompt, model, call, and code version"
+    },
+    {
+      "name": "technical_reliability",
+      "operationalization": "successful completion without API, parsing, or schema failure"
+    },
+    {
+      "name": "source_adequacy",
+      "operationalization": "whether the supplied title/abstract supports field verification"
+    }
+  ],
+  "design": {
+    "case_selection": "20 purposively selected test cases across five assigned domains",
+    "generalization_limit": "Cases do not constitute a probability sample of disciplines, systematic reviews, or bibliographic corpora. Domain comparisons are descriptive.",
+    "historical_reference_status": "model_generated_outputs_not_ground_truth",
+    "historical_snapshot_sha256": "619cb3d2d0d1f558454f77fd6b0aee98b476a648ec90e793d270c31005282f7c",
+    "primary_reference_standard": "human_adjudication",
+    "type": "retrospective_validation_plus_prospective_audit_and_simulation"
+  },
+  "evaluator_error_injection": {
+    "allocation": "blocked random assignment to unchanged control or one injected error",
+    "blinding": "evaluator is not told assignment or error type",
+    "companion_outcome": "false-alarm rate on unchanged controls",
+    "control_ratio": 1.0,
+    "eligible_inputs": "human-verified source-field pairs",
+    "error_types": [
+      "small_numeric_error",
+      "large_numeric_error",
+      "decimal_or_scale_error",
+      "unit_error",
+      "sign_or_direction_reversal",
+      "swapped_confidence_bounds",
+      "estimate_interval_inconsistency",
+      "wrong_effect_measure_label",
+      "wrong_outcome_comparator_subgroup_or_timepoint",
+      "false_null_or_false_nonnull",
+      "wrong_categorical_value"
+    ],
+    "initial_per_error_type": 30,
+    "precision_rule": "increase within frozen blocks until reported 95% half-width is at most 0.10",
+    "primary_outcome": "detection as INCORRECT"
+  },
+  "freeze_date": "2026-09-19",
+  "human_reference_sampling": {
+    "adaptive_precision_rule": {
+      "interval_level": 0.95,
+      "pooled_primary_half_width_target": 0.05,
+      "reported_case_level_half_width_target": 0.1,
+      "restriction": "increase sample size by frozen strata only; do not stop based on favorable results"
+    },
+    "annotators": {
+      "adjudication": "consensus or third reviewer; unresolved remains a reported state",
+      "blind_to_model_outputs_where_task_allows": true,
+      "count": 2,
+      "independent_before_adjudication": true
+    },
+    "extraction": {
+      "analysis": "retain inverse inclusion probabilities and cluster by record",
+      "expected_initial_fields": 1504,
+      "initial_draw_per_nonempty_stratum": 10,
+      "population_fields": 90554,
+      "sample_all_if_stratum_smaller_than": 10,
+      "sampling": "without replacement using stable record-field identities",
+      "sampling_frame": "all archived record-field pairs",
+      "strata": [
+        "case_id",
+        "field_audit_class",
+        "extracted_null_status",
+        "historical_evaluator_verdict"
+      ]
+    },
+    "screening": {
+      "analysis": "retain inverse inclusion probabilities for design-weighted estimates",
+      "expected_initial_records": 1192,
+      "initial_draw_per_nonempty_stratum": 30,
+      "sample_all_if_stratum_smaller_than": 30,
+      "sampling": "without replacement using stable record identities",
+      "sampling_frame": "all 94,522 archived screened records",
+      "strata": [
+        "case_id",
+        "historical_llm_decision"
+      ]
+    }
+  },
+  "meta_analysis_eligibility": {
+    "dependent_estimates": "use multilevel or cluster-robust analysis as a secondary model",
+    "exclusion_rule": "do not pool incompatible effect measures merely because they share a column",
+    "primary_estimate_selection": "one prespecified estimate per independent study",
+    "required": [
+      "a prespecified common estimand or a defensible conversion to one",
+      "at least five independent studies for any synthesis",
+      "at least ten independent studies for a primary propagation analysis",
+      "human verification of synthesis-critical values",
+      "documented handling of multiple reports, outcomes, subgroups, and time points"
+    ]
+  },
+  "meta_analysis_models": {
+    "comparators": [
+      "fixed-effect inverse variance",
+      "DerSimonian-Laird random effects"
+    ],
+    "conclusion_rules": [
+      "whether the confidence interval crosses the null",
+      "whether a case-specific substantive threshold is crossed"
+    ],
+    "heterogeneity": [
+      "tau_squared",
+      "I_squared",
+      "Q"
+    ],
+    "prediction_interval": "report for random-effects models when mathematically estimable",
+    "primary": "REML random effects with Hartung-Knapp inference",
+    "threshold_timing": "freeze each substantive threshold before comparing LLM and human results"
+  },
+  "primary_estimands": [
+    {
+      "denominator": "weighted adjudicated relevant records",
+      "id": "P1_screening_sensitivity",
+      "numerator": "weighted true-positive records",
+      "reference": "adjudicated human screening label",
+      "target": "design-weighted probability that an adjudicated relevant record was labeled INCLUDE",
+      "unit": "record"
+    },
+    {
+      "denominator": "weighted source-assessable extracted fields",
+      "id": "P2_extraction_error_rate",
+      "numerator": "weighted human-labeled incorrect fields",
+      "reference": "adjudicated same-source human field label",
+      "target": "design-weighted probability that a source-assessable extracted field is incorrect",
+      "unit": "field"
+    },
+    {
+      "denominator": "human-confirmed incorrect fields with completed evaluator calls",
+      "id": "P3_evaluator_sensitivity",
+      "numerator": "human-confirmed incorrect fields labeled INCORRECT by evaluator",
+      "reference": "adjudicated same-source human field label",
+      "target": "probability that the evaluator identifies a human-confirmed incorrect field",
+      "unit": "field"
+    },
+    {
+      "denominator": "human-confirmed correct fields with completed evaluator calls",
+      "id": "P4_evaluator_specificity",
+      "numerator": "human-confirmed correct fields labeled CORRECT by evaluator",
+      "reference": "adjudicated same-source human field label",
+      "target": "probability that the evaluator accepts a human-confirmed correct field",
+      "unit": "field"
+    },
+    {
+      "denominator": "not_applicable",
+      "id": "P5_observed_propagation_shift",
+      "numerator": "pooled effect on analysis scale from LLM data minus human-reference pooled effect",
+      "reference": "human-adjudicated synthesis dataset",
+      "target": "difference between pooled effects from matched LLM and human-adjudicated datasets",
+      "unit": "eligible_meta_analysis"
+    },
+    {
+      "denominator": "all valid simulation draws",
+      "id": "P6_simulated_conclusion_change",
+      "numerator": "draws with a changed statistical or substantive conclusion",
+      "reference": "human-adjudicated synthesis result",
+      "target": "probability that calibrated pipeline errors change a prespecified conclusion",
+      "unit": "monte_carlo_draw"
+    }
+  ],
+  "propagation_analyses": {
+    "minimum_draws_per_primary_scenario": 10000,
+    "monte_carlo_mechanisms": [
+      "screening omission",
+      "numeric extraction corruption",
+      "wrong unit or scale",
+      "confidence-bound corruption",
+      "wrong outcome or comparator selection",
+      "technical failure",
+      "joint pipeline error"
+    ],
+    "monte_carlo_standard_error_target": 0.0025,
+    "observed_order": [
+      "human-adjudicated synthesis dataset",
+      "matched original LLM-extracted dataset",
+      "extraction-corrected dataset",
+      "screening-restored dataset where validation supports it",
+      "combined corrected dataset",
+      "failure-aware lower and upper bounds"
+    ],
+    "rate_uncertainty": "bootstrap or hierarchical draws from observed validation data"
+  },
+  "prospective_model_roles": {
+    "available_models_observed": [
+      "gpt-5",
+      "gpt-5-mini",
+      "gpt-5-nano",
+      "gpt-5.5",
+      "gemini-3-flash-preview",
+      "gemini-3.1-pro-preview"
+    ],
+    "catalog_checked_on": "2026-09-19",
+    "catalog_snapshot_file": "config/model_catalog_snapshot.json",
+    "catalog_snapshot_sha256": "26757592f5eed9332607717625a9f74980f2e89f544e15b8482c50f12f08b630",
+    "human_reference_priority": "Model comparisons are secondary; no model output replaces human adjudication.",
+    "independent_evaluator_robustness_check": {
+      "model_id": "gemini-3.1-pro-preview",
+      "reasoning": "provider_default",
+      "response_format": "strict_json_schema",
+      "temperature": 0
+    },
+    "primary_generator_and_dependent_evaluator": {
+      "model_id": "gpt-5-mini",
+      "reasoning": "disabled_for_classification_and_structured_extraction",
+      "response_format": "strict_json_schema",
+      "temperature": 0
+    },
+    "runtime_logging": [
+      "requested_model_id",
+      "returned_model_id",
+      "system_fingerprint_if_available",
+      "request_id",
+      "prompt_hash",
+      "schema_hash",
+      "attempt_number",
+      "timestamps",
+      "latency",
+      "usage",
+      "raw_response",
+      "call_status"
+    ]
+  },
+  "protocol_version": "1.0.0",
+  "randomness": {
+    "generator": "NumPy PCG64DXSM",
+    "master_seed": 20260919,
+    "rule": "record every derived seed and never use one mutable global stream across analyses",
+    "stream_derivation": "SHA-256 of protocol version, task namespace, case, and replicate"
+  },
+  "repeatability": {
+    "extraction_fields_initial": 500,
+    "independent_repeats": 3,
+    "screening_records_initial": 200,
+    "seed_note": "Model-side nondeterminism is measured; local sampling remains seeded."
+  },
+  "required_companion_rates": [
+    {
+      "denominator": "all attempted calls",
+      "id": "technical_failure_rate",
+      "rule": "Report each failure state separately and combined; never impute an analytical value."
+    },
+    {
+      "denominator": "all completed evaluator field judgments",
+      "id": "unverifiability_rate",
+      "rule": "Do not exclude UNVERIFIABLE from its own denominator or merge it with failures."
+    },
+    {
+      "denominator": "all human-reviewed fields",
+      "id": "source_inadequacy_rate",
+      "rule": "Report not reported, ambiguous, unavailable, and not applicable separately."
+    }
+  ],
+  "research_questions": [
+    {
+      "id": "RQ1",
+      "question": "What completeness, validity, uniqueness, provenance, and technical-reliability problems occur across retrieval and corpus construction?"
+    },
+    {
+      "id": "RQ2",
+      "question": "How valid are archived LLM screening decisions and structured extractions against a human-adjudicated reference?"
+    },
+    {
+      "id": "RQ3",
+      "question": "How well does an LLM evaluator identify correct, incorrect, and source-unassessable extracted fields, including controlled injected errors?"
+    },
+    {
+      "id": "RQ4",
+      "question": "How do observed and calibrated screening, extraction, and technical failures change eligible meta-analyses and their conclusions?"
+    }
+  ],
+  "secondary_estimands": [
+    "screening specificity, precision, negative predictive value, balanced accuracy, and F1",
+    "field accuracy by case, field name, field class, null status, and source adequacy",
+    "raw human agreement, Cohen kappa, and Gwet AC1 before adjudication",
+    "evaluator predictive values and abstention rate",
+    "repeat-run stability and transition probabilities",
+    "retrieval completeness, metadata conformance, and deduplication error rates",
+    "confidence-interval width, prediction interval, tau-squared, I-squared, and weight shifts"
+  ],
+  "status": "frozen_before_new_primary_computations",
+  "status_vocabularies": {
+    "call_status": [
+      "ok",
+      "api_error",
+      "timeout",
+      "rate_limited",
+      "invalid_response",
+      "parse_error",
+      "cancelled"
+    ],
+    "evaluator_verdict": [
+      "CORRECT",
+      "INCORRECT",
+      "UNVERIFIABLE"
+    ],
+    "human_field_label": [
+      "correct",
+      "incorrect",
+      "not_assessable"
+    ],
+    "human_resolution_status": [
+      "resolved",
+      "human_unresolved"
+    ],
+    "screening_label": [
+      "include",
+      "exclude",
+      "uncertain"
+    ],
+    "source_status": [
+      "reported_explicitly",
+      "derivable_from_source",
+      "not_reported",
+      "ambiguous_source",
+      "source_unavailable",
+      "not_applicable"
+    ]
+  },
+  "target_venue": "ACM Journal of Data and Information Quality (JDIQ)",
+  "uncertainty_methods": {
+    "case_aggregation": [
+      "macro average across cases",
+      "record- or field-weighted micro estimate"
+    ],
+    "domain_aggregation": "descriptive only; no population-level domain claim",
+    "exploratory_multiple_testing": "Benjamini-Hochberg correction within each declared family",
+    "unweighted_proportions": "Wilson 95% confidence interval",
+    "weighted_validation_estimands": "10,000-replicate stratified cluster bootstrap respecting sampling strata and record clustering"
+  },
+  "units_of_analysis": {
+    "call": "one attempted model API operation, including failed attempts",
+    "case": "one purposively selected topic and retrieval configuration",
+    "estimate": "one harmonized effect estimate for a defined estimand",
+    "field": "one requested structured value for one record",
+    "record": "one retained bibliographic report record",
+    "study": "one underlying independent study after report linkage"
+  },
+  "working_title": "Data Quality and Error Propagation in LLM-Assisted Evidence Synthesis"
+}

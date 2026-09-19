@@ -1,0 +1,1588 @@
+{
+  "cases": [
+    {
+      "case_id": 1,
+      "domain_assignment": "Health and Clinical",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 22,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "population"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "intervention"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "comparison"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 5000,
+        "post_dedup_row_count": 90,
+        "pre_dedup_row_count": null,
+        "query": "(\"nurse-to-patient ratio\" OR \"nursing staffing\" OR \"staffing ratio\") AND (\"patient mortality\" OR \"adverse events\" OR \"patient outcomes\") AND (\"acute care\" OR \"hospital\")",
+        "query_semantics": "source_specific_query",
+        "source": "pubmed",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 22,
+        "inclusion_criteria": "Include if: empirical study reporting nurse-to-patient staffing ratios and patient mortality or adverse events in acute care hospitals. Exclude: editorials, opinion pieces, non-acute settings.",
+        "screened_rows": 90
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "nurse_staffing_mortality"
+    },
+    {
+      "case_id": 2,
+      "domain_assignment": "Health and Clinical",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 72,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "population"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "intervention"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4000,
+        "post_dedup_row_count": 2803,
+        "pre_dedup_row_count": null,
+        "query": "(\"mindfulness-based\" OR \"MBSR\" OR \"MBCT\") AND (\"anxiety disorder\" OR \"generalised anxiety\" OR \"panic disorder\") AND (\"randomised controlled trial\" OR \"RCT\" OR \"meta-analysis\")",
+        "query_semantics": "source_specific_query",
+        "source": "europepmc",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 72,
+        "inclusion_criteria": "Include if: RCT or systematic review of mindfulness-based interventions (MBSR/MBCT) for diagnosed anxiety disorders with quantitative outcomes. Exclude: qualitative studies, healthy populations.",
+        "screened_rows": 2803
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "mindfulness_anxiety"
+    },
+    {
+      "case_id": 3,
+      "domain_assignment": "Health and Clinical",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 841,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "drug"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "follow_up_years"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "hazard_ratio"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 6000,
+        "post_dedup_row_count": 5945,
+        "pre_dedup_row_count": null,
+        "query": "(\"GLP-1 receptor agonist\" OR \"semaglutide\" OR \"liraglutide\" OR \"dulaglutide\") AND (\"cardiovascular outcome\" OR \"MACE\" OR \"heart failure\" OR \"myocardial infarction\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 841,
+        "inclusion_criteria": "Include if: clinical trial or observational study reporting cardiovascular outcomes (MACE, heart failure, MI) for GLP-1 receptor agonists. Exclude: animal studies, case reports.",
+        "screened_rows": 5945
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "glp1_cardiovascular"
+    },
+    {
+      "case_id": 4,
+      "domain_assignment": "Health and Clinical",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 2444,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "imaging_modality"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "ai_model_type"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "task"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sensitivity"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "specificity"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "auc"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 10000,
+        "post_dedup_row_count": 9929,
+        "pre_dedup_row_count": null,
+        "query": "(\"artificial intelligence\" OR \"deep learning\" OR \"convolutional neural network\") AND (\"radiology\" OR \"medical imaging\" OR \"diagnostic imaging\") AND (\"accuracy\" OR \"sensitivity\" OR \"specificity\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 2444,
+        "inclusion_criteria": "Include if: empirical evaluation of AI/deep learning for diagnostic imaging accuracy (sensitivity/specificity reported). Exclude: review articles without primary data, non-diagnostic tasks.",
+        "screened_rows": 9929
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "ai_radiology_diagnosis"
+    },
+    {
+      "case_id": 5,
+      "domain_assignment": "Social and Behavioral",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 469,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "programme"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4500,
+        "post_dedup_row_count": 4447,
+        "pre_dedup_row_count": null,
+        "query": "(\"conditional cash transfer\" OR \"CCT\" OR \"unconditional cash transfer\") AND (\"educational attainment\" OR \"school enrolment\" OR \"dropout\" OR \"attendance\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 469,
+        "inclusion_criteria": "Include if: empirical study of conditional or unconditional cash transfer programmes measuring educational attainment, enrolment, or dropout. Exclude: theoretical models, qualitative only.",
+        "screened_rows": 4447
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "cash_transfers_education"
+    },
+    {
+      "case_id": 6,
+      "domain_assignment": "Social and Behavioral",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 584,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "platform"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "age_group"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4000,
+        "post_dedup_row_count": 3968,
+        "pre_dedup_row_count": null,
+        "query": "(\"social media\" OR \"Instagram\" OR \"TikTok\" OR \"Facebook\") AND (\"mental health\" OR \"depression\" OR \"anxiety\" OR \"wellbeing\") AND (\"adolescent\" OR \"teenager\" OR \"youth\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 584,
+        "inclusion_criteria": "Include if: quantitative study of social media use and mental health outcomes (depression, anxiety, wellbeing) in adolescents aged 10-25. Exclude: adults only, qualitative studies.",
+        "screened_rows": 3968
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "social_media_mental_health"
+    },
+    {
+      "case_id": 7,
+      "domain_assignment": "Social and Behavioral",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 77,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "programme_type"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "follow_up_months"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "recidivism_rate_treatment"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "recidivism_rate_control"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 5000,
+        "post_dedup_row_count": 4102,
+        "pre_dedup_row_count": null,
+        "query": "(\"restorative justice\" OR \"restorative practice\" OR \"victim-offender mediation\") AND (\"recidivism\" OR \"reoffending\" OR \"criminal behaviour\")",
+        "query_semantics": "source_specific_query",
+        "source": "core",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 77,
+        "inclusion_criteria": "Include if: empirical evaluation of restorative justice or victim-offender mediation measuring recidivism or reoffending rates. Exclude: theoretical, descriptive only.",
+        "screened_rows": 4102
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "restorative_justice_recidivism"
+    },
+    {
+      "case_id": 8,
+      "domain_assignment": "Social and Behavioral",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 308,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "sector"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "gap_measure"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "year"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "gap_percent"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 8000,
+        "post_dedup_row_count": 7708,
+        "pre_dedup_row_count": null,
+        "query": "(\"gender pay gap\" OR \"gender wage gap\" OR \"gender earnings gap\") AND (\"OECD\" OR \"labour market\" OR \"wage inequality\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 308,
+        "inclusion_criteria": "Include if: empirical study measuring gender pay or wage gap across OECD countries with quantitative estimates. Exclude: single-country studies outside OECD, qualitative only.",
+        "screened_rows": 7708
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "gender_pay_gap"
+    },
+    {
+      "case_id": 9,
+      "domain_assignment": "Education and Learning",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 580,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "system_name"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "subject"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "grade_level"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4000,
+        "post_dedup_row_count": 3962,
+        "pre_dedup_row_count": null,
+        "query": "(\"intelligent tutoring system\" OR \"ITS\" OR \"adaptive learning system\") AND (\"test scores\" OR \"academic achievement\" OR \"learning outcomes\") AND (\"randomised\" OR \"experiment\" OR \"quasi-experiment\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 580,
+        "inclusion_criteria": "Include if: controlled experiment or quasi-experiment of intelligent tutoring systems measuring standardised test scores or academic achievement. Exclude: case studies, qualitative.",
+        "screened_rows": 3962
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "intelligent_tutoring_scores"
+    },
+    {
+      "case_id": 10,
+      "domain_assignment": "Education and Learning",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 354,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "game_type"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome_measure"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "education_level"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4500,
+        "post_dedup_row_count": 993,
+        "pre_dedup_row_count": null,
+        "query": "game-based learning student motivation engagement gamification",
+        "query_semantics": "free_text_keywords",
+        "source": "semanticscholar",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 354,
+        "inclusion_criteria": "Include if: empirical study of game-based learning or gamification measuring student motivation or engagement with quantitative outcomes. Exclude: purely descriptive, no outcome measure.",
+        "screened_rows": 993
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "game_based_learning_motivation"
+    },
+    {
+      "case_id": 11,
+      "domain_assignment": "Education and Learning",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 253,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "school_level"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "class_size_treatment"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "class_size_control"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 5000,
+        "post_dedup_row_count": 4923,
+        "pre_dedup_row_count": null,
+        "query": "(\"class size\" OR \"pupil-teacher ratio\" OR \"student-teacher ratio\") AND (\"academic achievement\" OR \"test scores\" OR \"attainment\") AND (\"primary school\" OR \"secondary school\" OR \"elementary\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 253,
+        "inclusion_criteria": "Include if: empirical study of class size or pupil-teacher ratio effects on academic achievement in primary or secondary school. Exclude: higher education, qualitative.",
+        "screened_rows": 4923
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "class_size_achievement"
+    },
+    {
+      "case_id": 12,
+      "domain_assignment": "Education and Learning",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 1720,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "llm_tool"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "use_case"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "discipline"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome_direction"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 9000,
+        "post_dedup_row_count": 8633,
+        "pre_dedup_row_count": null,
+        "query": "(\"large language model\" OR \"ChatGPT\" OR \"GPT-4\" OR \"generative AI\") AND (\"higher education\" OR \"university\" OR \"college\") AND (\"pedagogy\" OR \"teaching\" OR \"learning\" OR \"assessment\")",
+        "query_semantics": "source_specific_query",
+        "source": "core",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 1720,
+        "inclusion_criteria": "Include if: empirical or conceptual study of LLM/ChatGPT/generative AI use in higher education contexts. Exclude: K-12 only, purely technical AI papers.",
+        "screened_rows": 8633
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "llm_higher_education"
+    },
+    {
+      "case_id": 13,
+      "domain_assignment": "Environmental",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 340,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "mpa_type"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "species_group"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "years_protected"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4000,
+        "post_dedup_row_count": 3929,
+        "pre_dedup_row_count": null,
+        "query": "(\"marine protected area\" OR \"MPA\" OR \"ocean reserve\") AND (\"fish biomass\" OR \"fish abundance\" OR \"species richness\") AND (\"meta-analysis\" OR \"systematic review\" OR \"empirical\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 340,
+        "inclusion_criteria": "Include if: empirical study measuring fish biomass, abundance, or species richness inside vs outside marine protected areas. Exclude: modelling only, no empirical data.",
+        "screened_rows": 3929
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "marine_protected_areas"
+    },
+    {
+      "case_id": 14,
+      "domain_assignment": "Environmental",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 1086,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "forest_type"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "age_years"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "carbon_stock_tC_ha"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4000,
+        "post_dedup_row_count": 3960,
+        "pre_dedup_row_count": null,
+        "query": "(\"reforestation\" OR \"afforestation\" OR \"forest restoration\") AND (\"carbon sequestration\" OR \"carbon stock\" OR \"CO2 uptake\") AND (\"tropical\" OR \"temperate\" OR \"boreal\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 1086,
+        "inclusion_criteria": "Include if: empirical study measuring carbon sequestration or carbon stock in reforestation or afforestation projects. Exclude: modelling projections without field data.",
+        "screened_rows": 3960
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "reforestation_carbon"
+    },
+    {
+      "case_id": 15,
+      "domain_assignment": "Environmental",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "complete_stage_linkage",
+        "extracted_rows": 1350,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "fuel_type"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "outcome"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "effect_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_lower"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "ci_upper"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 6000,
+        "post_dedup_row_count": 5888,
+        "pre_dedup_row_count": null,
+        "query": "(\"indoor air pollution\" OR \"household air pollution\" OR \"biomass fuel\") AND (\"health outcome\" OR \"respiratory disease\" OR \"mortality\") AND (\"low-income\" OR \"developing country\" OR \"sub-Saharan\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 1350,
+        "inclusion_criteria": "Include if: empirical study of indoor or household air pollution health outcomes (respiratory, mortality) in low-income or developing country settings. Exclude: outdoor air pollution only.",
+        "screened_rows": 5888
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "indoor_air_pollution_health"
+    },
+    {
+      "case_id": 16,
+      "domain_assignment": "Environmental",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "partial_extraction_coverage",
+        "extracted_rows": 200,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "country"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "water_body_type"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "polymer_type"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "concentration_items_L"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 8000,
+        "post_dedup_row_count": 7061,
+        "pre_dedup_row_count": null,
+        "query": "(\"microplastic\" OR \"nanoplastic\" OR \"plastic pollution\") AND (\"freshwater\" OR \"river\" OR \"lake\" OR \"drinking water\")",
+        "query_semantics": "source_specific_query",
+        "source": "europepmc",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 1694,
+        "inclusion_criteria": "Include if: empirical study measuring microplastic concentrations in freshwater ecosystems (rivers, lakes, drinking water). Exclude: marine only, review without primary data.",
+        "screened_rows": 7061
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "microplastics_freshwater"
+    },
+    {
+      "case_id": 17,
+      "domain_assignment": "Computer Science and AI",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "partial_extraction_coverage",
+        "extracted_rows": 200,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "model_name"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "benchmark"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "task_type"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "accuracy_percent"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "parameter_count_B"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "year"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 4000,
+        "post_dedup_row_count": 999,
+        "pre_dedup_row_count": null,
+        "query": "large language model reasoning benchmark evaluation MMLU HellaSwag",
+        "query_semantics": "free_text_keywords",
+        "source": "semanticscholar",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 394,
+        "inclusion_criteria": "Include if: empirical benchmark evaluation of LLMs on reasoning tasks (MMLU, HellaSwag, BIG-Bench, ARC or similar). Exclude: training methodology papers, non-reasoning tasks.",
+        "screened_rows": 999
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "llm_reasoning_benchmarks"
+    },
+    {
+      "case_id": 18,
+      "domain_assignment": "Computer Science and AI",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "partial_extraction_coverage",
+        "extracted_rows": 200,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "aggregation_algorithm"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "privacy_mechanism"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "dataset"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "n_clients"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "accuracy_percent"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "privacy_budget_epsilon"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 5000,
+        "post_dedup_row_count": 4886,
+        "pre_dedup_row_count": null,
+        "query": "(\"federated learning\" OR \"federated machine learning\") AND (\"privacy\" OR \"differential privacy\" OR \"data leakage\") AND (\"utility\" OR \"accuracy\" OR \"performance trade-off\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 2605,
+        "inclusion_criteria": "Include if: empirical study of federated learning reporting privacy-utility trade-off metrics. Exclude: purely theoretical, no experimental results.",
+        "screened_rows": 4886
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "federated_learning_privacy"
+    },
+    {
+      "case_id": 19,
+      "domain_assignment": "Computer Science and AI",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "partial_extraction_coverage",
+        "extracted_rows": 200,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "ethical_framework"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "application_domain"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "methodology"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "key_principle"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "sample_size"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 3000,
+        "post_dedup_row_count": 375,
+        "pre_dedup_row_count": null,
+        "query": "autonomous system ethical framework moral responsibility algorithmic accountability AI ethics",
+        "query_semantics": "free_text_keywords",
+        "source": "semanticscholar",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 314,
+        "inclusion_criteria": "Include if: philosophical or empirical analysis of ethical frameworks for autonomous decision-making systems. Exclude: purely technical AI papers, non-ethics focus.",
+        "screened_rows": 375
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "ai_ethics_autonomous_systems"
+    },
+    {
+      "case_id": 20,
+      "domain_assignment": "Computer Science and AI",
+      "historical_extraction": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "coverage_status": "partial_extraction_coverage",
+        "extracted_rows": 200,
+        "failure_log_available": false,
+        "fields": [
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "study_design"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "industry_sector"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "dl_architecture"
+          },
+          {
+            "audit_class": "categorical",
+            "declared_type": "categorical",
+            "name": "fault_type"
+          },
+          {
+            "audit_class": "other_numeric",
+            "declared_type": "numeric",
+            "name": "dataset_size"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "accuracy_percent"
+          },
+          {
+            "audit_class": "potentially_synthesis_critical",
+            "declared_type": "numeric",
+            "name": "f1_score"
+          }
+        ]
+      },
+      "historical_retrieval": {
+        "configured_max_records": 10000,
+        "post_dedup_row_count": 9921,
+        "pre_dedup_row_count": null,
+        "query": "(\"deep learning\" OR \"neural network\" OR \"convolutional neural network\") AND (\"predictive maintenance\" OR \"condition monitoring\" OR \"fault detection\") AND (\"manufacturing\" OR \"industrial\")",
+        "query_semantics": "source_specific_query",
+        "source": "openalex",
+        "source_reported_total_hits": null,
+        "truncation_status": "not_yet_audited"
+      },
+      "historical_screening": {
+        "actual_model_snapshot": null,
+        "actual_prompt_version": null,
+        "failure_log_available": false,
+        "include_rows": 3769,
+        "inclusion_criteria": "Include if: empirical study applying deep learning or neural networks to predictive maintenance or fault detection in manufacturing. Exclude: purely theoretical, simulation only.",
+        "screened_rows": 9921
+      },
+      "meta_analysis_eligibility": {
+        "common_estimand": null,
+        "decision_reason": null,
+        "independent_study_count": null,
+        "status": "not_assessed"
+      },
+      "selection_design": "purposive_test_case",
+      "slug": "deep_learning_predictive_maintenance"
+    }
+  ],
+  "freeze_date": "2026-09-19",
+  "historical_source_commit": "0a74f80eb30113aad2ebad024541920d2f8558a4",
+  "historical_source_hashes": {
+    "previous/empirical_evaluation/scripts/01_retrieval.py": "16f8cd665471b51c55d3ecf3a87652ce372d00d7650534aedff67e6abb6316d1",
+    "previous/empirical_evaluation/scripts/02_screening.py": "19afb78e7180a18a341f2effdf95766fea2608b52409f7c00dbb09d2a4cd16f9",
+    "previous/empirical_evaluation/scripts/03_extraction.py": "321629fb560faa7c9bbfe9f138ee0bc5eb3f46cc23007b95d1a22da6a8c1a702"
+  },
+  "interpretation": "Queries, criteria, schemas, and model aliases below are declarations in the tracked historical scripts. They are not proof that every archived row was generated with those exact script versions or model snapshots.",
+  "registry_version": "1.0.0"
+}

@@ -1,0 +1,35 @@
+{
+  "evaluator": {
+    "actual_model_snapshot": null,
+    "declared_model_alias": "gpt-4o-mini",
+    "known_failure_behavior": "final API failure converted to UNVERIFIABLE for every field",
+    "response_contract": "JSON object with CORRECT, INCORRECT, or UNVERIFIABLE per field",
+    "system_prompt": "You are a systematic review auditor. Given a title, abstract, and a set of extracted fields, verify whether each extracted value is consistent with the source text. Return a JSON object with the same keys as the extracted fields, where each value is either 'CORRECT', 'INCORRECT', or 'UNVERIFIABLE'.",
+    "temperature": 0
+  },
+  "extraction": {
+    "actual_model_snapshot": null,
+    "declared_model_alias": "gpt-4o-mini",
+    "known_failure_behavior": "final API failure converted to all-null extraction",
+    "response_contract": "JSON object; requested keys; values numeric/string/null",
+    "system_prompt": "You are an expert data extractor for systematic reviews. Extract the requested fields from the title and abstract. Return a valid JSON object with exactly the requested keys. Use null for fields that cannot be determined from the text. For numeric fields, return a number or null. For categorical fields, return a short string or null.",
+    "temperature": 0
+  },
+  "freeze_date": "2026-09-19",
+  "historical_source_commit": "0a74f80eb30113aad2ebad024541920d2f8558a4",
+  "historical_source_hashes": {
+    "previous/empirical_evaluation/scripts/01_retrieval.py": "16f8cd665471b51c55d3ecf3a87652ce372d00d7650534aedff67e6abb6316d1",
+    "previous/empirical_evaluation/scripts/02_screening.py": "19afb78e7180a18a341f2effdf95766fea2608b52409f7c00dbb09d2a4cd16f9",
+    "previous/empirical_evaluation/scripts/03_extraction.py": "321629fb560faa7c9bbfe9f138ee0bc5eb3f46cc23007b95d1a22da6a8c1a702"
+  },
+  "provenance_status": "declared_in_tracked_scripts_not_verified_per_archived_call",
+  "register_version": "1.0.0",
+  "screening": {
+    "actual_model_snapshot": null,
+    "declared_model_alias": "gpt-4.1-mini",
+    "known_failure_behavior": "final API failure converted to EXCLUDE without a failure flag",
+    "response_contract": "free text parsed as INCLUDE when substring INCLUDE is present; otherwise EXCLUDE",
+    "system_prompt": "You are an expert systematic review screener. Given a title and abstract, decide whether the study meets the inclusion criteria. Respond with exactly one word: INCLUDE or EXCLUDE.",
+    "temperature": 0
+  }
+}

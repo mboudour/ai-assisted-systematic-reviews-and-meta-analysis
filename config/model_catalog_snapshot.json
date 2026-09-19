@@ -1,0 +1,97 @@
+{
+  "snapshot_date": "2026-09-19",
+  "source": "Manus OpenAI-compatible model catalog endpoint",
+  "note": "Availability and pricing are point-in-time metadata; reruns must log the actual requested and returned model IDs.",
+  "models": [
+    {
+      "id": "gpt-5-nano",
+      "owned_by": "openai",
+      "pricing": {
+        "input_per_1m_usd": 0.05,
+        "output_per_1m_usd": 0.4
+      },
+      "capabilities": {
+        "supports_response_format_json_schema": true,
+        "supports_thinking": true,
+        "thinking_param": "reasoning",
+        "context_window": 400000,
+        "max_output_tokens": 128000
+      }
+    },
+    {
+      "id": "gpt-5-mini",
+      "owned_by": "openai",
+      "pricing": {
+        "input_per_1m_usd": 0.25,
+        "output_per_1m_usd": 2
+      },
+      "capabilities": {
+        "supports_response_format_json_schema": true,
+        "supports_thinking": true,
+        "thinking_param": "reasoning",
+        "context_window": 400000,
+        "max_output_tokens": 128000
+      }
+    },
+    {
+      "id": "gpt-5",
+      "owned_by": "openai",
+      "pricing": {
+        "input_per_1m_usd": 1.25,
+        "output_per_1m_usd": 10
+      },
+      "capabilities": {
+        "supports_response_format_json_schema": true,
+        "supports_thinking": true,
+        "thinking_param": "reasoning",
+        "context_window": 400000,
+        "max_output_tokens": 128000
+      }
+    },
+    {
+      "id": "gpt-5.5",
+      "owned_by": "openai",
+      "pricing": {
+        "input_per_1m_usd": 5,
+        "output_per_1m_usd": 30
+      },
+      "capabilities": {
+        "supports_response_format_json_schema": true,
+        "supports_thinking": true,
+        "thinking_param": "reasoning",
+        "context_window": 400000,
+        "max_output_tokens": 128000
+      }
+    },
+    {
+      "id": "gemini-3-flash-preview",
+      "owned_by": "google",
+      "pricing": {
+        "input_per_1m_usd": 0.5,
+        "output_per_1m_usd": 3
+      },
+      "capabilities": {
+        "supports_response_format_json_schema": true,
+        "supports_thinking": true,
+        "thinking_param": "thinking",
+        "context_window": null,
+        "max_output_tokens": null
+      }
+    },
+    {
+      "id": "gemini-3.1-pro-preview",
+      "owned_by": "google",
+      "pricing": {
+        "input_per_1m_usd": 2,
+        "output_per_1m_usd": 12
+      },
+      "capabilities": {
+        "supports_response_format_json_schema": true,
+        "supports_thinking": true,
+        "thinking_param": "thinking",
+        "context_window": null,
+        "max_output_tokens": null
+      }
+    }
+  ]
+}

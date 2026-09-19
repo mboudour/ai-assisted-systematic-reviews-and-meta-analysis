@@ -32,7 +32,7 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 ## Execution sequence
 
-The rebuild follows a 16-step plan. **Step 1 is complete. Step 2 is in progress.** The 20 raw, 20 screened, and 20 extracted historical CSVs have been transferred, frozen, hashed, and structurally audited. The audit and remaining transfer gaps are documented in [`docs/step02_data_inventory.md`](docs/step02_data_inventory.md) and [`data/manifests/transfer_gaps.csv`](data/manifests/transfer_gaps.csv).
+The rebuild follows a 16-step plan. **Steps 1 and 3 are complete.** The data portion of Step 2 is complete, while the historical non-data files in [`data/manifests/transfer_gaps.csv`](data/manifests/transfer_gaps.csv) remain outstanding. The frozen study design is documented in [`docs/step03_frozen_protocol.md`](docs/step03_frozen_protocol.md), with machine-readable decisions under [`config/`](config/).
 
 ## Safety rules
 
