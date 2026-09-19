@@ -116,3 +116,9 @@ Fixed-effect inverse-variance, DerSimonian–Laird, and REML Hartung–Knapp est
 **Date:** 19 September 2026
 
 A deterministic PCG64DXSM Monte Carlo engine now implements screening omission, additive and multiplicative effect errors, variance errors, wrong-target shifts, technical failure, and joint pipeline error. Every replicate uses a SHA-256-derived independent stream. The empirical error model retains null probabilities until human validation and prospective event logs are available, so the final propagation table is intentionally empty.
+
+## Sensitivity and ablation analyses
+
+**Date:** 19 September 2026
+
+The same-model evaluator's `CORRECT` share is 58.39% across all 90,554 requested fields but 98.52% after excluding `UNVERIFIABLE`, a denominator-driven increase of 40.12 percentage points. A naive five-row completeness gate admits seven cases, while the full gate admits none. Five capped extraction files omit 7,776 of 19,276 historical INCLUDE records.
