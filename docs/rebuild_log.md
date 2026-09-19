@@ -40,3 +40,11 @@ The `previous/` tree is an immutable historical snapshot. Any reusable script, c
 3. Freeze transferred historical data before transformation and record SHA-256 hashes in `data/manifests/`.
 4. Keep transformed data outside the historical snapshot.
 5. Generate reported results only through tested code in the rebuilt project.
+
+## Historical data import
+
+**Date:** 19 September 2026
+
+The supplied `data.zip` archive was inspected before extraction. It contained no unsafe paths, symbolic links, or credential-like filenames. Its SHA-256 hash is `619cb3d2d0d1f558454f77fd6b0aee98b476a648ec90e793d270c31005282f7c`.
+
+The archive contains 20 raw/post-deduplication CSVs, 20 screened CSVs, and 20 extracted CSVs. These files were copied to the ignored `data/raw_snapshot/` zone and marked read-only. Tracked manifests and the Step 2 audit report record their hashes, schemas, row counts, completeness, cross-stage linkage, and remaining transfer gaps.

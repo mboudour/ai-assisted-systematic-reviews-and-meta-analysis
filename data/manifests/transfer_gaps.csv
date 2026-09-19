@@ -1,0 +1,16 @@
+path,status,priority,reason
+outputs/case_03_meta_audit.csv,missing,critical,Documents Case 3 synthesis attrition and record-level audit
+outputs/case_15_meta_adjudication.csv,missing,critical,May contain source verification or adjudication used for Case 15
+outputs/extraction_summary.csv,missing,high,Historical uncorrected extraction summary
+outputs/meta_analysis_sensitivity_results.csv,missing,high,Historical sensitivity-analysis result table
+outputs/screening_summary_sequential.csv,missing,high,Historical sequential screening results
+scripts/02_screening_0.py,missing,medium,Earlier screening implementation shown in supplied tree
+scripts/02_screening_figure_no_overlap.py,missing,low,Historical figure implementation
+scripts/02_screening_figure.py,missing,low,Historical figure implementation
+scripts/04_extraction_figure.py,missing,low,Historical figure implementation
+scripts/04_inferential_figure.py,missing,low,Historical figure implementation
+scripts/05_case3_sensitivity_figure.py,missing,medium,Historical Case 3 sensitivity implementation
+scripts/05_meta_analysis_sensitivity.py,missing,critical,Historical meta-analysis sensitivity implementation
+scripts/06_prisma_flow_corrected.py,missing,low,Historical corrected flow implementation
+requirements.txt,missing,high,Historical dependency record
+run_all.sh,missing,high,Historical execution order

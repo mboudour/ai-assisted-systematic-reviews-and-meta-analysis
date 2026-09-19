@@ -1,0 +1,31 @@
+severity,case_id,stage,check,count,detail
+error,4,raw,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,4,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,5,raw,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,5,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+warning,7,raw,invalid_year,11,Year is non-numeric or outside the accepted range
+warning,7,screened,invalid_year,11,Year is non-numeric or outside the accepted range
+error,8,raw,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,8,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,9,raw,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,9,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,11,raw,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,11,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,12,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,12,extracted,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,13,raw,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,13,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,13,extracted,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,15,raw,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,15,screened,blank_title,1,Rows lack a title and therefore have weak fallback identity
+error,15,extracted,blank_title,1,Rows lack a title and therefore have weak fallback identity
+warning,16,screened_to_extracted,included_not_extracted,1494,Included records are absent from the retained extraction file
+warning,16,extracted,possible_200_record_cap,1494,Exactly 200 rows retained despite more INCLUDE decisions
+warning,17,screened_to_extracted,included_not_extracted,194,Included records are absent from the retained extraction file
+warning,17,extracted,possible_200_record_cap,194,Exactly 200 rows retained despite more INCLUDE decisions
+warning,18,screened_to_extracted,included_not_extracted,2405,Included records are absent from the retained extraction file
+warning,18,extracted,possible_200_record_cap,2405,Exactly 200 rows retained despite more INCLUDE decisions
+warning,19,screened_to_extracted,included_not_extracted,114,Included records are absent from the retained extraction file
+warning,19,extracted,possible_200_record_cap,114,Exactly 200 rows retained despite more INCLUDE decisions
+warning,20,screened_to_extracted,included_not_extracted,3569,Included records are absent from the retained extraction file
+warning,20,extracted,possible_200_record_cap,3569,Exactly 200 rows retained despite more INCLUDE decisions

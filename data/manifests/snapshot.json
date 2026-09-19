@@ -1,0 +1,20 @@
+{
+  "generated_utc": "2026-09-19T13:51:35.347635+00:00",
+  "git_policy": "source data ignored; manifests tracked",
+  "manifest_version": 1,
+  "snapshot_policy": "immutable_read_only",
+  "source_archive": "source_archive/data.zip",
+  "source_archive_file_count": 60,
+  "source_archive_sha256": "619cb3d2d0d1f558454f77fd6b0aee98b476a648ec90e793d270c31005282f7c",
+  "source_archive_size_bytes": 108092261,
+  "stage_file_counts": {
+    "extracted": 20,
+    "raw": 20,
+    "screened": 20
+  },
+  "stage_row_counts": {
+    "extracted": 11500,
+    "raw": 94522,
+    "screened": 94522
+  }
+}

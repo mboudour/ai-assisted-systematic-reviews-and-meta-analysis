@@ -32,7 +32,7 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 ## Execution sequence
 
-The rebuild follows a 16-step plan. The current stage is **Step 1: preserve the old project and establish the clean rebuild**. No historical computation will be rerun until the missing raw, screened, and extracted files have been transferred, frozen, and hashed.
+The rebuild follows a 16-step plan. **Step 1 is complete. Step 2 is in progress.** The 20 raw, 20 screened, and 20 extracted historical CSVs have been transferred, frozen, hashed, and structurally audited. The audit and remaining transfer gaps are documented in [`docs/step02_data_inventory.md`](docs/step02_data_inventory.md) and [`data/manifests/transfer_gaps.csv`](data/manifests/transfer_gaps.csv).
 
 ## Safety rules
 
