@@ -32,7 +32,7 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 ## Execution sequence
 
-The rebuild follows a 16-step plan. **Steps 1, 3, 4, and 6 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Steps 5 and 7–10 have complete computational implementations, but their human-referenced estimates and evaluator experiment remain pending verified human inputs. Step reports are under [`docs/`](docs/).
+The rebuild follows a 16-step plan. **Steps 1, 3, 4, 6, and 12 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Steps 5 and 7–10 have complete computational implementations, but their human-referenced estimates and evaluator experiment remain pending verified human inputs. The Step 12 gate found no currently eligible meta-analysis case; four cases remain candidates only after source-level human verification. Step reports are under [`docs/`](docs/).
 
 ## Safety rules
 

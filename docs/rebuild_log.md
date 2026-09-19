@@ -98,3 +98,9 @@ The historical evaluator profile now reports all 90,554 requested fields without
 **Date:** 19 September 2026
 
 An 11-type blocked error-injection design was frozen. It contains 30 injected items and 30 matched controls per type for each of two evaluator models, giving 1,320 planned calls. The strict-schema concurrent runner and analysis are tested. No calls were made because the experiment requires human-verified source-field pairs; call and metric tables therefore remain empty rather than using model-generated substitutes.
+
+## Meta-analysis eligibility audit
+
+**Date:** 19 September 2026
+
+Twenty independent case reviews were consolidated with deterministic completeness checks. No case currently passes the frozen synthesis gate. Sixteen cases are structurally ineligible from the archived schema and records. Cases 2, 3, 6, and 15 remain pending human verification, but none is a primary synthesis candidate. Cases 3 and 15 may support narrowly specified sensitivity analyses after full-text verification, estimand harmonization, and report-to-study linkage.

@@ -1,0 +1,557 @@
+{
+  "assessments": [
+    {
+      "blocking_issues": [
+        "Only 2 of 22 archived rows have a non-null effect_size with both ci_lower and ci_upper (and sample_size); this is below the frozen minimum of 5 independent studies for any synthesis and 10 for primary propagation.",
+        "The generic effect_size field has no effect-measure label, analysis scale, direction convention, or adjustment specification. The two complete rows therefore cannot be shown to be commensurate.",
+        "The two complete rows do not define one outcome estimand: one is labelled in-hospital mortality, while the other combines in-hospital mortality, 30-day readmission, and nurse-sensitive adverse events, with no indication of the outcome to which its estimate applies.",
+        "Archived identifier/source-linkage quality is materially unreliable: although all 22 rows have distinct DOI/title strings, multiple extracted titles, DOIs, years, populations, and fields visibly conflict with the paired raw-record metadata/abstracts. These model-extracted values and judge verdicts cannot establish study identity or correctness.",
+        "No underlying-study identifier, multiple-report linkage, or prespecified method for selecting/handling correlated outcomes, subgroups, and time points is present; independence cannot be counted from unique report strings.",
+        "Human verification of all synthesis-critical values has not occurred."
+      ],
+      "case_id": 1,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 2,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 1 defines categorical study design, country, population, intervention, comparison, and outcome plus numeric sample_size, effect_size, ci_lower, and ci_upper; it does not define effect-measure type, standard error, outcome time point, adjustment set, or study/report linkage. Conservatively counting only archived non-null columns yields 9 rows with sample size, 3 with an effect size, 2 with both confidence limits, and exactly 2 complete effect rows. The apparent mortality-related rows and other retained records span adverse events, pressure injuries, composite patient outcomes, pneumonia, readmission, and mortality, while staffing contrasts also differ. Since neither of the two complete estimates can be tied to a defined common effect measure and one is attached to a composite outcome label, a defensible common estimand cannot be specified from this archive. Even a favorable later adjudication could not make the currently complete effect-row structure meet the required minimum of five independent studies without new/re-extracted information; the case is therefore structurally ineligible rather than merely awaiting human verification.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "nurse_staffing_mortality",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "underlying-study identity and report linkage",
+        "population/setting",
+        "staffing exposure definition, scale, and direction",
+        "comparator/contrast",
+        "single prespecified outcome definition",
+        "outcome time point",
+        "effect-measure label and analysis scale",
+        "effect estimate",
+        "confidence interval or standard error",
+        "sample size/denominator",
+        "covariate adjustment",
+        "multiple-outcome, subgroup, and time-point selection/dependence plan"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema has no comparator, effect-measure label, direction-of-benefit convention, outcome instrument, analysis time point, arm-level data, or underlying-study identifier; generic effect_size and confidence-interval columns therefore cannot establish a common analysis scale or estimand.",
+        "The 72 retained reports mix primary trials, secondary analyses, feasibility/pilot studies, observational work, systematic reviews, meta-analyses, and network meta-analysis; review-level pooled estimates cannot be pooled with primary-study estimates.",
+        "Outcomes and target conditions are materially heterogeneous, including anxiety severity, PTSD/depression, quality of life, biomarkers, neuroimaging, cost-effectiveness, feasibility, remission, and process measures, with heterogeneous mindfulness formats and comparators.",
+        "Only 30 rows have a numeric effect_size and 17 have both numeric confidence bounds; 16 have all four archived numeric critical values, but one has an internally impossible interval (effect_size 67, CI 6 to 10), leaving 15 conservatively complete and interval-consistent rows.",
+        "Multiple-report/dependence risk is demonstrated rather than merely hypothetical: the same N=110 GAD mindfulness ecological-momentary trial appears in primary, moderator/mediator, and secondary-analysis reports; the N=191 social-anxiety intervention has related reports; the N=56 MBSR-versus-aerobic-exercise trial has several reports; and the coMforT feasibility study appears as a preprint and published report. No linkage or prespecified one-estimate selection is available.",
+        "Human adjudication of all synthesis-critical values, report linkage, effect-measure conversion, outcome/comparator/time-point selection, and a dependence model is not yet available."
+      ],
+      "case_id": 2,
+      "common_estimand_candidate": "Possible only after source-level reconstruction: a post-intervention standardized mean difference in anxiety-symptom severity for a defined mindfulness-based intervention versus a prespecified inactive/usual-care comparator among people with diagnosed anxiety disorders.",
+      "complete_effect_rows": 15,
+      "final_gate_status": "pending_human_verification",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 2 is best treated as an evidence-mapping/descriptive case at present. The configuration defines sample_size, effect_size, ci_lower, and ci_upper as potentially synthesis-critical numeric fields, but the archived file supplies no field definition that distinguishes SMD, mean difference, odds/risk ratio, or other measures. I counted a complete effect row conservatively as having finite archived sample size, estimate, and both bounds with lower <= estimate <= upper: 15/72 (although 16/72 are non-null in all four numeric columns before excluding the invalid interval). Titles/DOIs establish report-level identity but not underlying-study linkage. A narrow anxiety-symptom SMD estimand is conceptually plausible after source review, but it is not defensible from this archive and the number of independent eligible studies cannot be identified, let alone shown to meet the 5-study synthesis or 10-study primary-propagation thresholds. The absence of human verification makes the frozen gate pending rather than structurally ineligible regardless.",
+      "recommended_role": "descriptive_only",
+      "slug": "mindfulness_anxiety",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "_title",
+        "_doi",
+        "study_design",
+        "population",
+        "intervention",
+        "outcome",
+        "sample_size",
+        "effect_size",
+        "ci_lower",
+        "ci_upper"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema has no comparator, population, treatment-arm, endpoint-component, timepoint-selection, underlying-study-ID, or report-linkage field, so neither the target contrast nor independence can be established from the archive.",
+        "The complete numeric records mix randomized trials, observational cohorts, post-hoc/subgroup analyses, pooled analyses, systematic reviews/meta-analyses, and non-GLP-1 or combination interventions; outcome labels span MACE variants, heart failure, mortality, renal/cardiorenal composites, stroke, MI, and broad cardiovascular outcomes.",
+        "Multiple reports and dependence are materially plausible (including post-hoc, subgroup, pooled, and review/meta-analytic reports), but the archive provides no documented selection or dependence-handling procedure. Unique DOI/title strings are report identifiers, not evidence of independent studies.",
+        "All archived extracted values remain unverified; human verification of synthesis-critical values is required before any synthesis.",
+        "Follow-up is missing for many otherwise numeric rows and includes heterogeneous/implausible archived values, so follow-up and timepoint require source verification."
+      ],
+      "case_id": 3,
+      "common_estimand_candidate": "Hazard ratio for time to first 3-component major adverse cardiovascular event for a single GLP-1 receptor agonist versus placebo/usual care in randomized cardiovascular-outcome trials among adults with type 2 diabetes, using one prespecified primary-trial estimate per underlying study.",
+      "complete_effect_rows": 270,
+      "final_gate_status": "pending_human_verification",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "The immutable Case 3 archive contains 841 report rows. From archived—not evaluator—columns, 270 rows conservatively have parseable positive sample_size, hazard_ratio, ci_lower, and ci_upper with ci_lower <= hazard_ratio <= ci_upper; only 262 of these also have non-null drug and outcome. This is numeric completeness only, not confirmation that the reported quantity is a valid HR for a shared contrast. The archive nominally supports a narrow 3-point-MACE RCT estimand: 64 conservatively complete rows contain ‘MACE’ and 14 contain ‘major adverse cardiovascular’, but these are reports rather than identifiable independent studies and include reviews, meta-analyses, post-hoc analyses, different MACE definitions, different interventions/comparators, and likely overlapping trial populations. Exact DOI duplicates are absent among the 262 fully described numeric rows, but that does not resolve multiple reports of the same underlying study. Thus a defensible common estimand might be constructed only after human source verification, prespecified eligibility/estimate selection, report-to-study linkage, and dependence handling; the archive cannot establish either the >=5-study synthesis threshold or the >=10-study primary-propagation threshold. LLM extractions and historical judge fields were not treated as truth.",
+      "recommended_role": "sensitivity_candidate_after_verification",
+      "slug": "glp1_cardiovascular",
+      "structural_eligibility": "possible_candidate",
+      "synthesis_critical_fields": [
+        "study_design",
+        "drug/intervention",
+        "comparator (not archived)",
+        "population/eligibility (not archived)",
+        "outcome definition and components",
+        "follow_up_years/timepoint",
+        "sample_size",
+        "hazard_ratio and effect direction",
+        "ci_lower",
+        "ci_upper",
+        "underlying-study and report-linkage identifier (not archived)"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema lacks the disease/target condition, reference standard, positivity threshold, patient-level 2x2 counts, confidence intervals/standard errors, and test-set/cohort identifiers needed to define or weight a diagnostic-accuracy estimand.",
+        "The records mix fundamentally different modalities, targets, tasks, populations, index models, and apparent outcome definitions: among the 338 rows complete on all four archived critical columns there are 155 modality labels, 178 task labels, and task families spanning detection, classification, diagnosis, prediction, screening, segmentation, and other activities.",
+        "Effect-measure representation is not harmonized. Sensitivity and specificity are recorded both as proportions and percentages; AUC is recorded on both scales (31 of 338 complete rows have AUC >1). The columns contain neither a declared scale nor sufficient data to derive valid uncertainty for sensitivity, specificity, or AUC.",
+        "Independence and report linkage cannot be established from DOI/title/year alone. The archive has no underlying-study or cohort identifier, a duplicate normalized title across two records, and contains review/meta-analysis records (including 7 among the complete rows), so primary-study status, overlapping datasets, multiple outcomes/models/thresholds, and repeated reports cannot be handled.",
+        "No human verification of any synthesis-critical value is available; the archived extraction values and judge verdicts were used only to assess structural availability, not as truth."
+      ],
+      "case_id": 4,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 338,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "The extract has 2,444 rows. Archived non-null counts are 1,321 for sensitivity, 1,032 for specificity, 891 for AUC, and 1,470 for sample size; conservatively requiring all four declared synthesis-critical columns to be numeric and non-null yields 338 complete effect rows (not 699 rows with only sensitivity, specificity, and sample size). This numerical abundance does not establish eligible independent diagnostic-accuracy studies or a common estimand. The missing target/reference-standard/threshold and variance-defining data, unstandardized scales, broad clinical and non-clinical task heterogeneity, and unresolvable report/dependence structure mean that no defensible common estimand exists for this archived case as a whole. Thus it cannot meet the frozen common-estimand, independence, or dependence-handling requirements regardless of later verification of the existing values; a future narrowly scoped diagnostic-test-accuracy review would require a new, human-verified source-level dataset rather than pooling these rows.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "ai_radiology_diagnosis",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "sensitivity",
+        "specificity",
+        "auc",
+        "sample_size"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema labels all estimates only as effect_size: it has no effect-measure, unit/scale, comparator, timepoint, subgroup, or analysis-adjustment field. The numeric estimates and intervals therefore cannot be put on a defensible common scale from the archive.",
+        "Only 14 of 469 archived rows have all four declared synthesis-critical numeric values (sample_size, effect_size, ci_lower, ci_upper); 16 have an estimate and both bounds. This conservative count is based only on non-null archived numeric columns, not LLM values or judge verdicts.",
+        "The 14 complete rows mix education, health, HIV/STI, sexual/reproductive, composite, human-capital, and other outcomes; apparent effect scales include ratio-like values, percentage/percentage-point-like values, and other unlabelled quantities. Even an education-only subset cannot be defined with a consistent outcome definition or effect measure.",
+        "Report-level duplication and dependence are evident in normalized duplicate titles and repeated programme cohorts (including PROGRESA/Oportunidades, Zomba, RPS, and Bolsa programmes), but there is no underlying-study identifier or report-linkage field and no archived multiplicity handling for reports, outcomes, subgroups, or time points.",
+        "Consequently the number of independent compatible studies cannot be established, so the five-study synthesis and ten-study primary-propagation thresholds cannot be demonstrated. Human verification of critical values is also absent."
+      ],
+      "case_id": 5,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 14,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 5 is structurally ineligible regardless of later human verification because the archived data cannot support a prespecified common estimand: effect measure and key estimand-defining metadata are absent, while the complete records are outcome- and scale-heterogeneous. The archived file contains 74 non-null sample sizes, 91 non-null effect sizes, and 17 non-null values in each CI-bound column; requiring all four declared synthesis-critical numeric fields yields 14 complete rows. Although their intervals are numerically ordered, that arithmetic check does not identify what the effects measure. Multiple-report/dependence signals and lack of study linkage prevent an independent-study count or defensible primary estimate selection. This conclusion does not rely on the LLM extraction values or evaluator verdicts as truth.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "cash_transfers_education",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "effect_size",
+        "ci_lower",
+        "ci_upper",
+        "sample_size",
+        "outcome",
+        "effect_measure (not archived)",
+        "comparator (not archived)",
+        "timepoint (not archived)",
+        "study identifier/report linkage (not archived)"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema has no effect-measure or analysis-scale field, and no fields for exposure contrast/dose, comparator or reference group, outcome instrument/scale, adjustment set, or time point. Thus the numeric effect_size column cannot support a defensible common analysis scale or conversion from the archive alone.",
+        "Of 584 archived reports, 508 have numeric sample_size, 134 numeric effect_size, and 74 numeric values in each confidence-bound column. Conservatively, only 63 rows have all four synthesis-critical values numeric and ci_lower <= effect_size <= ci_upper; six of 72 rows with an effect and both bounds fail that ordering check. Presence and ordering do not validate the values.",
+        "The complete rows mix cross-sectional, cohort/longitudinal, trial, survey, review, and meta-analysis records; exposures range from social media to internet, smartphones, screen time, games, and non-exposure labels; and outcomes span depression, anxiety, wellbeing, sleep, suicidality, addiction, and many other constructs. Several complete rows are visibly reviews/meta-analyses or off-topic/non-comparable records.",
+        "There is no underlying-study identifier or report-to-study linkage and no documented selection/handling of multiple reports, outcomes, subgroups, or time points. Unique titles/DOIs do not establish independent studies, and the archived columns do not permit the required independence count or dependence handling.",
+        "Critical values are historical LLM extractions and evaluator verdicts are not a human reference; human verification of all candidate synthesis values and source context is absent."
+      ],
+      "case_id": 6,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 63,
+      "final_gate_status": "pending_human_verification",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 6 is structurally unsuitable for synthesis on the present archive, although it is not ineligible regardless of future source review: a human re-extraction and report-linkage exercise might identify a narrow, homogeneous subset. The current broad case question has no defensible archived common estimand because effect measure and essential exposure/outcome definitions are absent, while the numeric values show incompatible apparent scales (effect_size -25.6 to 51.9). The conservative count of 63 internally ordered, fully populated critical rows is a report-row count, not an independent-study count. It cannot demonstrate the frozen minima of five independent studies for any synthesis or ten for primary propagation analysis; human verification and documented dependence handling would also be required before reconsideration.",
+      "recommended_role": "descriptive_only",
+      "slug": "social_media_mental_health",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "sample_size",
+        "effect_size",
+        "ci_lower",
+        "ci_upper"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived Case 7 schema contains treatment and control recidivism-rate fields but no effect-estimate field, effect-measure label, confidence-interval fields, standard error, arm-specific denominators, or event-count fields; therefore it supplies zero conservatively complete effect-and-uncertainty rows.",
+        "Only 10/77 records have a non-null treatment rate and 5/77 have a non-null control rate; all five paired-rate records lack arm-specific event counts and denominators, and only one also has a total sample-size value. A total N cannot establish allocation, event counts, or sampling variance.",
+        "The five paired-rate records are not consistently defined: reported outcomes include recidivism rates, general effectiveness, educational outcomes plus recidivism, and re-offending rates; follow-up is 12 months for two, 24 months for one, and missing for two. Programme, population, comparator, and outcome ascertainment are not harmonized in the archived fields.",
+        "Underlying-study independence cannot be determined: the file has no study ID or report-linkage field and includes at least five explicitly secondary reports (meta-analyses/systematic reviews), alongside primary-looking reports and plausible related/multiple reports. No documented dependence or primary-estimate selection rule exists for this case.",
+        "Human verification of every synthesis-critical value is absent. Historical LLM extraction and judge/evaluator labels were not treated as a human reference."
+      ],
+      "case_id": 7,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 0,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 7 has 77 archived records and the configured potentially synthesis-critical numeric fields are sample_size, recidivism_rate_treatment, and recidivism_rate_control (with follow_up_months classified as other numeric). This is not an effect-and-uncertainty schema. Although paired percentages could in principle be transformed to a risk ratio or risk difference, the archive does not identify a defensible shared outcome, comparator, time point, effect scale, or sampling variance, and cannot recover them from the supplied total N. Thus a common estimand is not defensibly specified from the archived data, zero complete effect rows fall below the five-independent-study minimum (and the ten-study primary-propagation minimum), and report dependence cannot be handled. The case is structurally ineligible regardless of the currently unavailable human verification.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "restorative_justice_recidivism",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "precisely defined recidivism/reoffending outcome and ascertainment",
+        "prespecified follow-up time point",
+        "intervention and comparator definitions",
+        "treatment and control event counts with arm-specific denominators",
+        "effect-measure identity and estimate (for example risk ratio, odds ratio, or risk difference)",
+        "standard error or confidence interval on the effect-measure scale",
+        "underlying-study identifier, report linkage, and prespecified one-estimate selection"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The seven conservatively complete archived rows are the intersection of numeric gap_percent and numeric sample_size; none has a standard error, confidence interval, or sufficient group-level information to derive an inverse-variance weight. sample_size is not interpretable as a variance input without its unit and design.",
+        "The archived gap_measure values do not define one effect measure: they mix wage, earnings, hourly earnings/pay, monthly wages, income, wage penalty/differential, employment-and-wage measures, and explicit raw/unadjusted, adjusted, and unexplained gaps. Adjustment set, denominator, direction/reference group, population, and timepoint are not consistently recorded, so a defensible common estimand or conversion cannot be prespecified from these columns.",
+        "The seven complete rows include two apparent versions of the same report (Gender pay gap in Europe and Gender pay gap in Europe.docx): identical gap_percent (11.24), sample_size (36), country, sector, and year, with DOI version variants. Thus seven complete report rows cannot be treated as seven independent studies.",
+        "Underlying-study identity is not recorded, and titles indicate cross-country panels, country/sector estimates, secondary/meta-analytic material, and likely recurring data sources. Multiple reports, outcomes, subgroups, and timepoints therefore cannot be linked or handled, and no one-estimate-per-independent-study selection is defensible.",
+        "Even before human verification, the archive does not establish the required minimum of five independent studies for synthesis (or ten for primary propagation); after the apparent duplicate there are at most six distinct complete report records, not an identifiable independent-study count.",
+        "LLM-extracted values and judge verdict columns cannot supply the missing verification, estimand definitions, precision, or dependence linkage."
+      ],
+      "case_id": 8,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 7,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 8 defines only two potentially synthesis-critical numeric fields, gap_percent and sample_size. Of 308 archived report rows, 42 contain a numeric gap_percent, 28 contain a numeric sample_size, and only 7 contain both; this is the reported complete-effect-row count, conservatively based solely on non-null numeric archived values. It does not mean the rows are synthesis-ready: no archived SE, CI, or effect-specific derivation inputs exist. The point estimates are materially heterogeneous in outcome and construction, including adjusted versus unadjusted/unexplained measures and non-wage constructs, and the metadata cannot resolve a common female-versus-male wage-gap estimand. Report dependence is already visible in the two versioned Europe records with identical values, while study-level linkage and handling of repeated outcomes/subgroups/timepoints are absent. Human verification is also unavailable, but the absent common estimand, precision information, and dependence framework make the case structurally ineligible regardless of that pending verification.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "gender_pay_gap",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "gap_percent (point estimate)",
+        "sample_size",
+        "gap_measure, including adjustment status and wage/earnings/income definition",
+        "study_design",
+        "country, sector, and year (population/setting/timepoint)",
+        "sampling variance or confidence interval (absent from the archive)",
+        "underlying-study and report linkage (_doi and _title)"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "No effect-measure, comparator, outcome-definition, timepoint, group-level sample-size, or variance/standard-error field is archived; thus the meaning and orientation of `effect_size` and its intervals cannot be harmonized or defensibly converted.",
+        "Only 6/580 rows have all four synthesis-critical archived numeric fields; four of those six are explicitly meta-analysis/systematic-review reports rather than independent primary studies, leaving at most two complete primary-report rows before topical eligibility checks—below the five-independent-study minimum (and far below ten for primary propagation).",
+        "The six complete rows mix a literacy software RCT, medical-statistics erroneous-example RCT, pharmacy educational-game quasi-experiment, and three broad meta-analyses; they do not support a common ITS-versus-comparator academic-score estimand. The observed magnitudes (for example -2.33, -0.06, 0.46, 0.52, 0.86, 7.695) reinforce that a shared analysis scale is not established by the archived columns.",
+        "The corpus contains many clearly non-ITS interventions and secondary evidence syntheses. Existing title/DOI uniqueness (no exact duplicates) is not underlying-study linkage; no study identifier or documented rule handles multiple reports, outcomes, subgroups, or timepoints, so dependence cannot be evaluated or handled.",
+        "Synthesis-critical completeness is extremely limited (55 effect sizes, but 525 missing effects and 573 missing each CI bound); no archived source-linked human verification is available. Historical judge/LLM verdicts were not used as truth."
+      ],
+      "case_id": 9,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 6,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 9's declared critical fields are `sample_size`, `effect_size`, `ci_lower`, and `ci_upper`. Conservatively requiring finite non-null values in all four archived columns yields exactly 6 complete effect rows. These do not form an analyzable set of six independent primary ITS studies: four are explicitly secondary meta-analytic reports, and the remaining complete primary reports are not a coherent ITS outcome/comparator set. Moreover, the archive provides neither a labelled effect metric nor the data needed to convert raw/unknown estimates to a common standardized estimand. Although reports have unique titles/DOIs, underlying-study independence is not identifiable and no dependence-selection plan is documented. Therefore the frozen gate fails structurally irrespective of later human verification; verification remains necessary for any future re-extraction, but cannot cure the present lack of a common estimand and minimum independent-study count.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "intelligent_tutoring_scores",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "sample_size",
+        "effect_size",
+        "ci_lower",
+        "ci_upper"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema has a generic effect_size field but no effect-measure label, comparator, outcome instrument/scale direction, analysis time point, arm-level sample sizes, or standard-error/variance field. Thus the 32 non-null effect_size values cannot be interpreted or defensibly harmonized from the archive.",
+        "Only 4 of 354 archived report rows have effect_size plus both confidence bounds; only 3 of those also have sample_size. All four complete effect-and-interval rows are reports explicitly labelled/titled as meta-analyses, not identifiable primary-study estimates, and their outcome scopes differ (learning achievement/motivation, academic achievement, student learning outcomes, and mathematics learning).",
+        "The included records span distinct constructs and measures—motivation, engagement, achievement/performance, scores, N-gain, self-efficacy, attitudes, and many composites—rather than one prespecified outcome. A hypothetical restriction to a standardized post-intervention motivation contrast is not recoverable from the archived fields.",
+        "No underlying-study identifier or report-linkage variable exists. Unique DOI/title strings only establish distinct report records; they do not resolve overlapping primary studies in the included meta-analyses or repeated outcomes, subgroups, and time points within reports. Dependence therefore cannot be handled.",
+        "The archive does not identify at least five independent eligible primary studies (nor ten for primary propagation). Historical extracted values and evaluator verdicts are not human reference data and cannot establish eligibility or verification."
+      ],
+      "case_id": 10,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 4,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 10 contains 354 archived report records. Its declared numeric synthesis fields are sample_size, effect_size, ci_lower, and ci_upper: 203, 32, 4, and 4 values are non-null, respectively. Counting an effect estimate conservatively as requiring an archived estimate and both bounds gives four complete effect rows; all intervals are internally ordered, but that is only a conformance check, not evidence that the values are correct or share a measure. The four rows are archived secondary meta-analysis reports and cannot supply four independent primary-study effects; three also contain sample size. The broad protocol scope (game-based learning or gamification and motivation or engagement) and the archived outcome values extend well beyond a single construct, while effect metrics and comparators are unspecified. No defensible common estimand, independent-study count, or dependence plan can be established from these records. Human verification is additionally absent, but the lack of a recoverable common estimand and independent primary-effect set makes the case structurally ineligible regardless.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "game_based_learning_motivation",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "study_design",
+        "game_type (intervention/exposure proxy)",
+        "outcome_measure",
+        "education_level",
+        "sample_size",
+        "effect_size",
+        "ci_lower",
+        "ci_upper",
+        "_title and _doi (report identifiers only; no underlying-study linkage)"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "No archived record contains an effect_size with both ci_lower and ci_upper; ci_lower is entirely null and ci_upper is populated for only one record.",
+        "The archived schema contains no effect-measure or outcome-measure field, so the 33 non-null numeric effect_size values cannot be shown to share a scale, direction, outcome, contrast, or time point.",
+        "Exposure contrast is inadequately specified: class_size_treatment is non-null in 23 reports and class_size_control in 15, with no record containing both exposure values, an effect estimate, and both confidence bounds.",
+        "Independent-study count is not identifiable from report-level rows; normalized duplicate titles with distinct DOIs indicate multiple versions/reports, and no report-linkage or dependence plan is archived.",
+        "The included archive also contains clearly heterogeneous designs and report types, including meta-analytic/secondary reports, precluding an unverified common primary-study estimand."
+      ],
+      "case_id": 11,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 0,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 11 has 253 archived report records. Reading the archived extraction columns conservatively yields 33 non-null effect_size entries, zero ci_lower entries, one ci_upper entry, and therefore zero complete effect rows (effect estimate plus both confidence bounds). The configuration defines the numeric fields but sets the case common estimand and independent-study count to null/not assessed. The extraction does not capture effect measure, outcome definition, timing, or a study identifier/linkage variable. Consequently, the heterogeneous numeric entries cannot be harmonized defensibly, and independent-study thresholds (at least five for synthesis and ten for primary propagation) cannot be evaluated. Title-normalization also reveals apparent duplicate/multiple reports (including two versions of the Kenyan pupil-teacher-ratio study), while no archived dependence handling is documented. This conclusion relies on raw archived field presence and report metadata, not LLM values or evaluator verdicts; the case is structurally ineligible regardless of the presently unavailable human verification.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "class_size_achievement",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "class_size_treatment",
+        "class_size_control",
+        "sample_size",
+        "effect_size",
+        "ci_lower",
+        "ci_upper",
+        "effect_measure/analysis scale (not extracted)",
+        "outcome definition and time point (not extracted)",
+        "underlying-study/report linkage (not extracted)"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived extraction has no columns for an effect measure, effect estimate, standard error/variance/confidence interval, comparator, or defined quantitative outcome; consequently, zero rows conservatively meet the minimum complete-effect-row requirement.",
+        "The available non-null extracted values are limited to categorical descriptors, 601 sample-size values, and 1,113 heterogeneous narrative outcome-direction values; these cannot define or convert to a common effect estimand. These LLM-extracted values were not treated as verified evidence.",
+        "The included corpus is heterogeneous in design and report type, including conceptual/framework and review-type reports, so a shared quantitative target cannot be inferred from the archive.",
+        "There is no underlying-study identifier or report-linkage field and no documented handling of multiple reports, outcomes, subgroups, or time points. Unique report metadata do not establish independent studies; the independent-study count is therefore not identifiable.",
+        "No human verification of synthesis-critical values is available, and evaluator verdict columns cannot substitute for human adjudication.",
+        "The frozen requirements for a common estimand, at least five independent studies, and dependence handling cannot be met from this archived structure; the ten-study primary-propagation threshold cannot be assessed."
+      ],
+      "case_id": 12,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 0,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 12 is structurally ineligible irrespective of later human verification. The immutable archive contains record-level descriptors (study_design, country, llm_tool, use_case, discipline, sample_size, and outcome_direction) plus bibliographic metadata and evaluator labels, but lacks the numerical effect, effect-measure, and precision fields required to construct even one poolable estimate. Although sample_size and outcome_direction are often non-null, outcome_direction is an unstandardized qualitative label and sample size alone supplies neither an estimand nor uncertainty. The archive also lacks study-report linkage and outcome/time-point selection information, preventing an independent-study count or defensible dependence treatment. Thus no common estimand candidate or complete effect row can be established conservatively from archived columns; evaluator verdicts and LLM values were not accepted as truth.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "llm_higher_education",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "effect measure and point estimate",
+        "precision information (standard error, variance, or confidence interval)",
+        "defined outcome construct and direction on a common scale",
+        "intervention/exposure and comparator",
+        "sample size",
+        "study-to-report linkage",
+        "outcome/time-point/subgroup selection"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "No archived field identifies the outcome, contrast/comparator, effect-measure type, unit, or analysis scale; the single generic effect_size column cannot support effect-measure harmonization or a defensible conversion.",
+        "The seven rows with an effect estimate and both bounds, and the six that also have sample_size, visibly mix incompatible quantities/scales (for example 0.32 with 0.01–0.63, 18 with 10–29, 54 with 46–62, and 740 with 660–810); interval ordering alone does not establish a common effect measure.",
+        "Only 6/340 archived rows have all four declared synthesis-critical numeric values. Two evident duplicate-report pairs occur among those six (published/preprint versions of the same 2023 meta-analysis and duplicated records of the 2019 global biomass paper), leaving at most four distinct report-level candidates before any underlying-study linkage; this cannot meet the five-independent-study minimum and is far below the ten-study primary-propagation minimum.",
+        "Study/report linkage is absent and the retained corpus includes meta-analyses, reviews, peer-review records, and primary reports, so independent underlying studies cannot be established and dependence cannot be handled from the archive.",
+        "The case inclusion scope itself combines fish biomass, abundance, and species richness, while the complete rows also include biodiversity/governance and hard-coral quantities; outcome-specific eligibility cannot be reconstructed from the archived extraction fields.",
+        "Human verification of critical values is unavailable. Archived LLM values and evaluator verdicts were treated only as unverified records, not as truth."
+      ],
+      "case_id": 13,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 6,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 13 defines categorical context fields (study_design, country, mpa_type, species_group), years_protected, and the four declared potentially synthesis-critical numeric fields, but lacks an outcome, comparator, effect-measure, unit, variance/SE, and study-identity field. Counting conservatively from archived columns, 6 rows have non-null numeric sample_size, effect_size, ci_lower, and ci_upper; a seventh has effect_size and both bounds but no sample_size. The six complete rows include two clear duplicate-report pairs, yielding no more than four distinct reports even before excluding secondary meta-analytic reports or resolving study-level dependence. The observed numerical ranges are not coherently interpretable as one scale, and the archive does not contain the information needed to convert them. Therefore no defensible common estimand or sufficient independent-study set exists in the archived structure, irrespective of the still-required human verification; the case is structurally ineligible.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "marine_protected_areas",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "sample_size",
+        "effect_size",
+        "ci_lower",
+        "ci_upper",
+        "outcome definition (not captured as a field)",
+        "effect-measure label, unit, and analysis scale (not captured as fields)",
+        "inside-versus-outside comparator and timepoint (not captured as fields)",
+        "underlying-study/report linkage (not captured as a field)"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "Only 25 of 1,086 archived report rows have all three declared numeric synthesis-critical columns non-null (carbon_stock_tC_ha, sample_size, and effect_size); this is a conservative archived-column count, not a count of usable independent effects.",
+        "The archive provides no effect-measure label, standard error, variance, or confidence interval. The unlabelled effect_size values span -870 to 7,014,517, while carbon_stock_tC_ha is separately recorded, so neither the scale nor a defensible conversion/weighting rule is identifiable from the archived columns.",
+        "Outcome construction is not encoded: carbon pool (for example, soil, biomass, total ecosystem), stock versus sequestration rate/change, baseline/comparator, and timepoint are unresolved. Of the 25 fully populated declared-critical rows, only 12 have age_years; titles and design labels also indicate mixtures of field studies, inventories, models, remote sensing, management contrasts, and meta-analyses.",
+        "The table has report metadata but no underlying-study identifier or multiple-report/outcome/timepoint linkage. Unique DOI/title strings in this extracted table do not establish study independence; the retained-corpus audit still flags six exact-title duplicate groups and 12 candidate report pairs for Case 14, pending human review.",
+        "No human adjudication of synthesis-critical values exists. Archived LLM values and judge verdicts cannot establish correctness, source adequacy, or eligibility.",
+        "Consequently, the archived structure cannot demonstrate either the required five independent studies for any synthesis or ten for primary propagation, and it cannot support the protocol's inverse-variance meta-analytic models."
+      ],
+      "case_id": 14,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 25,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 14 is structurally ineligible for synthesis from the archived extraction. Although carbon_stock_tC_ha nominally specifies tC/ha and 25 rows contain all three declared numeric critical fields, the archive does not define what effect_size represents or provide its uncertainty, and it cannot distinguish incompatible carbon pools, stock versus flux/change outcomes, comparators, or relevant times. Thus no prespecified common estimand or defensible conversion is supported by the archived fields. Report-level metadata also cannot establish independent studies or dependence handling. Human verification remains necessary but cannot by itself resolve the absent effect-measure, precision, outcome-definition, and linkage structure in the archived synthesis dataset.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "reforestation_carbon",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "carbon_stock_tC_ha",
+        "sample_size",
+        "effect_size",
+        "effect-measure label and analysis scale",
+        "sampling variance, standard error, or confidence interval",
+        "carbon-pool and outcome definition",
+        "intervention/comparator and baseline definition",
+        "timepoint/stand age",
+        "underlying-study and multiple-report linkage"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The 1,350 archived reports cover highly heterogeneous outcomes, populations, exposures, intervention and observational designs, and effect scales; the case-level topic itself is not a common estimand.",
+        "The generic effect_size column contains incompatible quantities, including positive ratio-like values, negative absolute differences, prevalence/burden quantities, and at least 17 estimate/interval ordering failures among the 485 archived effect-plus-CI rows. No effect-measure label, adjustment status, comparator, or timepoint is archived.",
+        "Only 391 rows have all four registered numeric synthesis-critical columns (sample_size, effect_size, ci_lower, ci_upper); this is a conservative archived-column count, not a count of usable effects or independent studies.",
+        "Independent-study count cannot be established: no study/report linkage field is present, and titles show multiple reports from shared cohorts/trials (for example RESPIRE, Cooking and Pneumonia/CAPS, FRESH AIR, HAPIN, and Shanghai cohorts). Dependence handling and one prespecified estimate per study are not documented.",
+        "The archive includes systematic reviews/meta-analyses, burden/modeling studies, and reports that do not clearly estimate the proposed fuel-exposure/child-respiratory association; these cannot be pooled with primary reports without source-level screening and overlap resolution.",
+        "Archived extraction values and judge verdicts are model-generated historical outputs rather than a human reference; human verification of all selected critical values is absent."
+      ],
+      "case_id": 15,
+      "common_estimand_candidate": "A narrowly restricted, human-verified association between household biomass/solid-fuel use (versus a defined clean-fuel reference) and acute lower respiratory infection/pneumonia in children under five, analyzed as one prespecified adjusted odds-ratio estimand on the log scale (or only after a defensible verified conversion).",
+      "complete_effect_rows": 391,
+      "final_gate_status": "pending_human_verification",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "The archived schema supplies basic topic descriptors and numerical estimates, and it contains a potentially sizeable subset of reports labelled with child acute respiratory infection, ALRI, or pneumonia. Thus a restricted estimand may be defensible after source review, rather than pooling the broad indoor-air-pollution/health corpus. However, effect-measure and comparator metadata are absent, 391 is only a conservative complete numeric-row count, and report-to-study linkage is unavailable despite clear multiple-report signals. Consequently neither the >=5 independent-study synthesis threshold nor the >=10 independent-study primary-propagation threshold can be demonstrated from this archive. The case is therefore only a possible sensitivity candidate pending human verification, eligibility screening, harmonization, and documented dependence handling; it is not structurally ineligible regardless.",
+      "recommended_role": "sensitivity_candidate_after_verification",
+      "slug": "indoor_air_pollution_health",
+      "structural_eligibility": "possible_candidate",
+      "synthesis_critical_fields": [
+        "study_design",
+        "country",
+        "fuel_type",
+        "outcome",
+        "sample_size",
+        "effect_size",
+        "ci_lower",
+        "ci_upper",
+        "effect measure, scale, adjustment set, and timepoint (absent)",
+        "exposure contrast/comparator definition (absent)",
+        "underlying-study and report linkage identifier (absent)"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived extract has 113 non-null numeric concentration_items_L values and 101 non-null numeric sample_size values, but only 54 rows contain both; these are raw completeness counts only, not validated effects.",
+        "concentration_items_L is not a defensible common effect measure in this extract: ostensibly freshwater records mix water, drinking/bottled water, beverage, groundwater, irrigation water, estuarine/marine, sediment, fish and other biota, laboratory/sensor/method, model, and exposure studies. The available fields do not identify the sampled matrix, outcome definition, particle-size threshold, analytical method, denominator/volume basis beyond the field name, or comparable sampling design.",
+        "No variance, standard error, confidence interval, dispersion measure, arm/comparator data, or other uncertainty information is archived, so the concentration and sample-size pair cannot support the protocol's inverse-variance meta-analytic models or a defensible conversion to a common analysis scale.",
+        "Study independence cannot be established because the file identifies reports rather than underlying studies and supplies no report-to-study linkage or prespecified selection rule for outcomes, subgroups, locations, or time points. It contains at least one apparent duplicate report: the Lake Mainit title appears twice (one without DOI and one with DOI 10.1016/j.jconhyd.2025.104603), both with the same concentration and sample size.",
+        "The extraction coverage is explicitly partial (200 extracted of 1,694 included records), and no human verification of synthesis-critical values or dependence-handling plan is available. Archived LLM values and judge verdicts were not used as truth."
+      ],
+      "case_id": 16,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 54,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 16 is structurally ineligible for quantitative synthesis from the archived columns, independently of the absent human verification. The 54 conservatively complete raw rows are numerically populated for concentration_items_L and sample_size, but do not constitute comparable effect estimates: their titles and water_body_type values indicate heterogeneous environmental matrices and endpoints, and the extract lacks the metadata needed to restrict or harmonize them. Concentrations span 0.00112 to 191,000,000, further underscoring unresolved scale/unit and measurement-context heterogeneity rather than providing evidence of a shared estimand. With no effect uncertainty and no way to establish independent underlying studies or resolve the observed duplicate report, neither the at-least-five-study synthesis threshold nor the at-least-ten-study primary propagation threshold can be assessed or defensibly met. The case may be described narratively after source review, but it should not enter a meta-analysis on these archived data.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "microplastics_freshwater",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "concentration_items_L",
+        "sample_size"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The sole declared potentially synthesis-critical numeric field is raw accuracy_percent; it is a benchmark-specific performance proportion, not a defined comparative effect estimate.",
+        "No defensible common estimand is supported across the heterogeneous benchmark names and task types: benchmark denominator/item set, scoring protocol, model version/configuration, and a common comparator are absent.",
+        "No test-set denominator, sampling variance, standard error, or confidence interval is archived, so the accuracy percentages cannot be variance-weighted or reliably transformed into a common synthesis scale.",
+        "Underlying-study independence cannot be established from report-level title/DOI fields, and there is no linkage or prespecified handling for repeated models, multiple models within reports, shared benchmarks/datasets, or other correlated estimates.",
+        "Extraction coverage is partial (200 extracted rows from 394 historically included records), so the archived extraction cannot support a complete case synthesis frame.",
+        "Human verification of the critical values is not available."
+      ],
+      "case_id": 17,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 50,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 17 is a purposively selected Computer Science and AI case whose archived schema defines study_design, model_name, benchmark, and task_type as categorical fields and accuracy_percent as the only potentially synthesis-critical numeric field; parameter_count_B and year are other numeric fields. I treated neither the LLM extraction nor the judge/evaluator columns as ground truth. From the parse-valid 200-row archived CSV, 59 rows contain a numeric accuracy_percent (all within 0–100), but only 50 conservatively complete rows also contain nonblank model_name, benchmark, and task_type; this is the reported complete-effect-row count. These 50 rows have 50 distinct nonblank titles and 49 distinct nonblank DOIs, but uniqueness of report identifiers does not identify independent underlying studies. Repeated and aggregate/multi-model model labels, together with absent study/report linkage and no dependence plan, preclude establishing the required independent-study count. The 59 accuracy-bearing rows span 59 distinct benchmark labels, confirming that the extract does not contain replicated estimates on a shared named benchmark; it does not overcome heterogeneity in benchmark content or establish a common target population. Raw percent accuracy across different reasoning benchmarks/tasks is not a defensible common estimand or comparative effect without denominators, scoring definitions, model configuration, and a prespecified comparator/conversion. Therefore the frozen gate is structurally failed irrespective of the currently unavailable human verification; the five- and ten-independent-study thresholds cannot be assessed, and a primary propagation analysis is not supportable.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "llm_reasoning_benchmarks",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "model_name",
+        "benchmark",
+        "task_type",
+        "accuracy_percent"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived extraction has only study_design, aggregation_algorithm, privacy_mechanism, dataset, n_clients, accuracy_percent, privacy_budget_epsilon, and report metadata; it has no effect-estimate, comparator, uncertainty, confidence-interval, or raw-count fields.",
+        "No defensible common estimand can be constructed from the archived columns: the 44 non-literal-null accuracy_percent entries are unadjusted single percentages across heterogeneous tasks/datasets and privacy mechanisms, with no outcome-definition, comparator, or precision information.",
+        "There are zero conservatively complete effect rows. Even the most permissive performance/privacy context combination (accuracy_percent, privacy_budget_epsilon, dataset, and n_clients) is complete for zero rows; no row is complete on all seven substantive archived fields.",
+        "The archive is report-level (200 rows) and lacks author, underlying-study, experiment/cohort, or report-linkage identifiers. Unique archived titles/DOIs do not establish independent studies, and no dependence-handling plan can be applied from these data.",
+        "Consequently neither the minimum of five independent studies for any synthesis nor ten for a primary propagation analysis is supportable from the frozen archive."
+      ],
+      "case_id": 18,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 0,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "This is structurally ineligible on the frozen archived data, independently of the unavailable human verification. Non-null archived values were counted only as populated archive cells, not accepted as valid LLM extraction or evaluator truth: n_clients=13, accuracy_percent=44, and privacy_budget_epsilon=7 (excluding literal null strings). Those fields describe context or isolated performance percentages rather than harmonized effects. The records span materially different application domains, datasets, model/task settings, privacy mechanisms, and aggregation approaches, and the schema records neither a common outcome definition nor a comparator/uncertainty basis with which to derive a compatible effect. No exact duplicate title or DOI appears, but the absence of report-to-study linkage means independence and multiple-report dependence remain unidentifiable rather than resolved.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "federated_learning_privacy",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "effect estimate and explicitly defined effect measure (absent from archived schema)",
+        "outcome definition and common assessment setting/time point (not captured)",
+        "intervention/comparator specification (not captured)",
+        "uncertainty information (SE, variance, CI) or raw numerator/denominator data (absent)",
+        "dataset/task, client count, and privacy-budget context",
+        "privacy mechanism and aggregation algorithm",
+        "underlying-study/report linkage and dependence indicators"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema has no outcome, intervention/exposure or comparator, effect-estimate/effect-measure, uncertainty (standard error, variance, confidence interval), time-point, or analysis-scale fields; therefore no common quantitative estimand can be defined or defensibly converted from the archive.",
+        "There are zero conservatively complete effect rows: the 200 archived records contain no estimate-plus-uncertainty schema. The only declared potentially synthesis-critical field is sample_size, populated in 20 rows, which is not an effect estimate and cannot support pooling.",
+        "The included material spans philosophical, conceptual, qualitative, survey, mixed-method, case-study, and review reports across heterogeneous ethical frameworks and application domains, with no archived outcome definition tying them to one estimand.",
+        "Underlying independent studies cannot be identified: _title and _doi identify report records (200 titles and 198 populated DOIs, each unique in this file) but there is no study identifier or report-linkage/multiple-report, outcome, subgroup, or time-point handling plan. Unique reports do not establish independent studies.",
+        "Human verification of synthesis-critical values is unavailable; archived extracted values and evaluator verdict columns were not used as truth. Historical extraction coverage is partial (200 extracted records versus 314 historical includes)."
+      ],
+      "case_id": 19,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 0,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 19 is structurally ineligible regardless of the absent human verification. Configured extraction defines five categorical descriptive fields (study_design, ethical_framework, application_domain, methodology, key_principle) and one potentially synthesis-critical numeric field (sample_size). In the archived CSV, sample_size is non-null in 20/200 records, but no archived columns encode an outcome, effect measure or estimate, comparator, confidence interval, variance/SE, unit/scale, or time point. Thus the conservative complete-effect-row count is 0, the five- and ten-independent-study thresholds cannot be evaluated, and neither a synthesis nor primary propagation analysis can be constructed. Although report-level identifiers appear largely unique, the protocol defines a study only after report linkage; no such linkage or dependence-handling information is present. The protocol consequently precludes pooling incompatible material or proceeding before common-estimand and independence checks.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "ai_ethics_autonomous_systems",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "sample_size"
+      ]
+    },
+    {
+      "blocking_issues": [
+        "The archived schema has no effect-estimate-plus-uncertainty fields: it contains only dataset_size, accuracy_percent, and f1_score, with no confidence intervals, standard errors, variances, or class-level counts from which sampling uncertainty can be defensibly reconstructed.",
+        "No defensible common estimand is specified or recoverable from the archive. Accuracy and F1 are distinct performance measures, and the task/outcome fields span fault classification, detection, anomaly detection, quality inspection, and remaining-useful-life prognostics across disparate sectors and faults.",
+        "Measurement scale and denominator are inconsistent or undocumented: accuracy_percent ranges from 6.4 to 127.0, while the four non-null F1 values include both percentage-like values (95.2, 97.48, 92.0) and a proportion (0.9818). Dataset_size is non-null in only 30 records and cannot be assumed to be an evaluable test-set denominator.",
+        "Archived completeness is inadequate for an effect synthesis: accuracy_percent is non-null in 65/200 records, f1_score in 4/200, both in 4/200, and all three numeric fields in only 1/200; none constitutes a complete effect row because uncertainty is absent.",
+        "Independent underlying studies cannot be identified from report-level title/DOI metadata; no study-linkage or dependence-handling field exists. A near-duplicate WDCNN preprint/article pair is evident, confirming that unique report identifiers cannot establish independence.",
+        "Extraction coverage is partial (200 extracted records versus 3,769 historical INCLUDE records), and no human verification of any synthesis-critical value is available. Historical LLM extractions and evaluator verdicts were not used as truth."
+      ],
+      "case_id": 20,
+      "common_estimand_candidate": null,
+      "complete_effect_rows": 0,
+      "final_gate_status": "structurally_ineligible",
+      "independent_study_count_status": "not_identifiable",
+      "reasoning": "Case 20 is structurally ineligible regardless of the pending human verification requirement. Conservative counting yields zero complete effect rows because the archived columns provide neither a defined common effect measure nor its uncertainty (or sufficient counts for reconstruction). Although 65 records contain an archived accuracy value and four contain both accuracy and F1, these are unverified descriptive performance values with incompatible scales and heterogeneous prediction tasks; they cannot be pooled merely because they share columns. The archive also lacks the information needed to identify at least five independent studies or handle multiple reports, outcomes, models, validation splits, and timepoints. Human verification would be necessary for any future re-extraction, but cannot cure the current schema's absence of a defensible common estimand and analyzable effect data.",
+      "recommended_role": "exclude_from_synthesis",
+      "slug": "deep_learning_predictive_maintenance",
+      "structural_eligibility": "unlikely_candidate",
+      "synthesis_critical_fields": [
+        "accuracy_percent",
+        "f1_score",
+        "dataset_size",
+        "effect-measure definition and scale",
+        "evaluation-set denominator/class counts",
+        "uncertainty information (CI, SE, variance, or reconstructible counts)",
+        "outcome/task, comparator, threshold, validation split, and timepoint",
+        "underlying-study/report linkage"
+      ]
+    }
+  ],
+  "failures": []
+}
