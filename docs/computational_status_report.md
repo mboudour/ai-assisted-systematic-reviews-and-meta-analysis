@@ -24,11 +24,11 @@ These controls are familiar from provenance, MLOps, observability, data-contract
 
 | Established lesson | Concrete consequence in this project |
 |---|---|
-| Failure states must be typed separately | All 94,522 historical screening decisions lack call status, and 75,246 EXCLUDE labels collide with the terminal-failure fallback. The 11,500 extraction rows and 90,554 field cells also lack call status; historical failure rates cannot be reconstructed. |
 | Denominators must remain explicit | Removing 36,881 UNVERIFIABLE cells changes the displayed CORRECT share from 58.39% to 98.52%, a 40.12 percentage-point change. |
-| Execution provenance must be relational and versioned | The script, README, and manuscript name three different screening aliases. Consequently, none of the 94,522 screening labels can be attributed defensibly to a specific model alias or snapshot. |
-| Repeatability must separate representation and null states | Thirty-six of 500 sampled items changed null status. Among 154 all-non-null categorical items, normalization changes design-weighted exact agreement from 21.58% to 46.13%. |
+| Repeatability must separate representation and null states | The design-weighted probability of changing null status was 1.92% (95% interval 0.60%–4.34%); 36 of 500 items in the realized stratified sample changed status. Among 154 all-non-null categorical items, normalization changes design-weighted exact agreement from 21.58% to 46.13%. |
 | Schemas must encode downstream requirements | Ten case schemas yield 927 complete numeric estimate-and-interval rows, yet none records a study-level linkage identifier, dedicated effect-measure label, variance/standard error, or dependence identifier. Report DOIs are retained when available, but they cannot group multiple reports from one study. One schema names an effect-specific estimate (`hazard_ratio`); the other nine use generic `effect_size`. Only two schemas include an analysis time point. |
+| Execution provenance must be relational and versioned | The script, README, and manuscript name three different screening aliases. Consequently, none of the 94,522 screening labels can be attributed defensibly to a specific model alias or snapshot. |
+| Failure states must be typed separately | Historical failure incidence is not identifiable because the archive retains no call-status or retry history and the code maps terminal failures onto ordinary analytical states. A later logged rerun would characterize a different execution, not recover the historical run. |
 
 ## Historical and prospective model roles are different
 
@@ -49,7 +49,7 @@ The current offline analyses make no external model calls. The 2,100 successful 
 
 The original exact-match summary is retained as a strict descriptive statistic: 190 of 200 screening items and 307 of 500 extraction items produced byte-equivalent parsed values across all three prospective calls. For categorical fields, however, exact string equality confounds substantive change with capitalization, punctuation, word order, spelling, and paraphrase. Numeric stability was also inflated by repeated null outputs.
 
-The corrected sensitivity analysis separates null states and applies deterministic normalization without human labels or new model calls. Among the 500 extraction items, **160 were null in all three calls, 304 were non-null in all three calls, and 36 changed null status at least once**. The latter are **7.20% of sampled items**, comprise 23 categorical and 13 numeric fields, and produce 44 adjacent state changes. Because the sample was stratified, the inverse-probability-weighted mixed-null estimate is **1.92%** with a case-cluster bootstrap interval of **0.60%–4.34%**. Both estimates must be reported with their estimands. All-null items are excluded from the primary non-null comparison.
+The corrected sensitivity analysis separates null states and applies deterministic normalization without human labels or new model calls. The **inverse-probability-weighted probability of changing null status was 1.92%**, with a case-cluster bootstrap interval of **0.60%–4.34%**. Null states were therefore **largely, but not perfectly, stable** in the target represented by the stratified sample. In the realized sample, **36 of 500 items (7.20%)** changed null status, while 160 were null in all three calls and 304 were non-null in all three calls. The 36 items comprise 23 categorical and 13 numeric fields and produce 44 adjacent state changes. The weighted estimate and unweighted sample proportion have different estimands and are both reported. All-null items are excluded from the primary non-null comparison.
 
 | All-non-null prospective output | Items | Raw exact, design-weighted | Normalized exact, design-weighted | Token-set exact, design-weighted | Minimum pairwise lexical similarity ≥0.80 |
 |---|---:|---:|---:|---:|---:|
@@ -81,6 +81,10 @@ A comparison between archived evaluator labels and prospective `gpt-5-mini` repe
 The historical code returned EXCLUDE after terminal screening failure, all-null values after terminal extraction failure, and all-UNVERIFIABLE labels after terminal evaluator failure. These fallbacks collide with legitimate analytical states. Because no event log was retained, the historical failure rates cannot be recovered.
 
 The formal upper bounds—every EXCLUDE, every all-null record, or every all-UNVERIFIABLE record—are arithmetically valid but too wide to be substantively informative. They are retained only to demonstrate why failure logging is necessary. They are not empirical estimates or headline findings.
+
+### Why a logged rerun would not recover the historical failure rate
+
+A new run with event logging could estimate the operational failure rate of a **current** implementation. It could not recover the historical rate. The requested and returned model identities, provider infrastructure, rate limits, prompt and schema contracts, client code, retry behavior, corpus state, and execution period would differ. The historical execution is the object of this audit, so substituting a later run would answer a different question and could create false retrospective precision. A small logged rerun could be reported only as a separate prospective demonstration of the proposed event schema; it is not required for the present historical-identifiability claim.
 
 ## The synthesis gate diagnoses schema insufficiency
 
@@ -130,6 +134,8 @@ The current paper should lead with five established controls whose consequences 
 The prospective repeatability experiment illustrates the fourth control. It cannot characterize the historical models.
 
 The paper should be submitted, if pursued, as a JDIQ Experience Paper. The current official **Call for Papers** explicitly states “Mandatory `Experience:` prefix in the title” and a 10-page limit with an optional online-only supplement.[1] The general Author Guidelines list Experience Papers and link to the call but do not repeat those two details.[2] The substantive title should avoid claiming validation or error propagation.
+
+The 10-page core should prioritize the consequence matrix, the denominator-ledger figure, and the compact repeatability table. Case-level diagnostics, complete schema coverage, transition patterns, implementation details, protocols, amendments, and non-substantive software branches belong in the online supplement. The review artifact must be a dedicated identity-free snapshot rather than the full historical repository because JDIQ requires double anonymity and the `previous/` tree contains identifying text and binary manuscripts.[2]
 
 ## References
 

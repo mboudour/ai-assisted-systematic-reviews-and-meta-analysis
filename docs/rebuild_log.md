@@ -162,3 +162,13 @@ The extraction-cap statement now reports both valid denominators. The 7,776 omit
 A deterministic claim–consequence matrix now positions five controls against established provenance, MLOps, observability, data-contract, and LLM-evaluation literature. It quantifies the consequences observed in this archive rather than claiming the controls as novel. The historical schema audit records that ten case schemas yielded 927 complete estimate-and-interval rows. Report DOIs are retained when available, but none of the 20 schemas has a study-level linkage identifier, dedicated effect-measure label, variance or standard-error field, or dependence identifier. One schema names `hazard_ratio`; the other nine estimate-and-interval schemas use generic `effect_size`. Only two have an analysis time-point field.
 
 The current JDIQ Call for Papers was checked directly. It explicitly requires the `Experience:` title prefix and sets a 10-page limit with an optional online-only supplement. The general Author Guidelines list Experience Papers and link to the call but do not repeat those two details.
+
+## Third-round editorial corrections and review packaging
+
+**Date:** 19 September 2026
+
+The null-state interpretation now leads with the inverse-probability-weighted mixed-null estimate of 1.92% (case-cluster bootstrap interval 0.60%–4.34%) and describes null states as largely, but not perfectly, stable. The 36/500 realized-sample proportion is retained with its distinct estimand.
+
+The consequence matrix now leads with the three measured effects: the 58.39% to 98.52% denominator contrast, the 21.58% to 46.13% categorical normalization contrast, and the 927-row schema audit. Failure logging is stated as historical non-identifiability rather than quantified by counting ordinary outputs that share fallback values. The reports explicitly explain that a later logged rerun would characterize a different model, prompt, schema, API, and execution period rather than recover the historical failure rate.
+
+A single core-paper denominator-ledger figure was added in deterministic PNG and PDF formats. A 10-page JDIQ core and online-supplement allocation was documented. A dedicated minimal review artifact was built without Git history, raw bibliographic text, the `previous/` tree, old manuscripts, author-identifying strings, or unnecessary binaries. The artifact builds offline, requires no model or network calls, and passed its isolated test suite. Its public source uses anonymous commit metadata; the reviewer-facing Anonymous GitHub mirror requires completion of the service's read-only GitHub App authorization.

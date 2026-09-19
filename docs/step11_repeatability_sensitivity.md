@@ -8,7 +8,7 @@ The client requested `temperature=0`, and the endpoint accepted every corrected 
 
 ## Null-state decomposition
 
-Of 500 extraction items, 160 were null in all three calls, 304 were non-null in all three calls, and 36 (7.20%) changed null status at least once. The mixed-null group contained 23 categorical and 13 numeric items and accounted for 44 adjacent state changes. Its inverse-probability-weighted estimate was 1.92% (case-cluster bootstrap 95% interval 0.60%–4.34%). All-null items are trivially stable and are excluded from the primary non-null comparison.
+The inverse-probability-weighted estimate of changing null status at least once was 1.92% (case-cluster bootstrap 95% interval 0.60%–4.34%). Null states were therefore largely, but not perfectly, stable in the target population represented by the stratified sample. In the realized sample, 36 of 500 items (7.20%) changed null status, while 160 were null in all three calls and 304 were non-null in all three calls. The mixed-null group contained 23 categorical and 13 numeric items and accounted for 44 adjacent state changes. The 7.20% sample proportion and 1.92% weighted estimate have different estimands and are both reported. All-null items are trivially stable and are excluded from the primary non-null comparison.
 
 ## All-non-null outputs
 

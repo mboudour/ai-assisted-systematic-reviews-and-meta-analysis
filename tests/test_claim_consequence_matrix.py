@@ -18,13 +18,23 @@ def test_five_lessons_have_observed_consequences_and_limits() -> None:
     assert all(row["observed_consequence"] for row in rows)
     assert all(row["quantified_effect"] for row in rows)
     assert all(row["not_identifiable"] for row in rows)
+    assert [row["lesson"] for row in rows[:3]] == [
+        "Denominator-explicit reporting",
+        "Representation- and null-aware repeatability",
+        "Downstream-requirements-first schema design",
+    ]
     by_lesson = {row["lesson"]: row for row in rows}
-    assert "94,522" in by_lesson["Typed operational failure states"]["observed_consequence"]
-    assert "75,246" in by_lesson["Typed operational failure states"]["observed_consequence"]
+    failure = by_lesson["Typed operational failure states"]
+    assert "different model, prompt, schema, API, and execution period" in failure[
+        "observed_consequence"
+    ]
+    assert "not identifiable" in failure["quantified_effect"]
     assert "94,522" in by_lesson["Versioned relational provenance"]["quantified_effect"]
-    assert "36 (7.20%)" in by_lesson[
+    repeatability = by_lesson[
         "Representation- and null-aware repeatability"
     ]["observed_consequence"]
+    assert "1.92% (0.60%–4.34%)" in repeatability
+    assert "36 of 500" in repeatability
     assert "927 complete numeric rows" in by_lesson[
         "Downstream-requirements-first schema design"
     ]["observed_consequence"]

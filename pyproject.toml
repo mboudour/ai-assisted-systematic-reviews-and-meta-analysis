@@ -9,6 +9,7 @@ description = "Reproducible ground-truth-free data-quality audits for LLM-assist
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "matplotlib>=3.9",
   "numpy>=2.0",
   "openai>=1.0",
   "pandas>=3.0",

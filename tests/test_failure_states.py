@@ -79,3 +79,9 @@ def test_event_schema_requires_explicit_call_status() -> None:
 def test_event_table_template_contains_no_fabricated_events() -> None:
     rows = read_rows("config/pipeline_events_template.csv")
     assert rows == []
+
+
+def test_report_distinguishes_historical_recovery_from_prospective_rerun() -> None:
+    report = (ROOT / "docs/step06_failure_missingness.md").read_text(encoding="utf-8")
+    assert "logged rerun would answer a different question" in report
+    assert "could not recover the historical rate" in report

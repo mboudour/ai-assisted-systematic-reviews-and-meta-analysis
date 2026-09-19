@@ -39,6 +39,7 @@ def main() -> None:
         ("13 meta-analysis", command("scripts/run_meta_analyses.py", "--eligibility", "results/tables/meta_analysis_eligibility.csv", "--data", "results/tables/meta_analysis_candidates_unverified.csv", "--summary", "results/tables/meta_analysis_results.csv", "--weights", "results/tables/meta_analysis_weights.csv", "--report", "docs/step13_meta_analysis_models.md")),
         ("14 propagation", command("scripts/run_error_propagation.py", "--error-model", "config/error_model.pending.json", "--verified-data", "results/tables/meta_analysis_candidates_unverified.csv", "--output", "results/tables/error_propagation_results.csv", "--report", "docs/step14_error_propagation.md", "--draws", "10000", "--master-seed", "20260919")),
         ("15 ablations", command("scripts/build_sensitivity_ablations.py", "--root", ".", "--output", "results/tables/sensitivity_ablations.csv", "--report", "docs/step15_sensitivity_ablations.md")),
+        ("15 denominator figure", command("scripts/build_denominator_figure.py", "--root", ".", "--png", "results/figures/denominator_ledger.png", "--pdf", "results/figures/denominator_ledger.pdf")),
         ("15 claim consequences", command("scripts/build_claim_consequence_matrix.py", "--root", ".", "--matrix-output", "results/tables/claim_consequence_matrix.csv", "--schema-output", "results/tables/schema_requirement_coverage.csv", "--report", "docs/claim_consequence_matrix.md")),
     ]
     for label, cmd in stages:

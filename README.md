@@ -12,6 +12,8 @@ The rebuilt project studies data quality across linked stages of an LLM-assisted
 
 The project does not treat model-generated labels or same-model evaluator verdicts as ground truth. It makes no screening-accuracy, extraction-accuracy, evaluator-validity, calibrated error-propagation, or pooled-effect claim. The append-only amendments in [`config/amendments.jsonl`](config/amendments.jsonl) record the post-outcome scope change and the later historical-model correction; the earlier human-validation materials remain archived but are not planned work.
 
+The manuscript's measured empirical spine is deliberately narrow. Restricting the evaluator denominator changes the displayed CORRECT share from **58.39% to 98.52%**. Deterministic normalization changes design-weighted all-non-null categorical agreement from **21.58% to 46.13%**. Ten historical schemas yield **927 complete estimate-and-interval rows**, but none records both the study-level linkage and variance information needed to establish synthesis readiness. The design-weighted probability of changing null status is **1.92% (0.60%–4.34%)**; null states are therefore described as largely, but not perfectly, stable.
+
 ## Project structure
 
 | Path | Purpose |
@@ -36,7 +38,7 @@ The original rebuild followed a 16-step plan. The current no-human-validation sc
 
 Step 11 is a separate prospective `gpt-5-mini` experiment on frozen historical inputs. It is not a repeatability test of the historical system. The historical screening model is unresolved because the committed script declares `gpt-4.1-mini`, the empirical README reports `gpt-4o-mini`, and manuscript Section 4.5.1 reports `gpt-4o`; the screening rows retain no model or request metadata. Historical extraction and evaluator materials consistently declare `gpt-4o-mini` but also lack per-call verification. The full conflict is documented in [`docs/historical_model_identity_audit.md`](docs/historical_model_identity_audit.md). The prospective client requested `temperature=0`, but the saved responses do not expose the effective server-side decoding configuration. Raw exact matching is retained as a strict measure, while the companion sensitivity analysis separates null states and applies deterministic normalization to all-non-null outputs. Step reports are under [`docs/`](docs/).
 
-The consolidated interpretation is in [`docs/computational_status_report.md`](docs/computational_status_report.md). The five lessons, their observed consequences, and their literature boundaries are in [`docs/claim_consequence_matrix.md`](docs/claim_consequence_matrix.md). Exact local setup and rebuilding instructions are in [`docs/reproducibility.md`](docs/reproducibility.md).
+The consolidated interpretation is in [`docs/computational_status_report.md`](docs/computational_status_report.md). The five lessons, their observed consequences, and their literature boundaries are in [`docs/claim_consequence_matrix.md`](docs/claim_consequence_matrix.md). The 10-page core, supplement allocation, and double-anonymous artifact rules are in [`docs/jdiq_submission_plan.md`](docs/jdiq_submission_plan.md). The core denominator-ledger figure is generated in both [PNG](results/figures/denominator_ledger.png) and [PDF](results/figures/denominator_ledger.pdf) form. Exact local setup and rebuilding instructions are in [`docs/reproducibility.md`](docs/reproducibility.md).
 
 ## Reproduce the offline analyses
 

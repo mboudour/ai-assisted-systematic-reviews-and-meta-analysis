@@ -1,5 +1,5 @@
 {
-  "file_count": 84,
+  "file_count": 87,
   "files": [
     {
       "bytes": 0,
@@ -114,12 +114,22 @@
     {
       "bytes": 297,
       "path": "results/environment.json",
-      "sha256": "44533c98626153561447495a863a580235b9c6bf77a8d2ee74e781656af4e843"
+      "sha256": "f914c7f504e301bbd553ce7553debd12f4787fdd089da6bb3362a563f3d6fb09"
     },
     {
       "bytes": 0,
       "path": "results/figures/.gitkeep",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 43061,
+      "path": "results/figures/denominator_ledger.pdf",
+      "sha256": "67c00566df8e0c433fd0c753979a1ef52810dcbadffa743f204033656d240b49"
+    },
+    {
+      "bytes": 214445,
+      "path": "results/figures/denominator_ledger.png",
+      "sha256": "44c3d556ab5025d0b78e29c6829c8bcb16cb4e5fcc28480144b1e534635b990f"
     },
     {
       "bytes": 1707,
@@ -132,9 +142,9 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
-      "bytes": 3234,
+      "bytes": 3373,
       "path": "results/tables/claim_consequence_matrix.csv",
-      "sha256": "3029786883bb36d759dd3701155b4043744353bc5826405bbb1badaa34eb23cf"
+      "sha256": "e1b98fb5c46c18009b5d21c47211fe34f41b981ebf22b16dc91242aaae8743d1"
     },
     {
       "bytes": 5325,
@@ -277,14 +287,14 @@
       "sha256": "d7b19369649391490bb895d20d86878e296327837c14ce80f2efc7235073e7e0"
     },
     {
-      "bytes": 6037,
+      "bytes": 6174,
       "path": "docs/claim_consequence_matrix.md",
-      "sha256": "84ff3fbae60163ca2ede17bb14cef49fa2a2b33dc78f9711fdfb2634bd8376ad"
+      "sha256": "cbde3d5ec9fda5ca51ab7ac3a754dc185cf178ecac4e9f4e0af9cf1e4066edfe"
     },
     {
-      "bytes": 16052,
+      "bytes": 17600,
       "path": "docs/computational_status_report.md",
-      "sha256": "f70410fc508b2ccd7dac250c5baa60565aecb181509a2d4c24e95b4366325b20"
+      "sha256": "06767d563e6909744817165de7c1978e9e2e85ba50b5103f31a955db5649bf90"
     },
     {
       "bytes": 2701,
@@ -292,9 +302,14 @@
       "sha256": "dac361fe7a522287206e49d991aec418970bb4d1ebb136a03077cf1c9149e817"
     },
     {
-      "bytes": 14133,
+      "bytes": 6711,
+      "path": "docs/jdiq_submission_plan.md",
+      "sha256": "d447b13fcc6255abe6c6b3cb6424208ac58fdcc68bff1bc831e1a52931e14d75"
+    },
+    {
+      "bytes": 15658,
       "path": "docs/rebuild_log.md",
-      "sha256": "426e7ff9c972739ff871af143407176b186a56b6acda3f59a0086c8b3cb3205c"
+      "sha256": "a79491717fcc74357aee71089b7ebab02ddce02a465b82510f56e98ba5e3184d"
     },
     {
       "bytes": 4139,
@@ -322,9 +337,9 @@
       "sha256": "dda48bdfc1cfb725c1234b50e174e25ac33062642678e65c3e4e9a42fd332304"
     },
     {
-      "bytes": 3319,
+      "bytes": 3832,
       "path": "docs/step06_failure_missingness.md",
-      "sha256": "720d68da2be7f1fcb9e030afbfa35a91558621fbe546cc4ec183dc9391087523"
+      "sha256": "969dd75efd1f1699262fedd9b0d3892a3913e510124e132a2765823fd9ca74c0"
     },
     {
       "bytes": 2806,
@@ -352,9 +367,9 @@
       "sha256": "c275c0b635a919b68dbe6222f237189003ee777ba913f8ce69b4007eb11aec1f"
     },
     {
-      "bytes": 2453,
+      "bytes": 2723,
       "path": "docs/step11_repeatability_sensitivity.md",
-      "sha256": "6ab1fe2c4747039f60471d9db3f1c16186748881fa58e1591c9fdf40b18ef4cf"
+      "sha256": "f8545f071c6f49bc0998e3ae4769c33e04333720f2fe1b1e9aa996deb9b07ce1"
     },
     {
       "bytes": 2518,

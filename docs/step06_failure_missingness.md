@@ -37,6 +37,10 @@ Conditional agreement is shown only to reconcile the historical headline measure
 
 No historical failure rate, retry-success rate, or mis-exclusion rate is estimated here. Treating all-null or all-UNVERIFIABLE rows as known failures would overstate what the archive shows. Trivial bounds that assign every collided analytical state to failure are useful only as motivation for event logging and are not reported as empirical findings.
 
+## Why a logged rerun would answer a different question
+
+A new run with explicit event logging could estimate the failure rate of a current implementation, but it could not recover the historical rate. Model and provider behavior, prompts, schemas, client and retry code, rate limits, corpus state, and execution period would differ. Because the historical execution is the object of this audit, a logged rerun would be a separate prospective demonstration rather than a reconstruction of the archived workflow.
+
 ## References
 
 [1]: https://json-schema.org/draft/2020-12/json-schema-core "JSON Schema Core Specification, Draft 2020-12"

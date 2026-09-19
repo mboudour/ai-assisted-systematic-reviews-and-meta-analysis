@@ -286,18 +286,22 @@ def main() -> None:
         "",
         "## Null-state decomposition",
         "",
-        f"Of 500 extraction items, {results['null_state_counts']['all_null']} were null in all three "
-        f"calls, {results['null_state_counts']['all_nonnull']} were non-null in all three calls, and "
-        f"{results['null_state_counts']['mixed_null']} ({results['null_state_counts']['mixed_null_unweighted_rate']:.2%}) "
-        "changed null status at least once. The mixed-null group contained "
-        f"{results['null_state_counts']['mixed_null_by_declared_type']['categorical']} categorical and "
-        f"{results['null_state_counts']['mixed_null_by_declared_type']['numeric']} numeric items and "
-        f"accounted for {results['null_state_counts']['adjacent_null_transitions']} adjacent state changes. "
-        "Its inverse-probability-weighted estimate was "
+        "The inverse-probability-weighted estimate of changing null status at least once was "
         f"{results['null_state_design_weighted']['mixed_null']['weighted_estimate']:.2%} "
         f"(case-cluster bootstrap 95% interval "
         f"{results['null_state_design_weighted']['mixed_null']['cluster_bootstrap_95_lower']:.2%}–"
         f"{results['null_state_design_weighted']['mixed_null']['cluster_bootstrap_95_upper']:.2%}). "
+        "Null states were therefore largely, but not perfectly, stable in the target population represented "
+        "by the stratified sample. In the realized sample, "
+        f"{results['null_state_counts']['mixed_null']} of 500 items "
+        f"({results['null_state_counts']['mixed_null_unweighted_rate']:.2%}) changed null status, while "
+        f"{results['null_state_counts']['all_null']} were null in all three calls and "
+        f"{results['null_state_counts']['all_nonnull']} were non-null in all three calls. "
+        "The mixed-null group contained "
+        f"{results['null_state_counts']['mixed_null_by_declared_type']['categorical']} categorical and "
+        f"{results['null_state_counts']['mixed_null_by_declared_type']['numeric']} numeric items and "
+        f"accounted for {results['null_state_counts']['adjacent_null_transitions']} adjacent state changes. "
+        "The 7.20% sample proportion and 1.92% weighted estimate have different estimands and are both reported. "
         "All-null items are trivially stable and are excluded from the primary non-null comparison.",
         "",
         "## All-non-null outputs",

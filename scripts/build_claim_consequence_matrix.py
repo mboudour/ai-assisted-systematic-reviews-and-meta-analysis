@@ -86,14 +86,10 @@ def main() -> None:
         root / "results/tables/repeatability_normalized_summary.json"
     )
     screened = sum(int(row["screened_records"]) for row in failure)
-    excludes = sum(int(row["exclude_labels"]) for row in failure)
-    extraction_rows = sum(int(row["extracted_records"]) for row in failure)
     cells = sum(int(row["requested_field_cells"]) for row in failure)
     correct = sum(int(row["judge_correct_cells"]) for row in failure)
     incorrect = sum(int(row["judge_incorrect_cells"]) for row in failure)
     unverifiable = sum(int(row["judge_unverifiable_cells"]) for row in failure)
-    all_null_rows = sum(int(row["all_null_records"]) for row in failure)
-    all_unverifiable_rows = sum(int(row["all_unverifiable_records"]) for row in failure)
     determinate = correct + incorrect
 
     complete_estimate_ci_rows = sum(int(row["complete_estimate_ci_rows"]) for row in meta)
@@ -206,12 +202,12 @@ def main() -> None:
             "lesson": "Typed operational failure states",
             "established_principle": "Logical requests, retries, terminal errors, and content outcomes require separate event fields.",
             "observed_consequence": (
-                f"All {screened:,} screening decisions lack call status; {excludes:,} EXCLUDE labels collide "
-                f"with the terminal-failure fallback. All {extraction_rows:,} extraction rows and {cells:,} "
-                f"field cells lack call status; {all_null_rows} all-null and {all_unverifiable_rows} "
-                "all-UNVERIFIABLE rows collide with fallback states."
+                "The archive retains no call-status, attempt, retry, request, or error fields, while the "
+                "historical code maps terminal failures onto ordinary analytical states. A later rerun with "
+                "logging would measure a different model, prompt, schema, API, and execution period rather "
+                "than recover the historical run."
             ),
-            "quantified_effect": "Historical screening, extraction, and evaluator failure rates are unrecoverable",
+            "quantified_effect": "Historical screening, extraction, and evaluator failure rates are not identifiable",
             "identifiable_claim": "The archive cannot distinguish operational failure from specified analytical states.",
             "not_identifiable": "Failure incidence, retry success, or mis-exclusion rate",
             "literature_anchor": "OpenTelemetry GenAI conventions; Google SRE monitoring and retry guidance",
@@ -233,8 +229,11 @@ def main() -> None:
             "lesson": "Representation- and null-aware repeatability",
             "established_principle": "Exact, normalized, semantic, and abstention-aware agreement are distinct constructs.",
             "observed_consequence": (
-                f"Among 500 prospective items, {mixed['mixed_null']} ({mixed['mixed_null_unweighted_rate']:.2%}) "
-                f"changed null status; the design-weighted estimate is {mixed_weighted['weighted_estimate']:.2%}. "
+                f"The design-weighted probability of changing null status was "
+                f"{mixed_weighted['weighted_estimate']:.2%} "
+                f"({mixed_weighted['cluster_bootstrap_95_lower']:.2%}–"
+                f"{mixed_weighted['cluster_bootstrap_95_upper']:.2%}); the realized stratified sample contained "
+                f"{mixed['mixed_null']} of 500 such items ({mixed['mixed_null_unweighted_rate']:.2%}). "
                 f"For {normalized_cat['raw_exact']['items']} all-non-null categorical items, raw exact "
                 f"agreement is {normalized_cat['raw_exact']['weighted_estimate']:.2%} and normalized exact "
                 f"agreement is {normalized_cat['normalized_exact']['weighted_estimate']:.2%}."
@@ -243,7 +242,7 @@ def main() -> None:
                 f"{100 * (normalized_cat['normalized_exact']['weighted_estimate'] - normalized_cat['raw_exact']['weighted_estimate']):.2f} "
                 "percentage-point normalization effect for categorical items"
             ),
-            "identifiable_claim": "Repeatability estimates depend materially on null-state treatment and representation.",
+            "identifiable_claim": "Null states were largely but not perfectly stable, while categorical agreement depended materially on representation.",
             "not_identifiable": "Semantic equivalence or factual correctness",
             "literature_anchor": "Kamalloo et al. 2023; Wen et al. 2025",
         },
@@ -263,6 +262,14 @@ def main() -> None:
             "literature_anchor": "Wang and Strong 1996; SHACL; PRESERVE 2024",
         },
     ]
+    priority = {
+        "Denominator-explicit reporting": 1,
+        "Representation- and null-aware repeatability": 2,
+        "Downstream-requirements-first schema design": 3,
+        "Versioned relational provenance": 4,
+        "Typed operational failure states": 5,
+    }
+    matrix_rows.sort(key=lambda row: priority[row["lesson"]])
     write_csv(root / args.matrix_output, matrix_rows)
 
     report_lines = [

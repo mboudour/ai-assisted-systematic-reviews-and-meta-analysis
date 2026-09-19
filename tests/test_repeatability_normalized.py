@@ -78,3 +78,5 @@ def test_report_disclaims_historical_model_repeatability() -> None:
     assert "historical screening model is unresolved" in report
     assert "effective decoding configuration" in report
     assert "semantic-equivalence cutoffs" in report
+    assert "largely, but not perfectly, stable" in report
+    assert report.index("1.92%") < report.index("36 of 500")
