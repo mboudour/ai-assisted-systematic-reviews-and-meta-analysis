@@ -1,0 +1,1 @@
+case_id,slug,analysis_scale,model,k,estimate,ci_lower,ci_upper,back_transformed_estimate,back_transformed_ci_lower,back_transformed_ci_upper,prediction_lower,prediction_upper,tau2,i2,q,null_crossed,status

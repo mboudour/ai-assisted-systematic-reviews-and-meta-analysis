@@ -9,7 +9,9 @@ description = "Reproducible validation and error-propagation analyses for LLM-as
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "numpy>=2.0",
   "openai>=1.0",
+  "scipy>=1.14",
 ]
 
 [project.optional-dependencies]
@@ -21,6 +23,7 @@ packages = ["src/evidence_quality"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100

@@ -104,3 +104,9 @@ An 11-type blocked error-injection design was frozen. It contains 30 injected it
 **Date:** 19 September 2026
 
 Twenty independent case reviews were consolidated with deterministic completeness checks. No case currently passes the frozen synthesis gate. Sixteen cases are structurally ineligible from the archived schema and records. Cases 2, 3, 6, and 15 remain pending human verification, but none is a primary synthesis candidate. Cases 3 and 15 may support narrowly specified sensitivity analyses after full-text verification, estimand harmonization, and report-to-study linkage.
+
+## Gated meta-analysis engine
+
+**Date:** 19 September 2026
+
+Fixed-effect inverse-variance, DerSimonian–Laird, and REML Hartung–Knapp estimators were implemented and numerically tested. The production runner requires a verified common scale, human-verified values, and one selected estimate per independent study. Because no case passes the Step 12 gate, the final pooled-result and weight tables are intentionally empty.
