@@ -1,15 +1,15 @@
 step,title,status,blocking_dependency
 1,Preserve old project and create clean rebuild,complete,
 2,Freeze inventory and validate legacy data,partial,16 historical non-data artifacts unavailable
-3,Freeze study protocol before outcome analysis,complete_superseded_for_current_manuscript,see append-only amendment A-2026-09-19-01
+3,Freeze study protocol before outcome analysis,complete_superseded_for_current_manuscript,see append-only amendments A-2026-09-19-01 and A-2026-09-19-02
 4,Audit retrieval completeness and corpus quality,complete,
 5,Audit deduplication candidates,complete_for_ground_truth_free_scope,false-merge accuracy not estimated
-6,Separate technical failures from analytical states,complete,historical failure incidence not identifiable
+6,Audit technical-failure identifiability,complete_finding_nonidentifiable,no historical failure or retry rate can be reconstructed
 7,Create human reference sample,archived_not_planned,no human validation in current scope
 8,Validate screening against human reference,not_estimable_out_of_scope,no human reference
 9,Validate extraction and evaluator against human reference,not_estimable_out_of_scope,no human reference
 10,Run controlled evaluator error-injection experiment,archived_not_run,no verified source-field pairs and no additional model calls
-11,Run prospective same-request experiment,complete_separate_model,gpt-5-mini results do not characterize historical gpt-4.1-mini or gpt-4o-mini
+11,Run prospective same-request experiment,complete_separate_model,gpt-5-mini results do not characterize the unresolved historical screening system or historically declared extraction evaluator alias
 12,Audit schema support for meta-analysis,complete_schema_audit,historical schemas insufficient for synthesis eligibility
 13,Fit prespecified synthesis models,software_only_not_used,no verified analysis-ready case
 14,Propagate empirically calibrated errors,not_estimable_out_of_scope,no external calibration and no verified analysis-ready case

@@ -72,8 +72,20 @@ def test_historical_source_hashes_match_preserved_scripts() -> None:
 def test_historical_prompt_register_does_not_invent_model_snapshots() -> None:
     prompts = load_json("config/historical_prompts.json")
     assert prompts["provenance_status"] == (
-        "declared_in_tracked_scripts_not_verified_per_archived_call"
+        "conflicting_screening_documentation_and_no_per_call_verification"
     )
+    assert prompts["screening"]["historical_execution_model_alias"] is None
+    assert prompts["screening"]["model_identity_status"] == "unresolved"
+    assert prompts["screening"]["script_declared_model_alias"] == "gpt-4.1-mini"
+    assert prompts["screening"]["repository_readme_reported_model_alias"] == "gpt-4o-mini"
+    assert prompts["screening"]["manuscript_reported_model_alias"] == "gpt-4o"
+    evidence = prompts["screening"]["conflict_evidence"]
+    assert sha256_file(ROOT / "previous/empirical_evaluation/scripts/02_screening.py") == evidence[
+        "script_sha256"
+    ]
+    assert sha256_file(ROOT / "previous/empirical_evaluation/README.md") == evidence[
+        "repository_readme_sha256"
+    ]
     assert prompts["screening"]["actual_model_snapshot"] is None
     assert prompts["extraction"]["actual_model_snapshot"] is None
     assert prompts["evaluator"]["actual_model_snapshot"] is None
@@ -90,7 +102,7 @@ def test_prospective_model_choices_are_in_the_frozen_catalog() -> None:
     assert roles["independent_evaluator_robustness_check"]["model_id"] in model_ids
 
 
-def test_scope_amendment_is_explicit_and_preserves_model_boundary() -> None:
+def test_scope_and_model_identity_amendments_are_explicit() -> None:
     lines = [
         line
         for line in (ROOT / "config/amendments.jsonl")
@@ -98,11 +110,14 @@ def test_scope_amendment_is_explicit_and_preserves_model_boundary() -> None:
         .splitlines()
         if line.strip()
     ]
-    assert len(lines) == 1
-    amendment = json.loads(lines[0])
-    assert amendment["amendment_id"] == "A-2026-09-19-01"
-    assert amendment["timing"].startswith("after inspection")
-    assert "gpt-4.1-mini" in amendment["model_boundary"]
-    assert "gpt-4o-mini" in amendment["model_boundary"]
-    assert "gpt-5-mini" in amendment["model_boundary"]
-    assert "not as repeatability of the historical models" in amendment["model_boundary"]
+    assert len(lines) == 2
+    amendments = [json.loads(line) for line in lines]
+    assert [item["amendment_id"] for item in amendments] == [
+        "A-2026-09-19-01",
+        "A-2026-09-19-02",
+    ]
+    assert amendments[0]["timing"].startswith("after inspection")
+    correction = amendments[1]
+    assert correction["corrects"].startswith("A-2026-09-19-01")
+    assert "screening model alias is unresolved" in correction["corrected_model_boundary"]
+    assert correction["evidence_report"] == "docs/historical_model_identity_audit.md"

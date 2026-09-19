@@ -138,6 +138,7 @@ def main() -> None:
         normalized = [normalize_scalar(value) for value in values]
         tokenized = [token_set(value) for value in values]
         nulls = [value is None for value in values]
+        null_pattern = "".join("N" if is_null else "V" for is_null in nulls)
         nonnull_normalized = [value for value, is_null in zip(normalized, nulls) if not is_null]
         rows.append(
             {
@@ -148,6 +149,10 @@ def main() -> None:
                 "all_null": all(nulls),
                 "all_nonnull": not any(nulls),
                 "mixed_null": any(nulls) and not all(nulls),
+                "null_pattern": null_pattern,
+                "adjacent_null_transitions": sum(
+                    left != right for left, right in zip(nulls, nulls[1:])
+                ),
                 "min_pairwise_lexical_similarity": min_pairwise_similarity(normalized),
                 "min_pairwise_nonnull_lexical_similarity": (
                     min_pairwise_similarity(nonnull_normalized)
@@ -187,7 +192,13 @@ def main() -> None:
     results: dict[str, object] = {
         "scope": {
             "model": "gpt-5-mini",
-            "historical_models": ["gpt-4.1-mini screening", "gpt-4o-mini extraction/evaluator"],
+            "historical_screening_model_status": "unresolved",
+            "historical_screening_conflicting_aliases": [
+                "gpt-4.1-mini in committed script",
+                "gpt-4o-mini in repository README",
+                "gpt-4o in manuscript Section 4.5.1",
+            ],
+            "historical_extraction_evaluator_declared_alias": "gpt-4o-mini; no per-call verification",
             "comparability": "The prospective run is a separate gpt-5-mini experiment and does not estimate repeatability of the historical model outputs.",
             "temperature_requested": 0,
             "temperature_effective_confirmed_by_provider": False,
@@ -200,6 +211,24 @@ def main() -> None:
             "all_null": int(items["all_null"].sum()),
             "all_nonnull": int(items["all_nonnull"].sum()),
             "mixed_null": int(items["mixed_null"].sum()),
+            "mixed_null_unweighted_rate": float(items["mixed_null"].mean()),
+            "mixed_null_by_declared_type": {
+                declared_type: int(
+                    items.loc[items["declared_type"] == declared_type, "mixed_null"].sum()
+                )
+                for declared_type in ("categorical", "numeric")
+            },
+            "adjacent_null_transitions": int(items["adjacent_null_transitions"].sum()),
+        },
+        "null_state_design_weighted": summarize(
+            items, ["all_null", "all_nonnull", "mixed_null"]
+        ),
+        "null_transition_patterns": {
+            pattern: int(count)
+            for pattern, count in items.loc[items["mixed_null"], "null_pattern"]
+            .value_counts()
+            .sort_index()
+            .items()
         },
         "all_nonnull_by_declared_type": {},
         "all_null_by_declared_type": {},
@@ -226,6 +255,8 @@ def main() -> None:
         "all_null",
         "all_nonnull",
         "mixed_null",
+        "null_pattern",
+        "adjacent_null_transitions",
         "min_pairwise_lexical_similarity",
         "min_pairwise_nonnull_lexical_similarity",
         "lexical_at_least_70",
@@ -241,10 +272,12 @@ def main() -> None:
         "",
         "## Scope and model boundary",
         "",
-        "This analysis uses the already completed `gpt-5-mini` calls. The historical system used "
-        "`gpt-4.1-mini` for screening and `gpt-4o-mini` for extraction and evaluation. The results "
-        "therefore describe a separate prospective experiment on frozen historical inputs; they do "
-        "not estimate repeatability of the historical models or validate their outputs.",
+        "This analysis uses the already completed `gpt-5-mini` calls. The historical screening "
+        "model is unresolved: the committed script declares `gpt-4.1-mini`, the empirical README "
+        "reports `gpt-4o-mini`, and manuscript Section 4.5.1 reports `gpt-4o`. Historical extraction "
+        "and evaluator materials consistently declare `gpt-4o-mini` but lack per-call verification. "
+        "The results therefore describe a separate prospective experiment on frozen historical "
+        "inputs; they do not estimate repeatability of the historical models or validate their outputs.",
         "",
         "The client requested `temperature=0`, and the endpoint accepted every corrected call, but "
         "the retained responses do not expose the effective decoding configuration. The results are "
@@ -255,8 +288,17 @@ def main() -> None:
         "",
         f"Of 500 extraction items, {results['null_state_counts']['all_null']} were null in all three "
         f"calls, {results['null_state_counts']['all_nonnull']} were non-null in all three calls, and "
-        f"{results['null_state_counts']['mixed_null']} changed null status. All-null items are "
-        "trivially stable and are excluded from the primary non-null comparison.",
+        f"{results['null_state_counts']['mixed_null']} ({results['null_state_counts']['mixed_null_unweighted_rate']:.2%}) "
+        "changed null status at least once. The mixed-null group contained "
+        f"{results['null_state_counts']['mixed_null_by_declared_type']['categorical']} categorical and "
+        f"{results['null_state_counts']['mixed_null_by_declared_type']['numeric']} numeric items and "
+        f"accounted for {results['null_state_counts']['adjacent_null_transitions']} adjacent state changes. "
+        "Its inverse-probability-weighted estimate was "
+        f"{results['null_state_design_weighted']['mixed_null']['weighted_estimate']:.2%} "
+        f"(case-cluster bootstrap 95% interval "
+        f"{results['null_state_design_weighted']['mixed_null']['cluster_bootstrap_95_lower']:.2%}–"
+        f"{results['null_state_design_weighted']['mixed_null']['cluster_bootstrap_95_upper']:.2%}). "
+        "All-null items are trivially stable and are excluded from the primary non-null comparison.",
         "",
         "## All-non-null outputs",
         "",

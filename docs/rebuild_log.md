@@ -146,3 +146,19 @@ The historical and prospective model roles were also separated explicitly. Histo
 A new offline sensitivity analysis separates 160 all-null, 304 all-non-null, and 36 mixed-null extraction items. Among all-non-null categorical fields, design-weighted raw exact agreement was 21.58%, normalized exact agreement was 46.13%, token-set agreement was 47.79%, and the share with minimum pairwise lexical similarity of at least 0.80 was 53.35%. Among all-non-null numeric fields, raw and normalized exact agreement were 88.40% and 88.55%. These values replace the earlier categorical-versus-numeric exact-match contrast as the primary interpretation. They measure output-form repeatability, not semantic correctness.
 
 The evaluator nullness result, silent-failure bounds, and synthesis gate were correspondingly narrowed. Null–UNVERIFIABLE concordance is treated as structurally expected; attention shifts to the 218 null fields with a non-UNVERIFIABLE label and 458 non-null fields labelled UNVERIFIABLE. Failure bounds are used only to motivate event logging. The zero-case synthesis result is interpreted as evidence that the historical schemas did not collect sufficient analytical context, not as evidence that all extracted values are scientifically unusable.
+
+## Second-round evidential corrections
+
+**Date:** 19 September 2026
+
+A comparison of the uploaded manuscript, preserved empirical README, committed screening script, archived CSV schema, file timestamps, and reachable Git history identified a three-way model-identity conflict. Manuscript Section 4.5.1 reports `gpt-4o`, the README reports `gpt-4o-mini`, and every reachable script revision declares `gpt-4.1-mini`. The 94,522 screening rows contain no model or request metadata and predate the first reachable screening-script commit by six days. The historical screening model is now recorded as unresolved. Amendment `A-2026-09-19-02` corrects the earlier amendment without altering it.
+
+The repeatability report now treats 36 of 500 sampled extraction items as mixed null-status items rather than implying that nulls are uniformly stable. These items account for 44 adjacent state changes. Their unweighted sample prevalence is 7.20%; the inverse-probability-weighted estimate is 1.92%, with a case-cluster bootstrap interval of 0.60%–4.34%.
+
+The failure workstream is relabelled as an identifiability audit. All 94,522 screening decisions and all 11,500 extraction rows lack call status. The 75,246 EXCLUDE labels, 23 all-null extraction rows, and 22 all-UNVERIFIABLE evaluator rows are collision sets that may contain valid outputs or failures; they are not reconstructed failures.
+
+The extraction-cap statement now reports both valid denominators. The 7,776 omitted rows equal 88.61% of the 8,776 INCLUDE labels in Cases 16–20 and 40.34% of all 19,276 INCLUDE labels across the 20 cases.
+
+A deterministic claim–consequence matrix now positions five controls against established provenance, MLOps, observability, data-contract, and LLM-evaluation literature. It quantifies the consequences observed in this archive rather than claiming the controls as novel. The historical schema audit records that ten case schemas yielded 927 complete estimate-and-interval rows. Report DOIs are retained when available, but none of the 20 schemas has a study-level linkage identifier, dedicated effect-measure label, variance or standard-error field, or dependence identifier. One schema names `hazard_ratio`; the other nine estimate-and-interval schemas use generic `effect_size`. Only two have an analysis time-point field.
+
+The current JDIQ Call for Papers was checked directly. It explicitly requires the `Experience:` title prefix and sets a 10-page limit with an optional online-only supplement. The general Author Guidelines list Experience Papers and link to the call but do not repeat those two details.

@@ -7,5 +7,6 @@ meta_eligibility_gate,numeric_estimate_ci_rows_at_least_10,cases_passing,5,5,20,
 meta_eligibility_gate,expert_structural_review,cases_pending_verification,4,4,20,not currently eligible,computed
 meta_eligibility_gate,full_frozen_gate,currently_eligible_cases,0,0,20,"requires estimand, independence, human verification, and dependence handling",computed
 extraction_coverage,historical_200_record_cap,affected_cases,5,5,20,Cases 16 through 20 have partial extraction coverage,computed
-extraction_coverage,historical_200_record_cap,included_records_not_extracted,7776,7776,19276,unmodeled attrition before field extraction,computed
+extraction_coverage,all_20_cases,share_of_all_included_records_not_extracted_due_to_cap,0.4034031956837518,7776,19276,cap-related attrition as a share of INCLUDE labels in all cases,computed
+extraction_coverage,cases_16_through_20,share_of_capped_case_included_records_not_extracted,0.886052871467639,7776,8776,within-case-set attrition caused by the 200-record cap,computed
 pooled_model_robustness,fixed_vs_dl_vs_reml_hk,eligible_cases_available,0,0,20,model comparison blocked by synthesis gate,not_estimable

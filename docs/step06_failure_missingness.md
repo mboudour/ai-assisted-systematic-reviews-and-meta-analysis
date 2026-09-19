@@ -1,10 +1,10 @@
-# Step 6 Failure and Missingness-State Audit
+# Step 6 Failure-State Identifiability and Missingness Audit
 
 ## Historical identifiability
 
-The archived screened files contain no call-status, retry, request, or error fields. The historical screening failure rate is therefore **not identifiable**. An `EXCLUDE` value cannot be distinguished from a valid model decision after the fact.
+The archived screened files contain no call-status, retry, request, or error fields. The historical screening failure rate is therefore **not identifiable**. This missing provenance affects all 94,522 archived decisions. The 75,246 `EXCLUDE` labels include an unknown mixture of substantive decisions and any terminal failures; the two states cannot be distinguished after the fact.
 
-The archived extraction files contain null values but no source-status or call-status field. A null may mean that the source did not report the field, that the extractor omitted a reported value, or that the call failed. Those states cannot be separated retrospectively.
+The archived extraction files contain null values but no source-status or call-status field. A null may mean that the source did not report the field, that the extractor omitted a reported value, or that the call failed. Those states cannot be separated retrospectively for 11,500 extraction rows and 90,554 requested fields.
 
 Evaluator `UNVERIFIABLE` values similarly conflate source insufficiency and evaluator-call failure under the historical implementation. They must be reported as archived verdicts, not reclassified as observed technical failures.
 
@@ -12,6 +12,8 @@ Evaluator `UNVERIFIABLE` values similarly conflate source insufficiency and eval
 
 | Measure | Count | Rate |
 |---|---:|---:|
+| Screening decisions without call status | 94,522 | 100.00% of screened records |
+| EXCLUDE labels colliding with the failure fallback | 75,246 | 79.61% of screened records |
 | Requested extraction field cells | 90,554 | 100.00% |
 | Null extraction cells | 36,641 | 40.46% |
 | Evaluator CORRECT cells | 52,877 | 58.39% |

@@ -36,6 +36,11 @@ def test_eligibility_gate_reduces_naive_candidate_count_to_zero() -> None:
 
 def test_historical_extraction_cap_is_quantified() -> None:
     assert int(float(find("affected_cases")["value"])) == 5
-    omitted = find("included_records_not_extracted")
-    assert int(float(omitted["value"])) == 7_776
-    assert int(omitted["denominator"]) == 19_276
+    all_cases = find("share_of_all_included_records_not_extracted_due_to_cap")
+    capped_cases = find("share_of_capped_case_included_records_not_extracted")
+    assert int(all_cases["numerator"]) == 7_776
+    assert int(all_cases["denominator"]) == 19_276
+    assert math.isclose(float(all_cases["value"]), 7_776 / 19_276)
+    assert int(capped_cases["numerator"]) == 7_776
+    assert int(capped_cases["denominator"]) == 8_776
+    assert math.isclose(float(capped_cases["value"]), 7_776 / 8_776)

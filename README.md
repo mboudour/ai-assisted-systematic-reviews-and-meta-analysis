@@ -10,7 +10,7 @@ All content that existed at commit `0a74f80eb30113aad2ebad024541920d2f8558a4` is
 
 The rebuilt project studies data quality across linked stages of an LLM-assisted evidence-synthesis workflow. The current manuscript scope is a ground-truth-free audit of corpus completeness, assessability, denominator sensitivity, failure-state observability, provenance, interface conformance, same-request repeatability, and analytical readiness.
 
-The project does not treat model-generated labels or same-model evaluator verdicts as ground truth. It makes no screening-accuracy, extraction-accuracy, evaluator-validity, calibrated error-propagation, or pooled-effect claim. The append-only amendment in [`config/amendments.jsonl`](config/amendments.jsonl) records this post-outcome scope change; the earlier human-validation materials remain archived but are not planned work.
+The project does not treat model-generated labels or same-model evaluator verdicts as ground truth. It makes no screening-accuracy, extraction-accuracy, evaluator-validity, calibrated error-propagation, or pooled-effect claim. The append-only amendments in [`config/amendments.jsonl`](config/amendments.jsonl) record the post-outcome scope change and the later historical-model correction; the earlier human-validation materials remain archived but are not planned work.
 
 ## Project structure
 
@@ -34,9 +34,9 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 The original rebuild followed a 16-step plan. The current no-human-validation scope retains the completed audits and retires the human-reference, error-injection, and calibrated-propagation branches rather than leaving them as promised future work. The frozen historical protocol remains intact, and the change is recorded as an amendment.
 
-Step 11 is a separate prospective `gpt-5-mini` experiment on frozen historical inputs. It is not a repeatability test of the historical system, which declared `gpt-4.1-mini` for screening and `gpt-4o-mini` for extraction and evaluation. The prospective client requested `temperature=0`, but the saved responses do not expose the effective server-side decoding configuration. Raw exact matching is retained as a strict measure, while the companion sensitivity analysis separates null states and applies deterministic normalization to all-non-null outputs. Step reports are under [`docs/`](docs/).
+Step 11 is a separate prospective `gpt-5-mini` experiment on frozen historical inputs. It is not a repeatability test of the historical system. The historical screening model is unresolved because the committed script declares `gpt-4.1-mini`, the empirical README reports `gpt-4o-mini`, and manuscript Section 4.5.1 reports `gpt-4o`; the screening rows retain no model or request metadata. Historical extraction and evaluator materials consistently declare `gpt-4o-mini` but also lack per-call verification. The full conflict is documented in [`docs/historical_model_identity_audit.md`](docs/historical_model_identity_audit.md). The prospective client requested `temperature=0`, but the saved responses do not expose the effective server-side decoding configuration. Raw exact matching is retained as a strict measure, while the companion sensitivity analysis separates null states and applies deterministic normalization to all-non-null outputs. Step reports are under [`docs/`](docs/).
 
-The consolidated interpretation is in [`docs/computational_status_report.md`](docs/computational_status_report.md). Exact local setup and rebuilding instructions are in [`docs/reproducibility.md`](docs/reproducibility.md).
+The consolidated interpretation is in [`docs/computational_status_report.md`](docs/computational_status_report.md). The five lessons, their observed consequences, and their literature boundaries are in [`docs/claim_consequence_matrix.md`](docs/claim_consequence_matrix.md). Exact local setup and rebuilding instructions are in [`docs/reproducibility.md`](docs/reproducibility.md).
 
 ## Reproduce the offline analyses
 

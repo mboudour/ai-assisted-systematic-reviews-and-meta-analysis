@@ -4,7 +4,7 @@
 
 The audit attempted 2,100 calls using the requested model alias `gpt-5-mini`. Every call preserves the returned model identifier, request identifier, system fingerprint when available, prompt and schema hashes, timing, token usage, retries, and explicit status.
 
-This was a separate prospective experiment on frozen historical inputs. The archived screening outputs were produced with `gpt-4.1-mini`, while the archived extraction and evaluator outputs were produced with `gpt-4o-mini`. The prospective prompts and schemas also differ from the historical requests. These results therefore describe `gpt-5-mini` under the prospective test configuration; they do not estimate repeatability of the historical models or validate the historical outputs.
+This was a separate prospective experiment on frozen historical inputs. The historical screening model is unresolved: the committed script declares `gpt-4.1-mini`, the empirical README reports `gpt-4o-mini`, and manuscript Section 4.5.1 reports `gpt-4o`. Historical extraction and evaluator materials consistently declare `gpt-4o-mini` but lack per-call verification. The prospective prompts and schemas also differ from the historical requests. These results therefore describe `gpt-5-mini` under the prospective test configuration; they do not estimate repeatability of the historical models or validate the historical outputs.
 
 The requested alias resolved to 1 distinct returned model identifier(s): `gpt-5-mini`. The responses exposed 0 distinct nonempty system fingerprint(s). The returned identifier therefore confirms the alias but does not identify a versioned model snapshot.
 

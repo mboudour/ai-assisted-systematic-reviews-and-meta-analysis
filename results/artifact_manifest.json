@@ -1,5 +1,5 @@
 {
-  "file_count": 80,
+  "file_count": 84,
   "files": [
     {
       "bytes": 0,
@@ -7,9 +7,9 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
-      "bytes": 2201,
+      "bytes": 3340,
       "path": "config/amendments.jsonl",
-      "sha256": "fa1d49fdda2a587fd81adca531741423da878258f13ea88c261605e4b00dd8b3"
+      "sha256": "3f0ab2dd89d8c93810af63d2e77e6c1ebe48237b57757a29341751a05f9ff3c8"
     },
     {
       "bytes": 56356,
@@ -32,9 +32,9 @@
       "sha256": "ff115e5ff41c0c42205c4bce021b0ea8646fcb481f5f229b627a626b62433a0a"
     },
     {
-      "bytes": 2457,
+      "bytes": 3204,
       "path": "config/historical_prompts.json",
-      "sha256": "849027396df2814233bebf05f8ba2296be1c87ddecfa3c68e61070e13c7df08b"
+      "sha256": "3057a9d9020bb47e08953810123284210a526a6e16b6bb62d919c07259612652"
     },
     {
       "bytes": 2587,
@@ -114,7 +114,7 @@
     {
       "bytes": 297,
       "path": "results/environment.json",
-      "sha256": "008bf42b5587a731a5358880308614ee6b83495ebd6983d7a62d9e0077346e7e"
+      "sha256": "44533c98626153561447495a863a580235b9c6bf77a8d2ee74e781656af4e843"
     },
     {
       "bytes": 0,
@@ -122,14 +122,19 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
-      "bytes": 1606,
+      "bytes": 1707,
       "path": "results/step_status.csv",
-      "sha256": "99c1718633d69fd702a2a131a99af517f1536611aca4535dba8462adb5911bca"
+      "sha256": "087283cfb318b0e4610e8244214295da21f32fa82f376ad395207714b15478af"
     },
     {
       "bytes": 0,
       "path": "results/tables/.gitkeep",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3234,
+      "path": "results/tables/claim_consequence_matrix.csv",
+      "sha256": "3029786883bb36d759dd3701155b4043744353bc5826405bbb1badaa34eb23cf"
     },
     {
       "bytes": 5325,
@@ -167,9 +172,9 @@
       "sha256": "071ce2c7aaacc4342d6019083bd748fd87278b9a7d3b43e3551ca9f947173dc9"
     },
     {
-      "bytes": 5450,
+      "bytes": 5559,
       "path": "results/tables/failure_missingness_audit.csv",
-      "sha256": "09c066c516ed5f206a9ca94d76c880e3d08dcab5fd446a91625ad7bfaab4e1bc"
+      "sha256": "ad654e5b83f360069962bdc727d00157953e5ae2950285534b79498006720869"
     },
     {
       "bytes": 244239,
@@ -222,14 +227,14 @@
       "sha256": "633eccf8d9f1104ec48634f623a7ed34cdc6bc34153606be00cc131b4ef896b9"
     },
     {
-      "bytes": 71285,
+      "bytes": 74324,
       "path": "results/tables/repeatability_normalized_items.csv",
-      "sha256": "6ca13e43186085d38e9c0f6a1bf831ed5c6c4f51230ab53c6108a878aa0cf91e"
+      "sha256": "621d7038fb96c2cae6dda4444c205396b95d5b8c9a0ea87f8559125b8566804b"
     },
     {
-      "bytes": 9080,
+      "bytes": 10418,
       "path": "results/tables/repeatability_normalized_summary.json",
-      "sha256": "94eafd47fe523a6fafa6ff792b9fc34ba19e956098da1b05f643807b8f2dc871"
+      "sha256": "1a245f51a027bc651816f99083a97f6c4d4f5d782f0d864cbfcdccd59a06a93d"
     },
     {
       "bytes": 819192,
@@ -247,6 +252,11 @@
       "sha256": "2b1d4499d64857829f8c3ec651b92d4d3c23f66f6927b3e50d92bdcb9547ebfb"
     },
     {
+      "bytes": 2235,
+      "path": "results/tables/schema_requirement_coverage.csv",
+      "sha256": "adbaa60c054c61df0b4255023ebc01b92253761ae83db33d1b0759d7c87f903a"
+    },
+    {
       "bytes": 1885,
       "path": "results/tables/screening_decision_profile.csv",
       "sha256": "2677cfc6a5f424630d6a58dc5cf9d333de68fb6366251eead7953dc612d8745c"
@@ -262,24 +272,34 @@
       "sha256": "fa722ebda8bddebc023d253b35f5b2dda1cd6d298ce74c26f46273442e7eee82"
     },
     {
-      "bytes": 1424,
+      "bytes": 1653,
       "path": "results/tables/sensitivity_ablations.csv",
-      "sha256": "267b34d70157d353deda62091833cf78e32135e91f95bb39f52a07e3c8dbf357"
+      "sha256": "d7b19369649391490bb895d20d86878e296327837c14ce80f2efc7235073e7e0"
     },
     {
-      "bytes": 11517,
+      "bytes": 6037,
+      "path": "docs/claim_consequence_matrix.md",
+      "sha256": "84ff3fbae60163ca2ede17bb14cef49fa2a2b33dc78f9711fdfb2634bd8376ad"
+    },
+    {
+      "bytes": 16052,
       "path": "docs/computational_status_report.md",
-      "sha256": "c71fd911f64a2b281d51f72280630e77fd56fd1e9c22d7b5e1f6b9d074b30e23"
+      "sha256": "f70410fc508b2ccd7dac250c5baa60565aecb181509a2d4c24e95b4366325b20"
     },
     {
-      "bytes": 11520,
+      "bytes": 2701,
+      "path": "docs/historical_model_identity_audit.md",
+      "sha256": "dac361fe7a522287206e49d991aec418970bb4d1ebb136a03077cf1c9149e817"
+    },
+    {
+      "bytes": 14133,
       "path": "docs/rebuild_log.md",
-      "sha256": "d5a8e134a042b50761c01b867a60d3e0f3a1b1efccaa79d9fd4ea503c61922d6"
+      "sha256": "426e7ff9c972739ff871af143407176b186a56b6acda3f59a0086c8b3cb3205c"
     },
     {
-      "bytes": 3929,
+      "bytes": 4139,
       "path": "docs/reproducibility.md",
-      "sha256": "33a8a8057bc0eb72bb266b7f9b1797e49f02a49a30c1d8e63bff996a5cecda32"
+      "sha256": "ae4433ae2202cddb41ec2a0d62c8801b388992a823f277d982bab4609e8f9fac"
     },
     {
       "bytes": 3332,
@@ -287,9 +307,9 @@
       "sha256": "1900c8b9a5bf609918bfd97973ae31bb8e738d6b45f18757c994ffefcdaa4697"
     },
     {
-      "bytes": 6092,
+      "bytes": 6167,
       "path": "docs/step03_frozen_protocol.md",
-      "sha256": "a70a49e71eec3c199a4f965d0f33815c17812d967ffc9b03d7758f2876bc7823"
+      "sha256": "93a46e54a56172ff5d992a18dc5fa42fa4ab6fd2c34aeef503d235dcec25f65d"
     },
     {
       "bytes": 2955,
@@ -302,9 +322,9 @@
       "sha256": "dda48bdfc1cfb725c1234b50e174e25ac33062642678e65c3e4e9a42fd332304"
     },
     {
-      "bytes": 2934,
+      "bytes": 3319,
       "path": "docs/step06_failure_missingness.md",
-      "sha256": "29156c6602e190482727952f7e62920d9ae1ae7f68180d437a8b2a25173931d4"
+      "sha256": "720d68da2be7f1fcb9e030afbfa35a91558621fbe546cc4ec183dc9391087523"
     },
     {
       "bytes": 2806,
@@ -327,14 +347,14 @@
       "sha256": "c3ffd23ffef681330c667e1085a5474383bc74fccf80b6b43678fb907d77c9b3"
     },
     {
-      "bytes": 3046,
+      "bytes": 3190,
       "path": "docs/step11_repeatability.md",
-      "sha256": "59f40be71a6e0508258590878eec4e23897a8ea8701b56582b08df866ff98e2c"
+      "sha256": "c275c0b635a919b68dbe6222f237189003ee777ba913f8ce69b4007eb11aec1f"
     },
     {
-      "bytes": 2023,
+      "bytes": 2453,
       "path": "docs/step11_repeatability_sensitivity.md",
-      "sha256": "30cc32503a6ad1305bc3bf6b997872bfd3f2e2bf67774f5b9d51dbe549fba823"
+      "sha256": "6ab1fe2c4747039f60471d9db3f1c16186748881fa58e1591c9fdf40b18ef4cf"
     },
     {
       "bytes": 2518,
@@ -352,9 +372,9 @@
       "sha256": "d18565fcf2709dd0154e016e8e68f73ffe303511d337d9fb57d394a8884fffb0"
     },
     {
-      "bytes": 1951,
+      "bytes": 2064,
       "path": "docs/step15_sensitivity_ablations.md",
-      "sha256": "00ca02cb8201acbef0e40ba6dd25bbb0cc20b03e6763428e39a2266c93ab372e"
+      "sha256": "0cfbe4c26d7a16ded474ca39bd639670d73918966c145f3775746c88bbb257d5"
     },
     {
       "bytes": 0,

@@ -33,6 +33,12 @@ def main() -> None:
     determinate = correct + incorrect
     included_not_extracted = sum(int(row["included_not_extracted"]) for row in cases)
     partial_cases = sum(row["lineage_status"] == "partial_extraction_coverage" for row in cases)
+    total_included = sum(int(row["included_rows"]) for row in cases)
+    capped_included = sum(
+        int(row["included_rows"])
+        for row in cases
+        if row["lineage_status"] == "partial_extraction_coverage"
+    )
     numeric_five = sum(int(row["numeric_estimate_ci_rows"]) >= 5 for row in meta_input)
     numeric_ten = sum(int(row["numeric_estimate_ci_rows"]) >= 10 for row in meta_input)
     expert_pending = sum(
@@ -125,12 +131,22 @@ def main() -> None:
         },
         {
             "analysis_family": "extraction_coverage",
-            "scenario": "historical_200_record_cap",
-            "metric": "included_records_not_extracted",
-            "value": included_not_extracted,
+            "scenario": "all_20_cases",
+            "metric": "share_of_all_included_records_not_extracted_due_to_cap",
+            "value": included_not_extracted / total_included,
             "numerator": included_not_extracted,
-            "denominator": sum(int(row["included_rows"]) for row in cases),
-            "interpretation": "unmodeled attrition before field extraction",
+            "denominator": total_included,
+            "interpretation": "cap-related attrition as a share of INCLUDE labels in all cases",
+            "status": "computed",
+        },
+        {
+            "analysis_family": "extraction_coverage",
+            "scenario": "cases_16_through_20",
+            "metric": "share_of_capped_case_included_records_not_extracted",
+            "value": included_not_extracted / capped_included,
+            "numerator": included_not_extracted,
+            "denominator": capped_included,
+            "interpretation": "within-case-set attrition caused by the 200-record cap",
             "status": "computed",
         },
         {
@@ -175,9 +191,11 @@ def main() -> None:
         "",
         "## Extraction coverage is not uniform",
         "",
-        f"Five cases stop at 200 extracted records, leaving {included_not_extracted:,} historical "
-        "INCLUDE decisions without archived extraction rows. Any all-case extraction summary must "
-        "report this attrition rather than treating the retained extracted rows as a complete sample.",
+        f"Five cases stop at 200 extracted records. Those cases contain {capped_included:,} historical "
+        f"INCLUDE decisions, of which {included_not_extracted:,} ({included_not_extracted / capped_included:.2%}) "
+        f"lack archived extraction rows. The same omitted rows are {included_not_extracted / total_included:.2%} "
+        f"of all {total_included:,} INCLUDE decisions across the 20 cases. Any all-case extraction "
+        "summary must report both denominators rather than treating the retained rows as a complete sample.",
         "",
         "## Unavailable pooled-model sensitivity",
         "",

@@ -72,7 +72,7 @@ Any change requires an append-only amendment that identifies the reason, affecte
 
 - `config/study_protocol.json` contains the complete estimands and decision rules.
 - `config/cases.json` contains the 20 case definitions, queries, criteria, and schemas.
-- `config/historical_prompts.json` contains the prompt and model declarations found in the preserved scripts.
+- `config/historical_prompts.json` contains prompt declarations from the preserved scripts and records the unresolved screening-model conflict among the script, README, and manuscript.
 - `config/amendments.jsonl` is reserved for append-only protocol amendments.
 
 ## References

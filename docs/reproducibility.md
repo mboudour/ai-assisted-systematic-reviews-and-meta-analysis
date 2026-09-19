@@ -37,7 +37,7 @@ The runner intentionally consumes the retained `results/tables/current_source_co
 Two scripts are excluded from the offline runner:
 
 1. `scripts/run_error_injection_evaluators.py` makes controlled evaluator calls only after `annotations/forms/error_injection_item_template.csv` has been populated with human-verified source-field pairs.
-2. `scripts/run_repeatability_audit.py` made the prospective `gpt-5-mini` calls. Its retained call table allows the downstream analyses to run offline. Those calls use a different model, prompt, and response schema from the historical `gpt-4.1-mini` screening and `gpt-4o-mini` extraction/evaluation runs.
+2. `scripts/run_repeatability_audit.py` made the prospective `gpt-5-mini` calls. Its retained call table allows the downstream analyses to run offline. Those calls use different prompts and response schemas from the historical workflow. The historical screening alias is unresolved because three retained sources report `gpt-4.1-mini`, `gpt-4o-mini`, and `gpt-4o`, while the screening rows contain no call metadata. Historical extraction and evaluator materials declare `gpt-4o-mini` but lack per-call verification.
 
 Every prospective call records status, retries, requested and returned model identifiers, request identifiers when available, prompt and schema hashes, timing, and token usage. Technical failures are never converted to analytical labels.
 

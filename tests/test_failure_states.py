@@ -22,6 +22,11 @@ def test_historical_failure_rates_are_not_fabricated() -> None:
         == "not_identifiable_from_archived_output"
         for row in rows
     )
+    assert sum(int(row["screened_records"]) for row in rows) == 94_522
+    assert sum(int(row["exclude_labels"]) for row in rows) == 75_246
+    assert sum(int(row["extracted_records"]) for row in rows) == 11_500
+    assert sum(int(row["all_null_records"]) for row in rows) == 23
+    assert sum(int(row["all_unverifiable_records"]) for row in rows) == 22
 
 
 def test_archived_field_denominators_include_unverifiable() -> None:

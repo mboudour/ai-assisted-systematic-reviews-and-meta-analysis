@@ -10,7 +10,7 @@ A numeric estimate-and-interval threshold of at least five rows admits 7 cases. 
 
 ## Extraction coverage is not uniform
 
-Five cases stop at 200 extracted records, leaving 7,776 historical INCLUDE decisions without archived extraction rows. Any all-case extraction summary must report this attrition rather than treating the retained extracted rows as a complete sample.
+Five cases stop at 200 extracted records. Those cases contain 8,776 historical INCLUDE decisions, of which 7,776 (88.61%) lack archived extraction rows. The same omitted rows are 40.34% of all 19,276 INCLUDE decisions across the 20 cases. Any all-case extraction summary must report both denominators rather than treating the retained rows as a complete sample.
 
 ## Unavailable pooled-model sensitivity
 

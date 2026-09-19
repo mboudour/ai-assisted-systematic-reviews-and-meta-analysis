@@ -22,13 +22,25 @@
     "previous/empirical_evaluation/scripts/02_screening.py": "19afb78e7180a18a341f2effdf95766fea2608b52409f7c00dbb09d2a4cd16f9",
     "previous/empirical_evaluation/scripts/03_extraction.py": "321629fb560faa7c9bbfe9f138ee0bc5eb3f46cc23007b95d1a22da6a8c1a702"
   },
-  "provenance_status": "declared_in_tracked_scripts_not_verified_per_archived_call",
+  "provenance_status": "conflicting_screening_documentation_and_no_per_call_verification",
   "register_version": "1.0.0",
   "screening": {
     "actual_model_snapshot": null,
-    "declared_model_alias": "gpt-4.1-mini",
+    "conflict_evidence": {
+      "manuscript": "uploaded main.pdf Section 4.5.1",
+      "manuscript_sha256": "1d40f48c92885d68b4813d34494d187d8a778b8f4df1a0215731f72d14b0ca80",
+      "repository_readme": "previous/empirical_evaluation/README.md line 10",
+      "repository_readme_sha256": "8f26d22bb10433fc5c582675af8f824f449c91e92d0767c27d61d695381a3643",
+      "script": "previous/empirical_evaluation/scripts/02_screening.py line 76",
+      "script_sha256": "19afb78e7180a18a341f2effdf95766fea2608b52409f7c00dbb09d2a4cd16f9"
+    },
+    "historical_execution_model_alias": null,
     "known_failure_behavior": "final API failure converted to EXCLUDE without a failure flag",
+    "manuscript_reported_model_alias": "gpt-4o",
+    "model_identity_status": "unresolved",
+    "repository_readme_reported_model_alias": "gpt-4o-mini",
     "response_contract": "free text parsed as INCLUDE when substring INCLUDE is present; otherwise EXCLUDE",
+    "script_declared_model_alias": "gpt-4.1-mini",
     "system_prompt": "You are an expert systematic review screener. Given a title and abstract, decide whether the study meets the inclusion criteria. Respond with exactly one word: INCLUDE or EXCLUDE.",
     "temperature": 0
   }

@@ -37,6 +37,8 @@ def main() -> None:
     summary_rows: list[dict[str, Any]] = []
 
     pooled = {
+        "screened_records": 0,
+        "exclude_labels": 0,
         "records": 0,
         "field_cells": 0,
         "null_cells": 0,
@@ -59,7 +61,12 @@ def main() -> None:
         with screened_path.open("r", encoding="utf-8-sig", newline="") as handle:
             screened_reader = csv.DictReader(handle)
             screened_columns = set(screened_reader.fieldnames or [])
-            screened_rows = sum(1 for _ in screened_reader)
+            screened_rows = 0
+            exclude_labels = 0
+            for screened_row in screened_reader:
+                screened_rows += 1
+                if (screened_row.get("llm_decision") or "").strip().upper() == "EXCLUDE":
+                    exclude_labels += 1
         failure_columns = {
             "call_status",
             "screening_status",
@@ -72,6 +79,8 @@ def main() -> None:
 
         fields = [field["name"] for field in case["historical_extraction"]["fields"]]
         case_counts = {
+            "screened_records": screened_rows,
+            "exclude_labels": exclude_labels,
             "records": 0,
             "field_cells": 0,
             "null_cells": 0,
@@ -115,6 +124,7 @@ def main() -> None:
                 "case_id": case_id,
                 "slug": case["slug"],
                 "screened_records": screened_rows,
+                "exclude_labels": exclude_labels,
                 "screening_failure_flag_present": str(screening_failure_flag_present).lower(),
                 "screening_technical_failure_rate": "",
                 "screening_failure_identifiability": "not_identifiable_from_archived_output",
@@ -178,17 +188,20 @@ def main() -> None:
     determinate = pooled["correct"] + pooled["incorrect"]
     conditional_agreement = pooled["correct"] / determinate if determinate else 0.0
     lines = [
-        "# Step 6 Failure and Missingness-State Audit",
+        "# Step 6 Failure-State Identifiability and Missingness Audit",
         "",
         "## Historical identifiability",
         "",
         "The archived screened files contain no call-status, retry, request, or error fields. The "
-        "historical screening failure rate is therefore **not identifiable**. An `EXCLUDE` value "
-        "cannot be distinguished from a valid model decision after the fact.",
+        "historical screening failure rate is therefore **not identifiable**. This missing provenance "
+        f"affects all {pooled['screened_records']:,} archived decisions. The {pooled['exclude_labels']:,} "
+        "`EXCLUDE` labels include an unknown mixture of substantive decisions and any terminal failures; "
+        "the two states cannot be distinguished after the fact.",
         "",
         "The archived extraction files contain null values but no source-status or call-status field. "
         "A null may mean that the source did not report the field, that the extractor omitted a "
-        "reported value, or that the call failed. Those states cannot be separated retrospectively.",
+        f"reported value, or that the call failed. Those states cannot be separated retrospectively "
+        f"for {pooled['records']:,} extraction rows and {pooled['field_cells']:,} requested fields.",
         "",
         "Evaluator `UNVERIFIABLE` values similarly conflate source insufficiency and evaluator-call "
         "failure under the historical implementation. They must be reported as archived verdicts, "
@@ -198,6 +211,8 @@ def main() -> None:
         "",
         "| Measure | Count | Rate |",
         "|---|---:|---:|",
+        f"| Screening decisions without call status | {pooled['screened_records']:,} | 100.00% of screened records |",
+        f"| EXCLUDE labels colliding with the failure fallback | {pooled['exclude_labels']:,} | {100 * pooled['exclude_labels'] / pooled['screened_records']:.2f}% of screened records |",
         f"| Requested extraction field cells | {pooled['field_cells']:,} | 100.00% |",
         f"| Null extraction cells | {pooled['null_cells']:,} | {100 * null_rate:.2f}% |",
         f"| Evaluator CORRECT cells | {pooled['correct']:,} | {100 * pooled['correct'] / pooled['field_cells']:.2f}% |",

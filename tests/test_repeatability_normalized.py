@@ -31,13 +31,19 @@ def test_normalized_summary_separates_nulls_and_models() -> None:
     assert summary["scope"]["model"] == "gpt-5-mini"
     assert summary["scope"]["temperature_requested"] == 0
     assert summary["scope"]["temperature_effective_confirmed_by_provider"] is False
-    assert "gpt-4.1-mini" in summary["scope"]["historical_models"][0]
-    assert "gpt-4o-mini" in summary["scope"]["historical_models"][1]
-    assert summary["null_state_counts"] == {
-        "all_null": 160,
-        "all_nonnull": 304,
-        "mixed_null": 36,
+    assert summary["scope"]["historical_screening_model_status"] == "unresolved"
+    assert len(summary["scope"]["historical_screening_conflicting_aliases"]) == 3
+    assert summary["null_state_counts"]["all_null"] == 160
+    assert summary["null_state_counts"]["all_nonnull"] == 304
+    assert summary["null_state_counts"]["mixed_null"] == 36
+    assert summary["null_state_counts"]["mixed_null_unweighted_rate"] == pytest.approx(0.072)
+    assert summary["null_state_counts"]["mixed_null_by_declared_type"] == {
+        "categorical": 23,
+        "numeric": 13,
     }
+    assert summary["null_state_design_weighted"]["mixed_null"][
+        "weighted_estimate"
+    ] == pytest.approx(0.019183154596048524)
 
 
 def test_nonnull_normalization_materially_changes_categorical_result() -> None:
@@ -69,5 +75,6 @@ def test_report_disclaims_historical_model_repeatability() -> None:
         encoding="utf-8"
     )
     assert "do not estimate repeatability of the historical models" in report
+    assert "historical screening model is unresolved" in report
     assert "effective decoding configuration" in report
     assert "semantic-equivalence cutoffs" in report

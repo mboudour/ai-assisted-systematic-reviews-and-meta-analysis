@@ -254,16 +254,59 @@
     }
   },
   "null_state_counts": {
+    "adjacent_null_transitions": 44,
     "all_nonnull": 304,
     "all_null": 160,
-    "mixed_null": 36
+    "mixed_null": 36,
+    "mixed_null_by_declared_type": {
+      "categorical": 23,
+      "numeric": 13
+    },
+    "mixed_null_unweighted_rate": 0.072
+  },
+  "null_state_design_weighted": {
+    "all_nonnull": {
+      "cases": 20,
+      "cluster_bootstrap_95_lower": 0.5206917611242687,
+      "cluster_bootstrap_95_upper": 0.6983642632882614,
+      "items": 500,
+      "unweighted_estimate": 0.608,
+      "weighted_estimate": 0.6190419878640984
+    },
+    "all_null": {
+      "cases": 20,
+      "cluster_bootstrap_95_lower": 0.28399370604410157,
+      "cluster_bootstrap_95_upper": 0.44873558034954736,
+      "items": 500,
+      "unweighted_estimate": 0.32,
+      "weighted_estimate": 0.3617748575398532
+    },
+    "mixed_null": {
+      "cases": 20,
+      "cluster_bootstrap_95_lower": 0.006023444760272574,
+      "cluster_bootstrap_95_upper": 0.043406219674190304,
+      "items": 500,
+      "unweighted_estimate": 0.072,
+      "weighted_estimate": 0.019183154596048524
+    }
+  },
+  "null_transition_patterns": {
+    "NNV": 8,
+    "NVN": 3,
+    "NVV": 7,
+    "VNN": 7,
+    "VNV": 5,
+    "VVN": 6
   },
   "scope": {
     "comparability": "The prospective run is a separate gpt-5-mini experiment and does not estimate repeatability of the historical model outputs.",
-    "historical_models": [
-      "gpt-4.1-mini screening",
-      "gpt-4o-mini extraction/evaluator"
+    "historical_extraction_evaluator_declared_alias": "gpt-4o-mini; no per-call verification",
+    "historical_screening_conflicting_aliases": [
+      "gpt-4.1-mini in committed script",
+      "gpt-4o-mini in repository README",
+      "gpt-4o in manuscript Section 4.5.1"
     ],
+    "historical_screening_model_status": "unresolved",
     "lexical_metric": "minimum pairwise difflib SequenceMatcher ratio across three runs; thresholds are sensitivity analyses, not validated semantic-equivalence cutoffs.",
     "model": "gpt-5-mini",
     "normalization": "Unicode NFKC, case-folding, punctuation and separator normalization, whitespace normalization, and a small declared British-to-American spelling map.",
