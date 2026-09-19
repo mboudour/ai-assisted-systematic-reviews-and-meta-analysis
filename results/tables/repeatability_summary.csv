@@ -1,0 +1,3 @@
+task,items,attempted_calls,successful_calls,call_success_rate,complete_items,stable_items,exact_three_repeat_stability,interpretation
+extraction,500,1500,1500,1.0,500,307,0.614,repeatability_not_accuracy
+screening,200,600,600,1.0,200,190,0.95,repeatability_not_accuracy

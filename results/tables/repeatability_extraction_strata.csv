@@ -1,0 +1,8 @@
+dimension,value,items,complete_items,stable_items,exact_three_repeat_stability
+declared_type,categorical,219,219,78,0.3561643835616438
+declared_type,numeric,281,281,229,0.8149466192170819
+field_class,categorical,219,219,78,0.3561643835616438
+field_class,other_numeric,85,85,71,0.8352941176470589
+field_class,potentially_synthesis_critical,196,196,158,0.8061224489795918
+historical_null_status,nonnull,295,295,151,0.511864406779661
+historical_null_status,null,205,205,156,0.7609756097560976

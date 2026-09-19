@@ -1,0 +1,17 @@
+step,title,status,blocking_dependency
+1,Preserve old project and create clean rebuild,complete,
+2,Freeze inventory and validate legacy data,partial,16 historical non-data artifacts unavailable
+3,Freeze study protocol before outcome analysis,complete,
+4,Audit retrieval completeness and corpus quality,complete,
+5,Validate deduplication,partial,human labels and removed-pair history
+6,Separate technical failures from analytical states,complete,
+7,Create human reference sample,partial,two-reviewer annotation and adjudication
+8,Validate screening against human reference,partial,adjudicated screening labels
+9,Validate extraction and evaluator against human reference,partial,adjudicated extraction labels
+10,Run controlled evaluator error-injection experiment,partial,human-verified source-field pairs
+11,Measure repeatability and record model provenance,complete,
+12,Audit case-level meta-analysis eligibility,complete,
+13,Fit prespecified synthesis models,complete_zero_eligible_cases,no case passed frozen gate
+14,Propagate empirically calibrated errors,partial,human error calibration and eligible synthesis
+15,Run sensitivity and ablation analyses,complete,
+16,Package reproducibility artifacts,complete,

@@ -30,6 +30,7 @@ data/interim/**
 !data/interim/.gitkeep
 data/processed/**
 !data/processed/.gitkeep
+deliverables/*.zip
 
 # Local logs, caches, and temporary artifacts
 logs/

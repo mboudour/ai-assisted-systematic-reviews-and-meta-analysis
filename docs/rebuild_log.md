@@ -122,3 +122,15 @@ A deterministic PCG64DXSM Monte Carlo engine now implements screening omission, 
 **Date:** 19 September 2026
 
 The same-model evaluator's `CORRECT` share is 58.39% across all 90,554 requested fields but 98.52% after excluding `UNVERIFIABLE`, a denominator-driven increase of 40.12 percentage points. A naive five-row completeness gate admits seven cases, while the full gate admits none. Five capped extraction files omit 7,776 of 19,276 historical INCLUDE records.
+
+## Repeatability and model provenance
+
+**Date:** 19 September 2026
+
+The frozen audit completed 600 screening calls and 1,500 extraction calls. Exact three-call stability was 95.0% for 200 screening records and 61.4% for 500 extraction fields. Categorical extraction stability was 35.62%, compared with 81.49% for numeric fields. The returned identifier was the unversioned `gpt-5-mini` alias and no nonempty system fingerprint was exposed. A separate preflight ledger preserves 1,500 extraction requests rejected because an unsupported union-type response schema produced `Invalid request format`; the corrected design uses scalar text plus an explicit null flag.
+
+## Reproducibility package
+
+**Date:** 19 September 2026
+
+The deterministic offline runner rebuilt every result supported by the frozen snapshot without issuing new bibliographic queries or model calls. The environment and SHA-256 artifact manifests were regenerated, all repository whitespace checks passed, and the integrated suite completed with 67 passing tests. Continuous integration, exact run commands, protected-data rules, and separate human-review archives are available.

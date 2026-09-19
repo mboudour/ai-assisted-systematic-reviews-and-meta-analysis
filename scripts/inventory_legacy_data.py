@@ -514,6 +514,7 @@ def write_report(
     case_rows: list[dict[str, Any]],
     anomalies: list[dict[str, Any]],
     archive_hash: str,
+    generated_utc: str,
 ) -> None:
     stage_totals = {
         stage: sum(audit.row_count for audit in audits if audit.stage == stage)
@@ -556,7 +557,7 @@ def write_report(
     lines = [
         "# Step 2 Historical Data Inventory and Lineage Audit",
         "",
-        f"**Generated:** {datetime.now(timezone.utc).isoformat()}",
+        f"**Generated:** {generated_utc}",
         "",
         "## Snapshot",
         "",
@@ -682,9 +683,26 @@ def main() -> None:
     )
 
     archive_hash = sha256_file(archive)
+    snapshot_manifest_path = manifest_dir / "snapshot.json"
+    generated_utc = datetime.now(timezone.utc).isoformat()
+    if snapshot_manifest_path.exists():
+        try:
+            existing_snapshot = json.loads(snapshot_manifest_path.read_text(encoding="utf-8"))
+            generated_utc = existing_snapshot.get("generated_utc") or generated_utc
+        except (json.JSONDecodeError, OSError):
+            pass
+    report_generated_utc = generated_utc
+    if report_path.exists():
+        match = re.search(
+            r"^\*\*Generated:\*\* (.+)$",
+            report_path.read_text(encoding="utf-8"),
+            flags=re.MULTILINE,
+        )
+        if match:
+            report_generated_utc = match.group(1)
     snapshot_manifest = {
         "manifest_version": 1,
-        "generated_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_utc": generated_utc,
         "source_archive": "source_archive/data.zip",
         "source_archive_size_bytes": archive.stat().st_size,
         "source_archive_sha256": archive_hash,
@@ -701,10 +719,17 @@ def main() -> None:
         },
     }
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    (manifest_dir / "snapshot.json").write_text(
+    snapshot_manifest_path.write_text(
         json.dumps(snapshot_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    write_report(report_path, audits, case_rows, anomalies, archive_hash)
+    write_report(
+        report_path,
+        audits,
+        case_rows,
+        anomalies,
+        archive_hash,
+        report_generated_utc,
+    )
 
 
 if __name__ == "__main__":

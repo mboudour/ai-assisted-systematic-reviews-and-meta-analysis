@@ -1,0 +1,3 @@
+task,requested_model_id,returned_model_id,system_fingerprint,call_status,calls
+extraction,gpt-5-mini,gpt-5-mini,,ok,1500
+screening,gpt-5-mini,gpt-5-mini,,ok,600
