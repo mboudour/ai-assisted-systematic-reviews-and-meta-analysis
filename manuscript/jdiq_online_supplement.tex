@@ -1,0 +1,250 @@
+\documentclass[acmsmall,anonymous,review]{acmart}
+
+\setcopyright{none}
+\settopmatter{printacmref=false,printccs=false,printfolios=true}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\acmJournal{JDIQ}
+\acmYear{2026}
+\hypersetup{
+  pdfauthor={Anonymous Author(s)},
+  pdftitle={Online Supplement: Auditing LLM-Assisted Evidence Synthesis Without Ground Truth}
+}
+
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{pdflscape}
+\usepackage{microtype}
+\usepackage{enumitem}
+\graphicspath{{figures/}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title{Online Supplement for ``Experience: Auditing LLM-Assisted Evidence Synthesis Without Ground Truth''}
+\author{Anonymous Author(s)}
+\affiliation{\institution{Anonymous Institution}\country{Anonymous}}
+\email{anonymous@example.invalid}
+\keywords{online supplement, data quality, repeatability, provenance, evidence synthesis}
+
+\begin{document}
+\maketitle
+
+\section{Purpose and Scope}
+
+This supplement documents the archival inputs, amended protocol, estimands, algorithms, detailed diagnostics, and reproducibility package supporting the main paper. It contains no claim of screening accuracy, extraction accuracy, evaluator validity, semantic equivalence, historical failure incidence, valid pooled effect, or calibrated error propagation. The archive is treated as the object of a retrospective data-quality audit. A separate prospective three-call experiment is reported only as observed same-request behavior for \texttt{gpt-5-mini} on frozen historical inputs.
+
+The submission is double-anonymous. The accompanying review artifact excludes author names, affiliations, acknowledgments, repository history, raw titles and abstracts, old manuscripts, local logs, and the preserved historical repository snapshot. It contains compact derived tables and the scripts needed to reproduce the reported analyses offline.
+
+\section{Protocol History and Post-Outcome Amendment}
+
+The original protocol was frozen before the new primary computations. It specified human-referenced screening and extraction validation, evaluator error-injection experiments, meta-analysis eligibility, and calibrated error propagation. After the archived outputs and prospective repeatability results were inspected, the research question was narrowed because no independent reference standard was available. This change was recorded in an append-only amendment rather than silently editing the original protocol.
+
+The amended primary question is: which data-quality properties of an LLM-assisted evidence-synthesis workflow are observable and identifiable without external reference labels, and how do denominator rules, fallback-state collisions, provenance gaps, interface conformance, and output representation affect those measurements? Human-reference, error-injection, pooled meta-analysis, and calibrated-propagation branches remain in the research repository as archived code, but they are not used as substantive evidence in the paper.
+
+A second amendment corrected an initial provenance statement. The first amendment described the historical screening model using the alias found in the committed script. Further audit found a three-source conflict: the script declares \texttt{gpt-4.1-mini}, the empirical README reports \texttt{gpt-4o-mini}, and the earlier manuscript reports \texttt{gpt-4o}. No per-call evidence resolves the conflict. The paper therefore treats the historical screening alias as unknown.
+
+\section{Case Registry and Stage Counts}
+
+The 20 cases were purposively selected across five broad domains. Table~\ref{tab:cases} reports retained record counts and the historical INCLUDE and extraction counts. Cases 16--20 were subject to a 200-record extraction cap; the earlier cases were extracted without that cap.
+
+\begin{longtable}{r p{0.35\textwidth} r r r}
+\caption{Case-level retained, included, and extracted record counts.}\label{tab:cases}\\
+\toprule
+\textbf{Case} & \textbf{Topic slug} & \textbf{Retained} & \textbf{INCLUDE} & \textbf{Extracted} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Case} & \textbf{Topic slug} & \textbf{Retained} & \textbf{INCLUDE} & \textbf{Extracted} \\
+\midrule
+\endhead
+1 & Nurse staffing and mortality & 90 & 22 & 22 \\
+2 & Mindfulness and anxiety & 2,803 & 72 & 72 \\
+3 & GLP-1 and cardiovascular outcomes & 5,945 & 841 & 841 \\
+4 & AI radiology diagnosis & 9,929 & 2,444 & 2,444 \\
+5 & Cash transfers and education & 4,447 & 469 & 469 \\
+6 & Social media and mental health & 3,968 & 584 & 584 \\
+7 & Restorative justice and recidivism & 4,102 & 77 & 77 \\
+8 & Gender pay gap & 7,708 & 308 & 308 \\
+9 & Intelligent tutoring and scores & 3,962 & 580 & 580 \\
+10 & Game-based learning and motivation & 993 & 354 & 354 \\
+11 & Class size and achievement & 4,923 & 253 & 253 \\
+12 & LLMs in higher education & 8,633 & 1,720 & 1,720 \\
+13 & Marine protected areas & 3,929 & 340 & 340 \\
+14 & Reforestation and carbon & 3,960 & 1,086 & 1,086 \\
+15 & Indoor air pollution and health & 5,888 & 1,350 & 1,350 \\
+16 & Microplastics in freshwater & 7,061 & 1,694 & 200 \\
+17 & LLM reasoning benchmarks & 999 & 394 & 200 \\
+18 & Federated learning and privacy & 4,886 & 2,605 & 200 \\
+19 & AI ethics and autonomous systems & 375 & 314 & 200 \\
+20 & Predictive maintenance with deep learning & 9,921 & 3,769 & 200 \\
+\midrule
+\textbf{Total} & & \textbf{94,522} & \textbf{19,276} & \textbf{11,500} \\
+\bottomrule
+\end{longtable}
+
+The five capped cases contain 8,776 INCLUDE labels, of which 7,776 have no archived extraction row. This is 88.61\% of INCLUDE labels within Cases 16--20 and 40.34\% of all INCLUDE labels across the 20 cases. Both denominators are reported to avoid the ambiguity of stating only ``7,776 of 19,276.''
+
+\section{Retrieval and Corpus Audit}
+
+The historical summaries report 95,292 records before within-case deduplication and 94,522 retained records, implying 770 reported removals (0.81\% of the pre-deduplication total). Six cases reached or exceeded their configured retrieval limit: Cases 3, 5, 8, 11, 15, and 20. The original source-reported totals were not retained, so no case can be certified complete retrospectively. Current source counts were obtained for 16 cases, but these are temporal diagnostics rather than reconstructions because index content and query semantics can change.
+
+\begin{table}[h]
+\caption{Pooled metadata completeness among 94,522 retained records.}
+\label{tab:metadata}
+\begin{tabular}{lr}
+\toprule
+\textbf{Field} & \textbf{Complete or valid} \\
+\midrule
+Title & 99.99\% \\
+Abstract & 98.95\% \\
+DOI & 86.07\% \\
+Year present & 98.99\% \\
+Year valid & 98.98\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Language and source-native identifiers were not collected. Their completeness is unmeasured, not zero. The archive contains post-deduplication rows but not the removed pairs or original pre-deduplication records. Exact DOI and title checks can identify residual candidates, but no false-merge rate can be estimated.
+
+\section{Evaluator Denominators and Null States}
+
+The historical evaluator assigned one of three labels to each requested extraction field. Table~\ref{tab:evaluator} reports the complete ledger.
+
+\begin{table}[h]
+\caption{Historical evaluator output ledger.}
+\label{tab:evaluator}
+\begin{tabular}{lrr}
+\toprule
+\textbf{State} & \textbf{Count} & \textbf{Share of requested fields} \\
+\midrule
+CORRECT & 52,877 & 58.39\% \\
+INCORRECT & 796 & 0.88\% \\
+UNVERIFIABLE & 36,881 & 40.73\% \\
+\midrule
+All requested fields & 90,554 & 100.00\% \\
+Evaluator-decidable fields & 53,673 & 59.27\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The conditional CORRECT share among evaluator-decidable fields is 52,877/53,673, or 98.52\%. The unconditional share is 52,877/90,554, or 58.39\%. The 40.12-point change is caused entirely by denominator restriction.
+
+Nullness and UNVERIFIABLE nearly coincide. Of 36,641 null extraction cells, 36,423 were labelled UNVERIFIABLE. The exceptions comprise 198 null fields labelled CORRECT, 20 null fields labelled INCORRECT, and 458 non-null fields labelled UNVERIFIABLE. These 676 discordant cells are audit targets. They do not provide a factual reference for the extraction.
+
+\section{Repeatability Sampling and Estimation}
+
+\subsection{Experiment boundary}
+
+The prospective experiment used \texttt{gpt-5-mini}, different prompts, and strict response schemas. It made three calls for each of 200 screening records and 500 extraction fields. All 600 screening and 1,500 corrected extraction calls completed. The returned model identifier remained the unversioned alias \texttt{gpt-5-mini}; no nonempty system fingerprint was exposed. The client requested \texttt{temperature=0}, but effective server-side decoding parameters were not recorded by the provider. These results cannot be attributed to the historical models.
+
+A preflight extraction request used an unsupported union-type response schema. All 1,500 preflight requests were rejected as invalid requests. After the response contract was changed to scalar text plus an explicit null flag, all 1,500 corrected requests completed. The preflight ledger is preserved as evidence of interface conformance, not model quality.
+
+\subsection{Weights and cluster bootstrap}
+
+The extraction sample was stratified by case and field properties. Each sampled item retains selection probability $\pi_i$, and estimates use weight $w_i=1/\pi_i$. For a binary item-level indicator $z_i$, the estimator is
+\[
+\widehat{p}=\frac{\sum_i w_i z_i}{\sum_i w_i}.
+\]
+Uncertainty intervals use 10,000 bootstrap resamples of the 20 case clusters. Within each resample, all sampled items from a selected case enter together, preserving within-case dependence. The 2.5th and 97.5th percentiles form the reported interval.
+
+\subsection{Null-state results}
+
+Across the 500 extraction items, 160 were null in all three calls, 304 were non-null in all three calls, and 36 changed null status at least once. The 36 mixed-null items are 7.20\% of the realized stratified sample. Their design-weighted probability is 1.92\%, with a case-cluster bootstrap interval of 0.60\%--4.34\%. The sample proportion and weighted estimate answer different questions and are reported together. The mixed-null group contained 23 categorical and 13 numeric items and produced 44 adjacent state changes.
+
+The six observed three-call patterns were NNV (8 items), NVN (3), NVV (7), VNN (7), VNV (5), and VVN (6), where N denotes null and V denotes a non-null value. The distribution shows that transitions occurred in both directions. It does not identify whether any null or value was correct.
+
+\subsection{Representation rules and sensitivity}
+
+Raw exact agreement requires byte-equivalent parsed values across all three calls. Deterministic normalization applies Unicode NFKC, case folding, replacement of ampersands with ``and,'' normalization of hyphens, slashes, and punctuation, whitespace normalization, and a small declared British-to-American spelling map. Token-set equality additionally ignores order and duplicate tokens. Lexical sensitivity uses the minimum pairwise \texttt{SequenceMatcher} ratio across the three normalized outputs.
+
+\begin{table}[h]
+\caption{Design-weighted agreement for all-non-null extraction items.}
+\label{tab:repeatability-supp}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Type} & \textbf{$n$} & \textbf{Raw} & \textbf{Normalized} & \textbf{Token set} & \textbf{Lexical $\geq .80$} \\
+\midrule
+Categorical & 154 & 21.58\% & 46.13\% & 47.79\% & 53.35\% \\
+Numeric & 150 & 88.40\% & 88.55\% & 88.55\% & 90.22\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The case-cluster bootstrap interval for normalized exact agreement is 34.76\%--56.34\% for categorical items and 81.18\%--95.96\% for numeric items. The lexical thresholds are not validated semantic-equivalence cutoffs. They are included to show how conclusions vary under declared representation rules.
+
+\section{Schema Coverage and Synthesis Readiness}
+
+Table~\ref{tab:schema} reports the required field coverage across the 20 case-specific extraction schemas. A report DOI was retained when available, but no schema contains a study-level identifier capable of linking multiple reports from the same underlying study.
+
+\begin{table*}[t]
+\caption{Historical extraction-schema coverage for downstream synthesis requirements.}
+\label{tab:schema}
+\small
+\begin{tabularx}{\textwidth}{Y r Y}
+\toprule
+\textbf{Requirement} & \textbf{Cases} & \textbf{Observed consequence} \\
+\midrule
+Study-level linkage identifier & 0/20 & Multiple reports from the same study cannot be grouped. \\
+Explicit outcome construct & 8/20 & Most schemas cannot distinguish outcome constructs through a dedicated field. \\
+Analysis time point & 2/20 & Estimates measured at different follow-up times cannot generally be separated. \\
+Dedicated effect-measure label & 0/20 & Generic \texttt{effect\_size} values lack a recorded scale. \\
+Effect-specific estimate column & 1/20 & One schema names \texttt{hazard\_ratio}; nine use generic \texttt{effect\_size}. \\
+Confidence-interval bounds & 10/20 & Interval fields are present in half the schemas but do not establish a common estimand. \\
+Variance or standard error & 0/20 & No schema directly records within-study variance. \\
+Dependence identifier & 0/20 & Multiple outcomes, contrasts, time points, or reports cannot be grouped. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+Ten schemas produce 927 complete estimate-and-interval rows. Seven cases pass a naive five-row numeric threshold and five pass a ten-row threshold. A strict gate requires a common estimand, independent-study identification, verified synthesis-critical values, and dependence handling. No case satisfies that gate from the archived fields. This is a schema-sufficiency diagnosis, not a claim that every numeric value is wrong.
+
+Tested fixed-effect, DerSimonian--Laird, and REML with Hartung--Knapp implementations remain in the research code, but no pooled result is reported. A Monte Carlo propagation engine also remains archived, but no calibrated empirical error model exists. Empty output tables are intentional safeguards against turning structurally incomplete records into scientific estimates.
+
+\section{Historical Failure-State Identifiability}
+
+The screened files retain no call-status, attempt, retry, request, or error fields. Terminal screening failure was mapped to EXCLUDE. Extraction failure produced an all-null record. Evaluator failure produced all-UNVERIFIABLE labels. These values also arise from legitimate analytical outcomes, so the fallbacks are not observable after the fact.
+
+The 75,246 EXCLUDE labels are therefore not a failure count. Neither are the 23 all-null extraction rows or 22 all-UNVERIFIABLE evaluator rows. They are collision sets containing an unknown mixture of valid outputs and any terminal failures. Assigning every collision to failure produces only a trivial upper bound. Historical failure incidence, retry success, and mis-exclusion are not identifiable.
+
+A new logged run would answer a different question. It could measure current operational reliability under current models, provider infrastructure, prompts, schemas, client code, rate limits, and corpus state. It cannot recover the earlier execution. The review artifact includes a prospective event schema that separates call status, source status, and analytical value for future use.
+
+\section{Historical Model-Identity Evidence}
+
+\begin{table}[h]
+\caption{Conflicting retained evidence for the historical screening alias.}
+\label{tab:model-conflict}
+\begin{tabularx}{\columnwidth}{Y l}
+\toprule
+\textbf{Artifact} & \textbf{Reported alias} \\
+\midrule
+Committed historical screening script & \texttt{gpt-4.1-mini} \\
+Historical empirical README & \texttt{gpt-4o-mini} \\
+Earlier manuscript, Section 4.5.1 & \texttt{gpt-4o} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The screened CSVs contain title, year, DOI, abstract, source, case identifier, and decision. They contain no model, request, prompt, or timestamp provenance. Every reachable script revision declares the same alias, but the output files were written six days before that script first entered reachable Git history. The execution identity is consequently unresolved. The extraction and evaluator scripts and documentation consistently declare \texttt{gpt-4o-mini}; this remains a declaration rather than verified per-call provenance.
+
+\section{Reproducibility Package}
+
+The anonymous review artifact contains compact derived inputs, analysis scripts, figure-generation code, declared dependencies, and automated tests. The principal commands are:
+
+\begin{verbatim}
+python3 -m pip install -e '.[dev]'
+make all
+\end{verbatim}
+
+The build is offline. It does not issue bibliographic queries or model calls. The artifact manifest records SHA-256 hashes for distributed files. The repository-level test suite contains 78 tests; the minimal review artifact contains nine focused tests for the consequence matrix, normalized repeatability, figure generation, and artifact integrity.
+
+Raw titles and abstracts are excluded from the review artifact because they are unnecessary for reproducing the reported aggregate results and increase disclosure risk. The full preserved historical repository, old manuscripts, local reviewer packets, and binary documents with potentially identifying metadata are also excluded. The submitted artifact is therefore a review snapshot rather than a public archival release.
+
+\section{Claim Boundaries}
+
+The following statements are supported: denominator restriction changes the displayed evaluator-labelled CORRECT share; null status was largely but not perfectly stable in the weighted target of the prospective sample; categorical exact agreement is representation-sensitive; historical screening model identity and failure incidence are unrecoverable from retained evidence; and the archived schemas do not establish synthesis readiness.
+
+The following statements are not supported: the historical screening labels are accurate; the extracted values are factually correct; the evaluator is valid; normalized strings are semantically equivalent; one named model generated the historical screening labels; a specific historical failure rate occurred; or a valid pooled effect can be calculated from the archive. These boundaries are encoded in the tests and reports as well as stated in the manuscript.
+
+\end{document}

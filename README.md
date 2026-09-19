@@ -40,6 +40,8 @@ Step 11 is a separate prospective `gpt-5-mini` experiment on frozen historical i
 
 The consolidated interpretation is in [`docs/computational_status_report.md`](docs/computational_status_report.md). The five lessons, their observed consequences, and their literature boundaries are in [`docs/claim_consequence_matrix.md`](docs/claim_consequence_matrix.md). The 10-page core, supplement allocation, and double-anonymous artifact rules are in [`docs/jdiq_submission_plan.md`](docs/jdiq_submission_plan.md). The core denominator-ledger figure is generated in both [PNG](results/figures/denominator_ledger.png) and [PDF](results/figures/denominator_ledger.pdf) form. Exact local setup and rebuilding instructions are in [`docs/reproducibility.md`](docs/reproducibility.md).
 
+The complete double-anonymous submission draft is in [`manuscript/jdiq_experience_paper.pdf`](manuscript/jdiq_experience_paper.pdf), with the detailed online supplement in [`manuscript/jdiq_online_supplement.pdf`](manuscript/jdiq_online_supplement.pdf). Editable LaTeX sources, bibliography, the paper figure, and deterministic build instructions are in [`manuscript/`](manuscript/).
+
 ## Reproduce the offline analyses
 
 ```bash
