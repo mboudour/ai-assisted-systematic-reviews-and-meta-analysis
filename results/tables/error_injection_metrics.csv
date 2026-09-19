@@ -1,0 +1,1 @@
+model_id,error_type,arm,attempted_calls,successful_calls,failed_calls,incorrect_verdicts,correct_verdicts,unverifiable_verdicts,target_rate,wilson_lower,wilson_upper,status

@@ -8,7 +8,9 @@ version = "0.1.0"
 description = "Reproducible validation and error-propagation analyses for LLM-assisted evidence synthesis"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "openai>=1.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

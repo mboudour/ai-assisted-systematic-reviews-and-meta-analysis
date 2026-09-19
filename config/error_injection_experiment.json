@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "status": "frozen_pending_human_verified_inputs",
+  "master_seed": 20260919,
+  "unit": "human_verified_source_field_pair",
+  "initial_injected_items_per_error_type": 30,
+  "matched_unchanged_controls_per_error_type": 30,
+  "models": [
+    {
+      "model_id": "gpt-5-mini",
+      "role": "primary_evaluator",
+      "reasoning": "disabled",
+      "temperature": 0
+    },
+    {
+      "model_id": "gemini-3.1-pro-preview",
+      "role": "independent_provider_robustness_evaluator",
+      "reasoning": "provider_default",
+      "temperature": 0
+    }
+  ],
+  "error_types": [
+    {"id": "small_numeric_error", "eligibility": "numeric nonzero value", "construction": "5 percent relative perturbation"},
+    {"id": "large_numeric_error", "eligibility": "numeric value", "construction": "twofold magnitude perturbation"},
+    {"id": "decimal_or_scale_error", "eligibility": "numeric value", "construction": "multiply or divide by 10"},
+    {"id": "unit_error", "eligibility": "numeric value with explicit source unit", "construction": "replace with an incompatible unit while retaining magnitude"},
+    {"id": "sign_or_direction_reversal", "eligibility": "signed or directional value", "construction": "reverse sign or effect direction"},
+    {"id": "swapped_confidence_bounds", "eligibility": "paired lower and upper bounds", "construction": "exchange lower and upper bounds"},
+    {"id": "estimate_interval_inconsistency", "eligibility": "estimate with confidence interval", "construction": "move estimate outside its interval"},
+    {"id": "wrong_effect_measure_label", "eligibility": "reported effect measure", "construction": "replace measure label with a different measure"},
+    {"id": "wrong_outcome_comparator_subgroup_or_timepoint", "eligibility": "source with at least two distinguishable targets", "construction": "substitute a value from the wrong target"},
+    {"id": "false_null_or_false_nonnull", "eligibility": "explicit value or clearly absent field", "construction": "replace explicit value with null or absent value with fabricated non-null"},
+    {"id": "wrong_categorical_value", "eligibility": "categorical field with source-supported value", "construction": "substitute a source-contradicted category"}
+  ],
+  "allocation": "blocked random assignment within error type to injected or unchanged arm",
+  "blinding": "evaluators receive no arm or error-type label",
+  "primary_outcome": "INCORRECT verdict for injected items",
+  "control_outcome": "INCORRECT verdict for unchanged controls",
+  "planned_calls_per_model": 660,
+  "planned_total_calls": 1320,
+  "precision_expansion_rule": "increase within frozen blocks until the reported 95 percent interval half-width is at most 0.10",
+  "input_requirement": "adjudicated human-verified source-field pairs with an explicit controlled candidate value"
+}

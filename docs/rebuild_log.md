@@ -92,3 +92,9 @@ The archived decision profile was separated from accuracy reporting. It contains
 **Date:** 19 September 2026
 
 The historical evaluator profile now reports all 90,554 requested fields without dropping `UNVERIFIABLE`. Those verdicts comprise 20.66% of categorical fields, 72.89% of other numeric fields, and 64.66% of potentially synthesis-critical fields. These are dependent evaluator verdicts, not accuracy estimates. Human-referenced extraction and evaluator metrics remain empty until adjudication.
+
+## Controlled evaluator experiment implementation
+
+**Date:** 19 September 2026
+
+An 11-type blocked error-injection design was frozen. It contains 30 injected items and 30 matched controls per type for each of two evaluator models, giving 1,320 planned calls. The strict-schema concurrent runner and analysis are tested. No calls were made because the experiment requires human-verified source-field pairs; call and metric tables therefore remain empty rather than using model-generated substitutes.
