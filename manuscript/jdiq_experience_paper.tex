@@ -3,7 +3,7 @@
 \AtBeginDocument{%
   \providecommand\BibTeX{{Bib\TeX}}}
 \setcopyright{none}
-\settopmatter{printacmref=false,printccs=false,printfolios=true}
+\settopmatter{printacmref=false,printccs=true,printfolios=true}
 \renewcommand\footnotetextcopyrightpermission[1]{}
 \acmJournal{JDIQ}
 \acmYear{2026}
@@ -19,6 +19,7 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{microtype}
+\microtypesetup{expansion=false}
 \usepackage{enumitem}
 \graphicspath{{figures/}}
 
@@ -37,6 +38,10 @@
 Large language models are increasingly used to create and evaluate structured data, but archived workflows often lack an external reference standard. We report an experience-based data-quality audit of an LLM-assisted evidence-synthesis workflow spanning 20 purposively selected cases. The archive contains 95,292 retrieved records, 94,522 post-deduplication records, 19,276 records labelled INCLUDE, 11,500 extracted records, and 90,554 requested field values. The present research question was adopted after inspection of the archived outputs and a later repeatability experiment; it was not preregistered. We therefore do not estimate screening accuracy, extraction accuracy, or evaluator validity. Instead, we quantify three properties that remain identifiable. First, excluding 36,881 UNVERIFIABLE fields changes the evaluator-labelled CORRECT share from 58.39\% to 98.52\%, solely by changing the denominator. Second, in a separate three-call experiment on 500 frozen extraction items, the design-weighted probability of changing null status was 1.92\% (case-cluster bootstrap 95\% interval 0.60\%--4.34\%); among 154 all-non-null categorical items, deterministic normalization changed exact agreement from 21.58\% to 46.13\%. Third, ten extraction schemas yielded 927 complete estimate-and-interval rows, yet none recorded both study-level linkage and variance information needed to establish synthesis readiness. Model identity and historical failure incidence were not recoverable because provenance and call-status records were absent. The experience shows how denominator policy, output representation, and downstream schema design can materially change quality claims even when factual accuracy cannot be measured.
 \end{abstract}
 
+\ccsdesc[500]{Information systems~Data provenance}
+\ccsdesc[500]{Information systems~Data extraction and integration}
+\ccsdesc[300]{General and reference~Empirical studies}
+
 \keywords{data quality, large language models, evidence synthesis, provenance, repeatability, missing data, data contracts}
 
 \begin{document}
@@ -48,7 +53,7 @@ LLM-assisted workflows increasingly turn unstructured text into decisions and st
 
 External reference data are the usual basis for accuracy claims. In evidence synthesis, a defensible reference would require independent human screening, source-level extraction, and adjudication. Such a reference was not available for the archived workflow examined here. The absence of ground truth does not make every data-quality question unanswerable. It changes the question. Completeness, provenance, operational observability, repeatability, denominator sensitivity, and fitness for an intended downstream analysis can be audited directly, whereas factual accuracy and evaluator validity cannot.
 
-This paper reports an experience-based audit of a 20-case LLM-assisted evidence-synthesis workflow. The cases span health and clinical research, social and behavioral science, education, environmental research, and computer science. The audit was motivated by an unsuccessful attempt to present the archive as a validation and error-propagation study. Reconstructing the workflow showed that several desired quantities were not identifiable: the historical screening model alias was inconsistent across retained artifacts; terminal failures had been mapped to ordinary analytical states without an event log; and the extraction schemas did not retain the study-level and uncertainty information needed for a defensible meta-analysis. We therefore amended the research question after observing the archived and prospective results. This post-outcome change is disclosed throughout the paper and in an append-only protocol amendment.
+This paper reports an experience-based audit of a 20-case LLM-assisted evidence-synthesis workflow. The cases span health and clinical research, social and behavioral science, education, environmental research, and computer science. A prior, publicly posted report used the same archive to study validation and error propagation \cite{boudourides2026ssrn}. The present audit re-examines which of those quantities the retained evidence can support. It found that the historical screening model alias was inconsistent across retained artifacts; terminal failures had been mapped to ordinary analytical states without an event log; and the extraction schemas did not retain the study-level and uncertainty information needed for a defensible meta-analysis. We therefore amended the research question after observing the archived and prospective results. This post-outcome change is disclosed throughout the paper and in an append-only protocol amendment.
 
 The contribution is deliberately bounded. Provenance capture, operational logging, data contracts, fitness for use, abstention-aware evaluation, and representation-sensitive agreement are established ideas \cite{w3cprov2013,polyzotis2021mlmd,sre2016monitoring,wang1996beyond,shacl2017,wen2025abstention}. We do not propose a new standard for any of them. We quantify what their absence or underspecification did to this archive. The analysis makes three primary contributions:
 
@@ -72,9 +77,9 @@ W3C PROV represents linked entities, activities, agents, and derivations \cite{w
 
 \subsection{LLM evaluation and evidence synthesis}
 
-Research on LLM evaluation distinguishes lexical identity from semantic equivalence and documents limitations of LLM-as-judge designs \cite{kamalloo2023qa,zheng2023judge}. Abstention and insufficient-information states also change the target estimand: conditional performance among answered items is not the same as performance across all attempted items \cite{wen2025abstention}. Repeated calls can vary even when clients request low-temperature or nominally deterministic settings \cite{pagnamenta2025nondeterminism}. Our contribution is not another semantic metric. It is a controlled decomposition of exact agreement, deterministic normalization, token-set equality, and null-state transitions on the same frozen inputs.
+Research on LLM evaluation distinguishes lexical identity from semantic equivalence and documents limitations of LLM-as-judge designs \cite{kamalloo2023qa,zheng2023judge}. Abstention also changes the target estimand: conditional performance among answered items is not performance across all attempted items \cite{wen2025abstention}. Repeated calls can vary under nominally deterministic settings \cite{pagnamenta2025nondeterminism}. We decompose exact agreement, deterministic normalization, token-set equality, and null-state transitions on the same frozen inputs.
 
-Evidence-synthesis guidance emphasizes transparent search reporting and human accountability \cite{page2021prisma,rethlefsen2021prismas,flemyng2025ai}. Empirical studies show both the potential and limitations of LLM screening and extraction \cite{li2024screening,mahmoudi2025extraction,clark2025genai,lieberum2025llm}. Because this archive has no independent reference labels, we do not enter that accuracy literature as a competing benchmark. We instead examine the measurement and infrastructure conditions required before a benchmark claim would be meaningful.
+Evidence-synthesis guidance emphasizes human accountability \cite{flemyng2025ai}, while a recent systematic review documents both the potential and limitations of generative AI \cite{clark2025genai}. Because this archive has no independent reference labels, we examine the measurement and infrastructure conditions required before a benchmark claim would be meaningful.
 
 \section{Workflow Archive and Audit Design}
 
@@ -82,7 +87,7 @@ Evidence-synthesis guidance emphasizes transparent search reporting and human ac
 
 The archive contains 20 purposively selected cases distributed across five domains. Cases vary in corpus size, terminology, prevalence of historical INCLUDE labels, retrieval source, and extraction schema. They are design cases rather than a probability sample of disciplines; no population-level domain comparison is attempted. Across cases, the historical summaries report 95,292 records before within-case deduplication and 94,522 retained records. Screening assigned 19,276 INCLUDE labels. Extraction produced 11,500 record rows and requested 90,554 field values.
 
-Six cases reached their configured retrieval limits. Historical source-reported hit totals were not saved, so corpus completeness cannot be reconstructed. The archive retains only post-deduplication rows and not the removed record pairs, preventing estimation of false merges. Metadata completeness among retained records was 99.99\% for title, 98.95\% for abstract, 86.07\% for DOI, and 98.99\% for year. Language and source-native identifiers were not collected and are therefore unmeasured rather than zero. These facts characterize the corpus but are not among the three primary effects.
+Six cases reached or exceeded configured retrieval limits; Supplement Table~S1 lists each case, source, limit, and retained count. Historical source-reported totals and removed duplicate pairs were not saved, so corpus completeness and false merges cannot be reconstructed. Metadata completeness among retained records was 99.99\% for title, 98.95\% for abstract, 86.07\% for DOI, and 98.99\% for year. Language and source-native identifiers were not collected and are therefore unmeasured rather than zero.
 
 The historical screening outputs contain a three-way provenance conflict. The committed script declares \texttt{gpt-4.1-mini}; the empirical README names \texttt{gpt-4o-mini}; and the earlier manuscript names \texttt{gpt-4o}. The 94,522 screened rows retain no requested model, returned model, request identifier, timestamp, prompt hash, or system fingerprint. The files predate the first reachable commit of the screening script. We therefore record the generating screening alias as unresolved. Historical extraction and evaluator materials consistently declare \texttt{gpt-4o-mini}, but the calls likewise lack returned model identifiers and version fingerprints.
 
@@ -99,6 +104,8 @@ The historical evaluator assigns CORRECT, INCORRECT, or UNVERIFIABLE to each req
 \subsection{Prospective same-request repeatability}
 
 A separate prospective experiment sampled 200 screening records and 500 extraction fields from frozen historical inputs. Each item was submitted three times to the \texttt{gpt-5-mini} alias. The experiment produced 600 successful screening calls and 1,500 successful extraction calls. It used prompts and strict response schemas that differed from the historical workflow and does not estimate historical-model repeatability. The client requested \texttt{temperature=0}; the saved responses expose neither the effective server-side decoding configuration nor a system fingerprint. We therefore describe observed same-request repeatability rather than deterministic decoding.
+
+The 200 screening records were a deterministic subset of a larger stratified sampling frame. We therefore report the realized sample proportion with identical labels across all three calls and the complete adjacent-transition counts, without treating either as population accuracy.
 
 For extraction, items were sampled within case and field strata with recorded selection probabilities. We use inverse-probability weights, $w_i=1/\pi_i$, where $\pi_i$ is item $i$'s sampling probability. Uncertainty intervals come from 10,000 bootstrap resamples of the 20 case clusters with a fixed random seed.
 
@@ -149,6 +156,8 @@ Figure~\ref{fig:denominators} combines the record-level stage ledger with the tw
 
 \subsection{Null states are largely stable, while categorical exact agreement is representation-sensitive}
 
+Among the 200 screening records, 190 retained the same label across all three calls (95.00\%). Of 400 adjacent repeat comparisons, 13 changed label: seven INCLUDE-to-EXCLUDE and six EXCLUDE-to-INCLUDE. This is prospective same-request stability, not screening accuracy or historical-model repeatability.
+
 The design-weighted probability that an extraction item changed null status at least once across three calls was 1.92\%, with a case-cluster bootstrap 95\% interval of 0.60\%--4.34\%. In the realized stratified sample, 36 of 500 items (7.20\%) were mixed-null. These are different estimands: the first represents the target induced by the sampling weights; the second describes the selected sample. The remaining sample contained 160 all-null items and 304 all-non-null items. The 36 mixed-null items comprised 23 categorical and 13 numeric fields and generated 44 adjacent null-state transitions. Null states were therefore largely, but not perfectly, stable.
 
 Table~\ref{tab:repeatability} reports all-non-null agreement. For categorical fields, deterministic normalization changes the weighted exact estimate from 21.58\% to 46.13\%. Token-set equality yields 47.79\%, while 53.35\% meet the minimum pairwise lexical-similarity threshold of 0.80. The case-cluster bootstrap interval for normalized categorical exact agreement is 34.76\%--56.34\%. Numeric fields are much more stable under all four representations. Their normalized exact estimate is 88.55\% (81.18\%--95.96\%). The residual categorical variation may include both harmless phrasing differences and substantive changes; without a semantic reference, those components cannot be separated.
@@ -171,7 +180,7 @@ Numeric & 150 & 88.40\% & 88.55\% & 88.55\% & 90.22\% \\
 
 Ten of the 20 schemas include estimate and confidence-interval fields. Across them, 927 rows have complete numeric estimates and interval bounds, and seven cases pass a naive threshold of five such rows. Nevertheless, none of the 20 schemas includes a study-level linkage identifier, a dedicated effect-measure metadata field, a variance or standard-error field, or a dependence identifier. Report DOIs are retained when available, but a DOI identifies a report rather than grouping multiple reports from the same underlying study. Only one schema names an effect-specific estimate field (\texttt{hazard\_ratio}); the other nine use a generic \texttt{effect\_size}. Only two schemas include an analysis time point.
 
-A strict synthesis gate therefore admits no case from the archived fields alone. This result does not show that the extracted numbers are false. It shows that the data model did not record enough information to establish a common estimand, independent-study set, and uncertainty structure. The downstream model failed before statistical estimation became scientifically meaningful.
+The schema coverage result is therefore 0/20 for the joint presence of study linkage, effect-measure metadata, variance or standard error, and a dependence identifier. This result does not show that the extracted numbers are false. It shows that the data model did not record enough information to establish a common estimand, independent-study set, and uncertainty structure. Statistical pooling was consequently not attempted.
 
 \subsection{Provenance and failure incidence are not reconstructable}
 
@@ -215,11 +224,11 @@ The audit also excludes a pooled meta-analysis and calibrated error-propagation 
 
 An LLM-assisted workflow can produce a large structured archive while leaving its most attractive quality claims unidentified. In this experience, the measurable consequences were not hidden model accuracies. They were changes induced by denominator policy, output representation, and schema design. Removing UNVERIFIABLE fields raised a displayed CORRECT share from 58.39\% to 98.52\%. Deterministic normalization raised all-non-null categorical exact agreement from 21.58\% to 46.13\%. Nine hundred twenty-seven complete estimate-and-interval rows still lacked the linkage and uncertainty fields needed to establish synthesis readiness. Meanwhile, missing execution records made historical model identity and failure incidence unrecoverable.
 
-These results support a practical rule: data-quality controls must be designed around the claims the downstream workflow is expected to sustain. Denominator ledgers, typed event records, versioned execution provenance, representation-aware agreement, and analysis-driven schemas do not replace accuracy validation. They determine whether accuracy, reliability, and synthesis can be measured at all.
+These results support a practical rule: data-quality controls must be designed around downstream claims. Denominator ledgers, event records, provenance, appropriate agreement measures, and analysis-driven schemas do not replace accuracy validation. They determine whether accuracy, reliability, and synthesis can be measured at all.
 
 \section*{Data and Code Availability}
 
-A double-anonymous review artifact is supplied as online supplementary material. It contains the derived tables, figure-generation code, repeatability and schema analyses, dependency specification, checksums, and automated tests needed to reproduce the reported results. It excludes raw bibliographic text, old manuscripts, Git history, author-identifying metadata, and the preserved historical repository snapshot.
+A double-anonymous review artifact is supplied as online supplementary material. It contains the case-by-field-type-by-null-status-by-verdict count cube, screening and extraction repeatability summaries, schema tables, figure-generation code, dependency specification, checksums, and automated tests needed to reproduce the reported results. It excludes raw bibliographic text, old manuscripts, Git history, author-identifying metadata, and the preserved historical repository snapshot.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}

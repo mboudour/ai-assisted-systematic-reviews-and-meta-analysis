@@ -20,6 +20,6 @@ The generated PDFs are copied to the manuscript directory. Build intermediates a
 
 ## Submission status
 
-The paper uses the mandatory `Experience:` title prefix and the ACM `acmsmall` class. The core PDF is exactly 10 pages. Both PDFs use anonymous authorship and contain no author name, affiliation, email address, username-bearing repository URL, or placeholder artifact URL. The review artifact should be uploaded as anonymous supplementary material in the submission system; the paper deliberately does not link to the identity-bearing development repository.
+The paper uses the mandatory `Experience:` title prefix and the ACM `acmsmall` class. The core PDF is exactly 10 pages. Both PDFs use anonymous author and affiliation blocks and contain no current-author contact information, username-bearing repository URL, or placeholder artifact URL. In accordance with JDIQ guidance, the public prior report remains in the references and is discussed neutrally in the third person. The review artifact should be uploaded as anonymous supplementary material; the paper deliberately does not link to the identity-bearing development repository.
 
 The manuscript explicitly discloses that the no-ground-truth research question is a post-outcome amendment. It does not claim screening accuracy, extraction accuracy, evaluator validity, semantic equivalence, historical failure incidence, a valid pooled effect, or calibrated error propagation.

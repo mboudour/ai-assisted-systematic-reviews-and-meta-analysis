@@ -1,0 +1,46 @@
+{
+  "adjacent_transitions": {
+    "EXCLUDE_to_EXCLUDE": 242,
+    "EXCLUDE_to_INCLUDE": 6,
+    "INCLUDE_to_EXCLUDE": 7,
+    "INCLUDE_to_INCLUDE": 145
+  },
+  "bootstrap_draws": 10000,
+  "calls": 600,
+  "case_cluster_bootstrap_95_lower": 0.9097039505694399,
+  "case_cluster_bootstrap_95_upper": 0.9892880631069929,
+  "changed_adjacent_transitions": 13,
+  "design_weighted_stability": 0.9538347000385159,
+  "historical_label_strata": {
+    "EXCLUDE": {
+      "design_weighted_stability": 0.9699325569190572,
+      "items": 104,
+      "stable_items": 99,
+      "unweighted_stability": 0.9519230769230769
+    },
+    "INCLUDE": {
+      "design_weighted_stability": 0.8996948786555885,
+      "items": 96,
+      "stable_items": 91,
+      "unweighted_stability": 0.9479166666666666
+    }
+  },
+  "items": 200,
+  "model_boundary": "prospective gpt-5-mini calls; not historical-model repeatability and not accuracy",
+  "primary_estimand": "realized proportion of the 200-item deterministic repeatability subset with three identical screening labels",
+  "seed": 20260919,
+  "stable_items": 190,
+  "successful_calls": 600,
+  "three_call_patterns": {
+    "EXCLUDE-EXCLUDE-EXCLUDE": 119,
+    "EXCLUDE-EXCLUDE-INCLUDE": 3,
+    "EXCLUDE-INCLUDE-EXCLUDE": 2,
+    "INCLUDE-EXCLUDE-EXCLUDE": 1,
+    "INCLUDE-EXCLUDE-INCLUDE": 1,
+    "INCLUDE-INCLUDE-EXCLUDE": 3,
+    "INCLUDE-INCLUDE-INCLUDE": 71
+  },
+  "total_adjacent_transitions": 400,
+  "unweighted_stability": 0.95,
+  "weighted_sensitivity_estimand": "inverse-first-stage-probability weighted stability within the deterministic repeatability subset"
+}

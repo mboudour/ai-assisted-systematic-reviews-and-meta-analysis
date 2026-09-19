@@ -28,10 +28,14 @@ def test_unverifiable_exclusion_inflates_apparent_agreement() -> None:
     assert increase > 40
 
 
-def test_eligibility_gate_reduces_naive_candidate_count_to_zero() -> None:
+def test_schema_only_check_replaces_human_verification_gate() -> None:
     assert int(float(find("cases_passing")["value"])) in {5, 7}
-    assert int(float(find("cases_pending_verification")["value"])) == 4
-    assert int(float(find("currently_eligible_cases")["value"])) == 0
+    schema = find("cases_with_all_required_schema_groups")
+    assert int(float(schema["value"])) == 0
+    assert schema["interpretation"] == "schema-only coverage check; no human verification criterion"
+    metrics = {row["metric"] for row in rows()}
+    assert "cases_pending_verification" not in metrics
+    assert "currently_eligible_cases" not in metrics
 
 
 def test_historical_extraction_cap_is_quantified() -> None:

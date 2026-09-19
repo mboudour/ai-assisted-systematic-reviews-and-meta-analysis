@@ -15,11 +15,13 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 
 def test_headline_denominator_claims_match_derived_table() -> None:
-    rows = read_csv(ROOT / "results" / "tables" / "failure_missingness_audit.csv")
-    correct = sum(int(row["judge_correct_cells"]) for row in rows)
-    incorrect = sum(int(row["judge_incorrect_cells"]) for row in rows)
-    unverifiable = sum(int(row["judge_unverifiable_cells"]) for row in rows)
-    requested = sum(int(row["requested_field_cells"]) for row in rows)
+    rows = read_csv(ROOT / "results" / "tables" / "evaluator_verdict_cube.csv")
+    correct = sum(int(row["count"]) for row in rows if row["verdict"] == "CORRECT")
+    incorrect = sum(int(row["count"]) for row in rows if row["verdict"] == "INCORRECT")
+    unverifiable = sum(
+        int(row["count"]) for row in rows if row["verdict"] == "UNVERIFIABLE"
+    )
+    requested = sum(int(row["count"]) for row in rows)
 
     assert (correct, incorrect, unverifiable, requested) == (52_877, 796, 36_881, 90_554)
     assert round(100 * correct / requested, 2) == 58.39
@@ -72,23 +74,61 @@ def test_schema_claims_match_derived_tables() -> None:
     assert "927" in text
     assert "0/20" in text
     assert "does not establish synthesis readiness" in text
+    assert "strict synthesis gate" not in text
+
+
+def test_screening_repeatability_and_retrieval_limits_are_reported() -> None:
+    screening = json.loads(
+        (ROOT / "results/tables/screening_repeatability_summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert screening["items"] == 200
+    assert screening["calls"] == 600
+    assert screening["stable_items"] == 190
+    assert screening["changed_adjacent_transitions"] == 13
+
+    text = PAPER.read_text(encoding="utf-8")
+    for expected in ("190 retained the same label", "95.00\\%", "13 changed label", "seven INCLUDE-to-EXCLUDE", "six EXCLUDE-to-INCLUDE"):
+        assert expected in text
+    supplement = SUPPLEMENT.read_text(encoding="utf-8")
+    for expected in (
+        "3 & OpenAlex & 6,000 & 6,000",
+        "5 & OpenAlex & 4,500 & 4,600",
+        "8 & OpenAlex & 8,000 & 8,000",
+        "11 & OpenAlex & 5,000 & 5,000",
+        "15 & OpenAlex & 6,000 & 6,000",
+        "20 & OpenAlex & 10,000 & 10,000",
+    ):
+        assert expected in supplement
+
+
+def test_ccs_and_public_prior_work_are_disclosed_neutrally() -> None:
+    text = PAPER.read_text(encoding="utf-8")
+    assert "printccs=true" in text
+    assert "\\ccsdesc[500]{Information systems~Data provenance}" in text
+    assert "\\ccsdesc[500]{Information systems~Data extraction and integration}" in text
+    assert "prior, publicly posted report" in text
+    assert "\\cite{boudourides2026ssrn}" in text
+    assert "unsuccessful attempt" not in text
 
 
 def test_anonymity_and_post_outcome_disclosure() -> None:
     combined = PAPER.read_text(encoding="utf-8") + SUPPLEMENT.read_text(encoding="utf-8")
-    forbidden = (
-        "Moses",
-        "Boudour",
-        "Northwestern",
-        "mboudour",
-        "@northwestern",
-        "ANONYMOUS-ARTIFACT-URL",
-    )
+    forbidden = ("Northwestern", "mboudour", "@northwestern", "ANONYMOUS-ARTIFACT-URL")
     assert not any(value.casefold() in combined.casefold() for value in forbidden)
+    assert "\\author{Anonymous Author(s)}" in PAPER.read_text(encoding="utf-8")
+    assert "\\institution{Anonymous Institution}" in PAPER.read_text(encoding="utf-8")
     assert "post-outcome" in combined
     assert "not preregistered" in combined
     assert "separate prospective question" in combined
     assert combined.startswith("\\documentclass[acmsmall,anonymous,review]{acmart}")
+
+
+def test_noel_storr_reference_is_corrected() -> None:
+    bibliography = (ROOT / "manuscript/references.bib").read_text(encoding="utf-8")
+    assert "Noel-Storr, Anna" in bibliography
+    assert "Norl-Storr" not in bibliography
 
 
 def test_paper_leads_with_measured_consequences() -> None:

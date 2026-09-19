@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from pathlib import Path
 from typing import Any
 
@@ -23,8 +24,8 @@ def main() -> None:
     root = args.root.resolve()
     failure = read_rows(root / "results/tables/failure_missingness_audit.csv")
     meta_input = read_rows(root / "results/tables/meta_analysis_input_audit.csv")
-    eligibility = read_rows(root / "results/tables/meta_analysis_eligibility.csv")
     cases = read_rows(root / "data/manifests/cases.csv")
+    case_config = json.loads((root / "config/cases.json").read_text(encoding="utf-8"))
 
     correct = sum(int(row["judge_correct_cells"]) for row in failure)
     incorrect = sum(int(row["judge_incorrect_cells"]) for row in failure)
@@ -41,12 +42,16 @@ def main() -> None:
     )
     numeric_five = sum(int(row["numeric_estimate_ci_rows"]) >= 5 for row in meta_input)
     numeric_ten = sum(int(row["numeric_estimate_ci_rows"]) >= 10 for row in meta_input)
-    expert_pending = sum(
-        row["final_gate_status"] == "pending_human_verification" for row in eligibility
+    required_groups = (
+        {"study_id", "trial_id", "cohort_id", "study_cluster_id"},
+        {"effect_measure", "effect_measure_type", "measure_type"},
+        {"variance", "within_study_variance", "standard_error", "se"},
+        {"cluster_id", "study_cluster_id", "arm_id", "comparison_id", "effect_id"},
     )
-    final_eligible = sum(
-        row["currently_eligible_for_meta_analysis"] == "true" for row in eligibility
-    )
+    schema_sufficient = 0
+    for case in case_config["cases"]:
+        fields = {field["name"] for field in case["historical_extraction"]["fields"]}
+        schema_sufficient += all(fields & aliases for aliases in required_groups)
 
     rows: list[dict[str, Any]] = [
         {
@@ -100,23 +105,13 @@ def main() -> None:
             "status": "computed",
         },
         {
-            "analysis_family": "meta_eligibility_gate",
-            "scenario": "expert_structural_review",
-            "metric": "cases_pending_verification",
-            "value": expert_pending,
-            "numerator": expert_pending,
+            "analysis_family": "schema_sufficiency",
+            "scenario": "linkage_effect_measure_variance_and_dependence",
+            "metric": "cases_with_all_required_schema_groups",
+            "value": schema_sufficient,
+            "numerator": schema_sufficient,
             "denominator": 20,
-            "interpretation": "not currently eligible",
-            "status": "computed",
-        },
-        {
-            "analysis_family": "meta_eligibility_gate",
-            "scenario": "full_frozen_gate",
-            "metric": "currently_eligible_cases",
-            "value": final_eligible,
-            "numerator": final_eligible,
-            "denominator": 20,
-            "interpretation": "requires estimand, independence, human verification, and dependence handling",
+            "interpretation": "schema-only coverage check; no human verification criterion",
             "status": "computed",
         },
         {
@@ -153,10 +148,10 @@ def main() -> None:
             "analysis_family": "pooled_model_robustness",
             "scenario": "fixed_vs_dl_vs_reml_hk",
             "metric": "eligible_cases_available",
-            "value": final_eligible,
-            "numerator": final_eligible,
+            "value": schema_sufficient,
+            "numerator": schema_sufficient,
             "denominator": 20,
-            "interpretation": "model comparison blocked by synthesis gate",
+            "interpretation": "model comparison blocked by missing schema fields",
             "status": "not_estimable",
         },
     ]
@@ -182,12 +177,11 @@ def main() -> None:
         "",
         "## Numeric completeness does not establish synthesis readiness",
         "",
-        f"A numeric estimate-and-interval threshold of at least five rows admits {numeric_five} cases. "
-        f"A ten-row threshold admits {numeric_ten}. Independent case review leaves {expert_pending} "
-        "cases that might support source reconstruction, and the full frozen gate admits zero cases. "
-        "The historical schemas did not collect enough analytical context to satisfy that gate. This "
-        "ablation shows that row completeness cannot substitute for estimand compatibility, study "
-        "independence, or value verification; it does not show that every extracted value is invalid.",
+        f"A numeric estimate-and-interval threshold of at least five rows admits {numeric_five} cases, "
+        f"and a ten-row threshold admits {numeric_ten}. However, {schema_sufficient} of 20 schemas contain "
+        "all four required metadata groups: study linkage, effect-measure label, variance or standard "
+        "error, and dependence identifier. This is a schema-only result; it does not depend on human "
+        "verification and does not show that every extracted value is invalid.",
         "",
         "## Extraction coverage is not uniform",
         "",

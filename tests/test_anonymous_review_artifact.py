@@ -34,6 +34,9 @@ def test_builder_excludes_historical_and_identity_bearing_material(tmp_path: Pat
     assert not (target / ".git").exists()
     assert not list(target.rglob("*.tex"))
     assert not list(target.rglob("*.docx"))
+    assert (target / "results/tables/evaluator_verdict_cube.csv").exists()
+    assert (target / "results/tables/screening_repeatability_summary.json").exists()
+    assert (target / "results/tables/sensitivity_ablations.csv").exists()
 
     manifest = json.loads((target / "artifact_manifest.json").read_text(encoding="utf-8"))
     assert manifest["identity_scan"] == "passed"
@@ -66,3 +69,5 @@ def test_builder_excludes_historical_and_identity_bearing_material(tmp_path: Pat
     assert "mboudour" not in combined
     assert "northwestern" not in combined
     assert "ai-assisted-systematic-reviews-and-meta-analysis" not in combined
+    assert "expert_structural_review" not in combined
+    assert "cases_pending_verification" not in combined

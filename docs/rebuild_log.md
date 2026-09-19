@@ -172,3 +172,15 @@ The null-state interpretation now leads with the inverse-probability-weighted mi
 The consequence matrix now leads with the three measured effects: the 58.39% to 98.52% denominator contrast, the 21.58% to 46.13% categorical normalization contrast, and the 927-row schema audit. Failure logging is stated as historical non-identifiability rather than quantified by counting ordinary outputs that share fallback values. The reports explicitly explain that a later logged rerun would characterize a different model, prompt, schema, API, and execution period rather than recover the historical failure rate.
 
 A single core-paper denominator-ledger figure was added in deterministic PNG and PDF formats. A 10-page JDIQ core and online-supplement allocation was documented. A dedicated minimal review artifact was built without Git history, raw bibliographic text, the `previous/` tree, old manuscripts, author-identifying strings, or unnecessary binaries. The artifact builds offline, requires no model or network calls, and passed its isolated test suite. Its public source uses anonymous commit metadata; the reviewer-facing Anonymous GitHub mirror requires completion of the service's read-only GitHub App authorization.
+
+## Final pre-submission evidence corrections
+
+**Date:** 19 September 2026
+
+The prospective screening experiment is now reported rather than merely described: 190 of 200 records retained the same label across three calls, and 13 of 400 adjacent comparisons changed label. A disclosure-safe 240-row evaluator verdict cube was added at the case-by-field-type-by-null-status-by-verdict level; it reproduces all 90,554 field cells, the CORRECT/INCORRECT/UNVERIFIABLE totals, and the null cross-tabulation without bibliographic text.
+
+The meta-analysis readiness discussion is now based only on schema coverage. Human-verification and expert-review gate rows were removed from the sensitivity output and anonymous artifact. The schema result is 0/20 cases jointly containing study linkage, effect-measure metadata, variance or standard error, and dependence identifiers.
+
+The bibliography now records Anna Noel-Storr correctly from DOI 10.1002/cl2.70074. ACM CCS concepts are visible in the core paper. Every case that reached or exceeded a retrieval limit is listed in the supplement, including the 4,500-record Case 5 limit and the 4,600 records obtained because the OpenAlex loop appended a complete 200-record page before the next stopping-condition check.
+
+The public SSRN prior report (DOI 10.2139/ssrn.7346302) is cited neutrally in the third person. An editor-only disclosure was prepared separately; it is not part of the reviewer-facing package. The final core paper remains exactly 10 pages, the online supplement is 7 pages, and the anonymous artifact rebuilds offline with 11 focused tests.

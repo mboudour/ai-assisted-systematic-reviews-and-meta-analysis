@@ -87,7 +87,24 @@ The five capped cases contain 8,776 INCLUDE labels, of which 7,776 have no archi
 
 \section{Retrieval and Corpus Audit}
 
-The historical summaries report 95,292 records before within-case deduplication and 94,522 retained records, implying 770 reported removals (0.81\% of the pre-deduplication total). Six cases reached or exceeded their configured retrieval limit: Cases 3, 5, 8, 11, 15, and 20. The original source-reported totals were not retained, so no case can be certified complete retrospectively. Current source counts were obtained for 16 cases, but these are temporal diagnostics rather than reconstructions because index content and query semantics can change.
+The historical summaries report 95,292 records before within-case deduplication and 94,522 retained records, implying 770 reported removals (0.81\% of the pre-deduplication total). Table~\ref{tab:limits} reports every configured limit that was reached or exceeded. Case 5 exceeds its nominal limit because the OpenAlex loop appends complete 200-record pages and checks the stopping condition only before requesting the next page. The original source-reported totals were not retained, so no case can be certified complete retrospectively. Current source counts were obtained for 16 cases, but these are temporal diagnostics rather than reconstructions because index content and query semantics can change.
+
+\begin{table}[h]
+\caption{Cases that reached or exceeded a configured retrieval limit.}
+\label{tab:limits}
+\begin{tabular}{rlrrr}
+\toprule
+\textbf{Case} & \textbf{Source} & \textbf{Limit} & \textbf{Pre-dedup} & \textbf{Retained} \\
+\midrule
+3 & OpenAlex & 6,000 & 6,000 & 5,945 \\
+5 & OpenAlex & 4,500 & 4,600 & 4,447 \\
+8 & OpenAlex & 8,000 & 8,000 & 7,708 \\
+11 & OpenAlex & 5,000 & 5,000 & 4,923 \\
+15 & OpenAlex & 6,000 & 6,000 & 5,888 \\
+20 & OpenAlex & 10,000 & 10,000 & 9,921 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[h]
 \caption{Pooled metadata completeness among 94,522 retained records.}
@@ -139,6 +156,10 @@ Nullness and UNVERIFIABLE nearly coincide. Of 36,641 null extraction cells, 36,4
 The prospective experiment used \texttt{gpt-5-mini}, different prompts, and strict response schemas. It made three calls for each of 200 screening records and 500 extraction fields. All 600 screening and 1,500 corrected extraction calls completed. The returned model identifier remained the unversioned alias \texttt{gpt-5-mini}; no nonempty system fingerprint was exposed. The client requested \texttt{temperature=0}, but effective server-side decoding parameters were not recorded by the provider. These results cannot be attributed to the historical models.
 
 A preflight extraction request used an unsupported union-type response schema. All 1,500 preflight requests were rejected as invalid requests. After the response contract was changed to scalar text plus an explicit null flag, all 1,500 corrected requests completed. The preflight ledger is preserved as evidence of interface conformance, not model quality.
+
+\subsection{Screening results}
+
+Of the 200 screening records, 190 had identical labels across all three calls, yielding 95.00\% exact three-call stability in the realized deterministic subset. Across the 400 adjacent repeat comparisons, 13 changed label: seven INCLUDE-to-EXCLUDE and six EXCLUDE-to-INCLUDE. The remaining comparisons comprised 145 INCLUDE-to-INCLUDE and 242 EXCLUDE-to-EXCLUDE transitions. These results measure prospective same-request stability, not screening accuracy or historical-model repeatability.
 
 \subsection{Weights and cluster bootstrap}
 
@@ -198,7 +219,7 @@ Dependence identifier & 0/20 & Multiple outcomes, contrasts, time points, or rep
 \end{tabularx}
 \end{table*}
 
-Ten schemas produce 927 complete estimate-and-interval rows. Seven cases pass a naive five-row numeric threshold and five pass a ten-row threshold. A strict gate requires a common estimand, independent-study identification, verified synthesis-critical values, and dependence handling. No case satisfies that gate from the archived fields. This is a schema-sufficiency diagnosis, not a claim that every numeric value is wrong.
+Ten schemas produce 927 complete estimate-and-interval rows. Seven cases pass a naive five-row numeric threshold and five pass a ten-row threshold. However, 0/20 schemas jointly contain a study-level linkage identifier, a dedicated effect-measure label, variance or standard error, and a dependence identifier. This is a schema-only coverage result; it has no human-verification criterion and does not claim that any extracted value is wrong.
 
 Tested fixed-effect, DerSimonian--Laird, and REML with Hartung--Knapp implementations remain in the research code, but no pooled result is reported. A Monte Carlo propagation engine also remains archived, but no calibrated empirical error model exists. Empty output tables are intentional safeguards against turning structurally incomplete records into scientific estimates.
 
@@ -230,14 +251,14 @@ The screened CSVs contain title, year, DOI, abstract, source, case identifier, a
 
 \section{Reproducibility Package}
 
-The anonymous review artifact contains compact derived inputs, analysis scripts, figure-generation code, declared dependencies, and automated tests. The principal commands are:
+The anonymous review artifact contains compact derived inputs, analysis scripts, figure-generation code, declared dependencies, and automated tests. In particular, \path{evaluator_verdict_cube.csv} reports case-by-field-type-by-null-status-by-verdict counts without source text, allowing the evaluator totals and null cross-tabulation to be recomputed. It also contains the 200-item screening manifest, all 600 screening outputs reduced to labels, and the screening summary. The principal commands are:
 
 \begin{verbatim}
 python3 -m pip install -e '.[dev]'
 make all
 \end{verbatim}
 
-The build is offline. It does not issue bibliographic queries or model calls. The artifact manifest records SHA-256 hashes for distributed files. The repository-level test suite contains 78 tests; the minimal review artifact contains nine focused tests for the consequence matrix, normalized repeatability, figure generation, and artifact integrity.
+The build is offline. It does not issue bibliographic queries or model calls. The artifact manifest records SHA-256 hashes for distributed files. Automated tests cover the evaluator cube, screening stability, consequence matrix, normalized extraction repeatability, figure generation, and artifact integrity.
 
 Raw titles and abstracts are excluded from the review artifact because they are unnecessary for reproducing the reported aggregate results and increase disclosure risk. The full preserved historical repository, old manuscripts, local reviewer packets, and binary documents with potentially identifying metadata are also excluded. The submitted artifact is therefore a review snapshot rather than a public archival release.
 

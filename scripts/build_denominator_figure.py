@@ -33,17 +33,19 @@ def main() -> None:
     root = args.root.resolve()
 
     retrieval = read_csv(root / "results/tables/retrieval_corpus_quality.csv")
-    failure = read_csv(root / "results/tables/failure_missingness_audit.csv")
+    verdict_cube = read_csv(root / "results/tables/evaluator_verdict_cube.csv")
     cases = read_csv(root / "data/manifests/cases.csv")
 
     retrieved = sum(int(row["historical_pre_dedup_rows_reported"]) for row in retrieval)
     retained = sum(int(row["historical_post_dedup_rows"]) for row in retrieval)
     included = sum(int(row["included_rows"]) for row in cases)
     extracted = sum(int(row["extracted_rows"]) for row in cases)
-    fields = sum(int(row["requested_field_cells"]) for row in failure)
-    correct = sum(int(row["judge_correct_cells"]) for row in failure)
-    incorrect = sum(int(row["judge_incorrect_cells"]) for row in failure)
-    unverifiable = sum(int(row["judge_unverifiable_cells"]) for row in failure)
+    fields = sum(int(row["count"]) for row in verdict_cube)
+    correct = sum(int(row["count"]) for row in verdict_cube if row["verdict"] == "CORRECT")
+    incorrect = sum(int(row["count"]) for row in verdict_cube if row["verdict"] == "INCORRECT")
+    unverifiable = sum(
+        int(row["count"]) for row in verdict_cube if row["verdict"] == "UNVERIFIABLE"
+    )
     determinate = correct + incorrect
 
     # The retrieval audit is read deliberately so figure generation fails if the

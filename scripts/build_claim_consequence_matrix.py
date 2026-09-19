@@ -80,16 +80,25 @@ def main() -> None:
         }
         for case in cases_payload["cases"]
     }
-    failure = read_csv(root / "results/tables/failure_missingness_audit.csv")
+    verdict_cube = read_csv(root / "results/tables/evaluator_verdict_cube.csv")
     meta = read_csv(root / "results/tables/meta_analysis_input_audit.csv")
+    case_manifest = read_csv(root / "data/manifests/cases.csv")
     repeatability = read_json(
         root / "results/tables/repeatability_normalized_summary.json"
     )
-    screened = sum(int(row["screened_records"]) for row in failure)
-    cells = sum(int(row["requested_field_cells"]) for row in failure)
-    correct = sum(int(row["judge_correct_cells"]) for row in failure)
-    incorrect = sum(int(row["judge_incorrect_cells"]) for row in failure)
-    unverifiable = sum(int(row["judge_unverifiable_cells"]) for row in failure)
+    screened = sum(int(row["screened_rows"]) for row in case_manifest)
+    cells = sum(int(row["count"]) for row in verdict_cube)
+    correct = sum(
+        int(row["count"]) for row in verdict_cube if row["verdict"] == "CORRECT"
+    )
+    incorrect = sum(
+        int(row["count"]) for row in verdict_cube if row["verdict"] == "INCORRECT"
+    )
+    unverifiable = sum(
+        int(row["count"])
+        for row in verdict_cube
+        if row["verdict"] == "UNVERIFIABLE"
+    )
     determinate = correct + incorrect
 
     complete_estimate_ci_rows = sum(int(row["complete_estimate_ci_rows"]) for row in meta)

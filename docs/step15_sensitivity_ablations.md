@@ -6,7 +6,7 @@ Across all 90,554 requested fields, the archived evaluator assigned `CORRECT` to
 
 ## Numeric completeness does not establish synthesis readiness
 
-A numeric estimate-and-interval threshold of at least five rows admits 7 cases. A ten-row threshold admits 5. Independent case review leaves 4 cases that might support source reconstruction, and the full frozen gate admits zero cases. The historical schemas did not collect enough analytical context to satisfy that gate. This ablation shows that row completeness cannot substitute for estimand compatibility, study independence, or value verification; it does not show that every extracted value is invalid.
+A numeric estimate-and-interval threshold of at least five rows admits 7 cases, and a ten-row threshold admits 5. However, 0 of 20 schemas contain all four required metadata groups: study linkage, effect-measure label, variance or standard error, and dependence identifier. This is a schema-only result; it does not depend on human verification and does not show that every extracted value is invalid.
 
 ## Extraction coverage is not uniform
 
