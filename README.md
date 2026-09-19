@@ -32,7 +32,7 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 ## Execution sequence
 
-The rebuild follows a 16-step plan. **Steps 1, 3, 4, and 6 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Steps 5 and 7 have completed their computational preparation, but their empirical results remain pending human duplicate-pair and reference-standard labels. Step reports are under [`docs/`](docs/).
+The rebuild follows a 16-step plan. **Steps 1, 3, 4, and 6 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Steps 5, 7, and 8 have complete computational implementations, but their human-referenced estimates remain pending duplicate-pair and reference-standard labels. Step reports are under [`docs/`](docs/).
 
 ## Safety rules
 

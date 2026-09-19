@@ -80,3 +80,9 @@ Historical screening failures were classified as not identifiable because no fai
 **Date:** 19 September 2026
 
 Deterministic, stratified samples of 1,192 screening records and 1,504 extraction fields were created with recorded inclusion probabilities. Two differently ordered local reviewer packets were generated for each task. Historical screening decisions and evaluator verdicts are hidden from the corresponding reviewer packets. Human labels remain pending and will not be replaced by model-generated labels.
+
+## Screening-validation implementation
+
+**Date:** 19 September 2026
+
+The archived decision profile was separated from accuracy reporting. It contains 19,276 historical INCLUDE decisions among 94,522 screened records. A design-weighted validation script and schema-correct result table are ready, but the accuracy table remains empty until adjudicated human labels are imported.

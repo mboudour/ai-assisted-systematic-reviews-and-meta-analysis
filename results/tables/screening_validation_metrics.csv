@@ -1,0 +1,1 @@
+scope,case_id,n_adjudicated,n_uncertain,tp_weighted,fn_weighted,fp_weighted,tn_weighted,sensitivity,specificity,precision,negative_predictive_value,f1,balanced_accuracy,status
