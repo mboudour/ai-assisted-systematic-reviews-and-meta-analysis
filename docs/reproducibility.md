@@ -28,7 +28,7 @@ Run:
 make pipeline
 ```
 
-The command executes `scripts/run_pipeline.py`, which rebuilds the data inventory, protocol, corpus audit, duplicate audit materials, missingness audit, human-reference samples, pending validation outputs, meta-analysis gate, gated statistical outputs, propagation gate, sensitivity analyses, test suite, environment snapshot, and artifact checksum manifest.
+The command executes `scripts/run_pipeline.py`, which rebuilds the data inventory, protocol, corpus audit, duplicate audit materials, missingness audit, archived validation stubs, repeatability summaries, normalized and non-null repeatability sensitivity analysis, schema-readiness audit, gated statistical outputs, test suite, environment snapshot, and artifact checksum manifest.
 
 The runner intentionally consumes the retained `results/tables/current_source_count_audit.csv` rather than issuing new bibliographic API calls. Current source counts are time-sensitive and are not historical retrieval totals.
 
@@ -37,15 +37,15 @@ The runner intentionally consumes the retained `results/tables/current_source_co
 Two scripts are excluded from the offline runner:
 
 1. `scripts/run_error_injection_evaluators.py` makes controlled evaluator calls only after `annotations/forms/error_injection_item_template.csv` has been populated with human-verified source-field pairs.
-2. `scripts/run_repeatability_audit.py` makes the frozen repeatability calls. Its retained call table allows the downstream analysis to run offline.
+2. `scripts/run_repeatability_audit.py` made the prospective `gpt-5-mini` calls. Its retained call table allows the downstream analyses to run offline. Those calls use a different model, prompt, and response schema from the historical `gpt-4.1-mini` screening and `gpt-4o-mini` extraction/evaluation runs.
 
 Every prospective call records status, retries, requested and returned model identifiers, request identifiers when available, prompt and schema hashes, timing, and token usage. Technical failures are never converted to analytical labels.
 
-## Human-dependent stages
+## Archived stages outside the current manuscript scope
 
-Duplicate-removal validation requires source pairs that were not preserved in the archive. Screening and extraction accuracy require two independent human reviewers and adjudication under `annotations/protocols/human_reference_protocol.md`. The controlled evaluator experiment requires verified source-field pairs. Meta-analysis and error propagation require a verified common estimand, report-to-study linkage, one prespecified estimate per independent study, and verified effect and uncertainty values.
+The repository retains code and forms for duplicate-removal validation, screening and extraction accuracy, evaluator error injection, meta-analysis, and calibrated error propagation. The current manuscript does not undertake these activities because it has no human-reference or source-verification component. The append-only entry in `config/amendments.jsonl` records that scope decision.
 
-Pending output tables remain header-only. This is deliberate. Empty tables record that an estimand is not currently identifiable; they are not failed scripts or missing files.
+The corresponding output tables remain header-only. This is deliberate. They record estimands that are not identifiable under the current data and scope; they are not failed scripts or promised future work.
 
 ## Verification
 

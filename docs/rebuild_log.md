@@ -134,3 +134,15 @@ The frozen audit completed 600 screening calls and 1,500 extraction calls. Exact
 **Date:** 19 September 2026
 
 The deterministic offline runner rebuilt every result supported by the frozen snapshot without issuing new bibliographic queries or model calls. The environment and SHA-256 artifact manifests were regenerated, all repository whitespace checks passed, and the integrated suite completed with 67 passing tests. Continuous integration, exact run commands, protected-data rules, and separate human-review archives are available.
+
+## No-human-validation scope amendment and repeatability correction
+
+**Date:** 19 September 2026
+
+The project scope was amended after inspecting the archived outputs and prospective repeatability results. Human-reference validation, controlled evaluator injection, empirical error calibration, and pooled meta-analysis are no longer planned for the current manuscript. Their code and forms remain archived; they are not presented as future requirements.
+
+The historical and prospective model roles were also separated explicitly. Historical screening declared `gpt-4.1-mini`, and historical extraction and evaluation declared `gpt-4o-mini`. The later 600 screening and 1,500 corrected extraction calls used `gpt-5-mini` with different prompts and strict schemas. They are a separate prospective same-request experiment on frozen inputs, not a repeatability analysis of the historical models. The client requested `temperature=0`, but the retained responses do not verify the effective server-side decoding configuration.
+
+A new offline sensitivity analysis separates 160 all-null, 304 all-non-null, and 36 mixed-null extraction items. Among all-non-null categorical fields, design-weighted raw exact agreement was 21.58%, normalized exact agreement was 46.13%, token-set agreement was 47.79%, and the share with minimum pairwise lexical similarity of at least 0.80 was 53.35%. Among all-non-null numeric fields, raw and normalized exact agreement were 88.40% and 88.55%. These values replace the earlier categorical-versus-numeric exact-match contrast as the primary interpretation. They measure output-form repeatability, not semantic correctness.
+
+The evaluator nullness result, silent-failure bounds, and synthesis gate were correspondingly narrowed. Null–UNVERIFIABLE concordance is treated as structurally expected; attention shifts to the 218 null fields with a non-UNVERIFIABLE label and 458 non-null fields labelled UNVERIFIABLE. Failure bounds are used only to motivate event logging. The zero-case synthesis result is interpreted as evidence that the historical schemas did not collect sufficient analytical context, not as evidence that all extracted values are scientifically unusable.

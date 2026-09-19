@@ -1,117 +1,124 @@
-# Computational Status Report
+# Corrected Computational Status Report
 
-## Data Quality and Error Propagation in LLM-Assisted Evidence Synthesis
+## Auditing Data Quality in LLM-Assisted Evidence Synthesis Without Ground Truth
 
 **Prepared:** 19 September 2026
 **Repository branch:** `jdiq-rebuild`
-**Target venue:** ACM Journal of Data and Information Quality (JDIQ)
+**Current scope:** ground-truth-free data-quality audit
 
 ## Overall conclusion
 
-The rebuilt project now provides a substantially stronger data-quality audit than the original manuscript. It also shows that the proposed paper **cannot yet support human-referenced accuracy estimates, an evaluator-detection claim, or an empirical error-propagation result**. Those quantities depend on human annotation and source-level synthesis reconstruction that have not occurred.
+The archived data can support a paper about **auditability**, but not a validation study. The current manuscript will not estimate screening accuracy, extraction accuracy, evaluator validity, calibrated error propagation, or pooled effects. Human-reference and source-verification branches are archived and explicitly outside the current scope.
 
-The strongest completed findings concern denominator choice, repeatability, provenance, missingness, retrieval limits, and synthesis eligibility. The archived evaluator assigned `CORRECT` to 58.39% of all 90,554 requested fields. Excluding 36,881 `UNVERIFIABLE` fields raises the displayed value to 98.52%. This 40.12-percentage-point increase is caused solely by denominator restriction and is not independent evidence of accuracy. Prospective exact stability was 95.0% for screening but only 61.4% for extraction across three calls. The historical archive also lacks the call logs needed to distinguish technical failures from valid exclusions, null extractions, and unverifiable fields.
+The strongest generalizable lessons are operational:
 
-A separate review of all 20 cases found that **no case currently passes the frozen meta-analysis gate**. Sixteen cases are structurally ineligible from the archived schema and records. Cases 2, 3, 6, and 15 remain conditional candidates, but none is eligible until source-level human verification, common-estimand confirmation, report-to-study linkage, and dependence handling are complete. The rebuilt meta-analysis and propagation engines therefore produce intentionally empty inferential tables rather than reproducing unsupported pooled estimates.
+1. never encode a technical failure as a valid analytical output;
+2. report full stage-specific denominators before conditional percentages;
+3. version prompts, schemas, models, and parsers, and retain per-call status;
+4. separate surface-form repeatability, null-state stability, semantic validity, and factual accuracy; and
+5. design extraction schemas for the intended downstream analysis before collecting values.
 
-The editor's written confirmation means that journal scope is no longer uncertain. The main risk is now evidential completeness, not fit with JDIQ.
+The append-only amendment in `config/amendments.jsonl` records this post-outcome scope change without rewriting the original frozen protocol.
 
-## Status of the 16-step program
+## Historical and prospective model roles are different
 
-| Step | Status | Current outcome |
-|---:|---|---|
-| 1 | Complete | The historical repository is preserved under `previous/`; the clean project was created on `jdiq-rebuild`. |
-| 2 | Partially complete | Sixty CSV files were frozen, hashed, inventoried, and lineage-audited. Sixteen historical non-data artifacts remain unavailable. |
-| 3 | Complete | The case registry, prompts, estimands, thresholds, sample design, model roles, and master seed were frozen before new outcome analysis. |
-| 4 | Complete | Retrieval and corpus quality were audited for all 20 cases. Historical completeness cannot be certified. |
-| 5 | Computationally complete; human work pending | Residual duplicate candidates and a deterministic 200-pair review sample were created. False merges cannot be estimated without removed pairs. |
-| 6 | Complete | Historical technical failures were found to be non-identifiable. A prospective event schema now separates failures from analytical labels. |
-| 7 | Computationally complete; human work pending | Blinded packets contain 1,192 screening records and 1,504 extraction fields for two independent reviewers. |
-| 8 | Computationally complete; human work pending | Design-weighted screening validation is implemented. Its result table remains empty until adjudication. |
-| 9 | Computationally complete; human work pending | Extraction validity and evaluator sensitivity/specificity analyses are implemented. Their human-referenced result table remains empty. |
-| 10 | Computationally complete; verified inputs pending | An 11-error-type, two-evaluator, 1,320-call experiment is frozen and executable. No calls were made without human-verified source-field pairs. |
-| 11 | Complete | The 2,100-call audit found 95.0% exact screening stability and 61.4% exact extraction stability across three calls. |
-| 12 | Complete | Twenty independent case reviews found zero currently eligible meta-analysis cases. |
-| 13 | Complete | Fixed-effect, DerSimonian–Laird, and REML Hartung–Knapp estimators are tested. Final pooled tables are empty because the gate admitted no case. |
-| 14 | Computationally complete; empirical calibration pending | The deterministic Monte Carlo engine is tested. No inferential simulation was run without calibrated errors and an eligible synthesis. |
-| 15 | Complete | Denominator, eligibility-gate, and extraction-coverage ablations were completed from the archived data. |
-| 16 | Complete | The full offline rebuild, environment capture, checksums, continuous integration, and 67-test validation suite completed successfully. |
+| Component | Declared model | Evidential role |
+|---|---|---|
+| Historical screening | `gpt-4.1-mini` | Produced the archived INCLUDE and EXCLUDE labels |
+| Historical extraction | `gpt-4o-mini` | Produced the archived structured fields |
+| Historical evaluation | `gpt-4o-mini` | Produced the archived CORRECT, INCORRECT, and UNVERIFIABLE labels |
+| Prospective same-request experiment | `gpt-5-mini` | Produced a separate set of repeated outputs from frozen historical inputs |
 
-## Completed empirical findings
+The prospective experiment therefore **does not estimate repeatability of the historical system**. It measures observed behavior of `gpt-5-mini` under a later prompt, schema, and runtime configuration. The client requested `temperature=0`, and the endpoint accepted every corrected call, but the retained responses do not expose the effective server-side decoding configuration. The result is described as observed same-request repeatability, not as nondeterminism under a verified deterministic configuration.
 
-### Retrieval and corpus construction
+The current offline analyses make no external model calls. The 2,100 successful prospective calls and 1,500 rejected preflight requests had already occurred before the no-additional-calls scope was adopted.
 
-The archive contains 95,292 pre-deduplication records and 94,522 retained records. The reported 770 removals equal 0.81% of the original total. Cases 3, 5, 8, 11, 15, and 20 reached or exceeded their configured retrieval limit. They must be treated as configuration-truncated unless historical source totals show otherwise. Current source-count checks succeeded for 16 cases, but current counts do not reconstruct historical totals because indexes change over time.
+## Corrected repeatability analysis
 
-Title, abstract, DOI, and valid-year completeness among retained records are 99.99%, 98.95%, 86.07%, and 98.98%, respectively. Language and source-native identifiers were not collected, so their completeness is not measurable from the archive.
+The original exact-match summary is retained as a strict descriptive statistic: 190 of 200 screening items and 307 of 500 extraction items produced byte-equivalent parsed values across all three prospective calls. For categorical fields, however, exact string equality confounds substantive change with capitalization, punctuation, word order, spelling, and paraphrase. Numeric stability was also inflated by repeated null outputs.
 
-### Deduplication
+The corrected sensitivity analysis separates null states and applies deterministic normalization without human labels or new model calls. Among the 500 extraction items, **160 were null in all three calls, 304 were non-null in all three calls, and 36 changed null status**. All-null items are excluded from the primary non-null comparison.
 
-No residual duplicate rows were found through exact normalized DOI matching. Exact normalized-title groups contained 407 excess rows, and the broader candidate generator found 713 exact-title or high-similarity retained pairs. These are review candidates, not confirmed duplicates. A deterministic sample of 200 retained pairs awaits human classification. The archive contains neither pre-deduplication rows nor a removed-pair log, so false merges and historical positive predictive value remain non-identifiable.
+| All-non-null prospective output | Items | Raw exact, design-weighted | Normalized exact, design-weighted | Token-set exact, design-weighted | Minimum pairwise lexical similarity ≥0.80 |
+|---|---:|---:|---:|---:|---:|
+| Categorical | 154 | 21.58% | 46.13% | 47.79% | 53.35% |
+| Numeric | 150 | 88.40% | 88.55% | 88.55% | 90.22% |
 
-### Failure states, nulls, and evaluator denominators
+The case-cluster bootstrap interval for normalized exact categorical agreement is **34.76%–56.34%**. The corresponding numeric interval is **81.18%–95.96%**. Normalization therefore changes the categorical conclusion materially and confirms that the earlier 35.62% all-item exact-match figure was not a defensible standalone headline. The residual categorical variation may contain both paraphrase and substantive differences. Lexical thresholds are sensitivity analyses rather than validated semantic-equivalence rules.
 
-The screened files contain no request status, retry status, or error field. Historical screening failures are therefore not identifiable, and a technical failure cannot be distinguished retrospectively from a valid `EXCLUDE` label. Extraction nulls likewise conflate absent source information, extraction error, and call failure.
+These results belong to the separate `gpt-5-mini` experiment. They neither validate the archived values nor describe the repeatability of `gpt-4.1-mini` or `gpt-4o-mini`.
 
-Among 90,554 requested extraction fields, 36,641 are null and 36,881 carry an `UNVERIFIABLE` evaluator verdict. The all-field evaluator profile is 52,877 `CORRECT`, 796 `INCORRECT`, and 36,881 `UNVERIFIABLE`. Almost every null field is unverifiable: 36,423 of 36,641, or 99.41%. The retained 98.52% headline is conditional on deleting every unverifiable field from its denominator.
+## Evaluator labels and denominator policy
 
-The categorical-field profile is 78.73% `CORRECT`, 0.61% `INCORRECT`, and 20.66% `UNVERIFIABLE`. Other numeric fields are 25.03%, 2.08%, and 72.89%, respectively. Potentially synthesis-critical fields are 34.21%, 1.12%, and 64.66%. These are dependent same-model verdict shares, not accuracy estimates.
+Across 90,554 requested historical extraction fields, 52,877 were labelled CORRECT, 796 INCORRECT, and 36,881 UNVERIFIABLE by the same `gpt-4o-mini` model family used for extraction. The label distribution is not an accuracy estimate.
 
-### Human-reference design
+Nullness and UNVERIFIABLE are almost structurally equivalent in the archive. Of 36,641 null fields, 36,423 were UNVERIFIABLE. This is unsurprising because a null supplies no candidate value to confirm. The informative exceptions are:
 
-The screening reference sample contains 1,192 records across 40 nonempty strata. The extraction reference sample contains 1,504 fields across 191 nonempty strata. Two independently ordered reviewer packets were generated for each task, with historical model decisions hidden. Selection probabilities are retained for design-weighted estimates. No model output may substitute for either reviewer.
+- **198 null fields labelled CORRECT**;
+- **20 null fields labelled INCORRECT**; and
+- **458 non-null fields labelled UNVERIFIABLE**.
 
-### Repeatability and model provenance
+The first two groups expose inconsistency in how null values were judged. The last group identifies non-null extracted values that the evaluator could not confirm from the supplied title and abstract. It does not prove that those values are wrong.
 
-All 600 planned screening calls and 1,500 corrected extraction calls completed successfully under the requested `gpt-5-mini` alias. Screening outputs were exactly equal across all three calls for 190 of 200 sampled records, or 95.0%. Ten records changed at least once, and 13 of 400 adjacent repeat transitions changed label.
+Excluding every UNVERIFIABLE field changes the displayed CORRECT share from 58.39% of requested fields to 98.52% of evaluator-decidable fields. This contrast is retained as a transparent correction to the earlier analysis, which foregrounded the restricted percentage. It is not presented as a general accusation that conditional metrics are inherently invalid. The lesson is narrower: a conditional agreement percentage must never be displayed without the full denominator and excluded-state counts.
 
-Extraction outputs were exactly equal across all three calls for 307 of 500 sampled fields, or 61.4%. Stability differed sharply by declared type: 78 of 219 categorical fields were stable (35.62%), compared with 229 of 281 numeric fields (81.49%). Historically null fields were more stable than historically non-null fields, at 76.10% versus 51.19%. These measures describe repeatability, not correctness.
+A comparison between archived evaluator labels and prospective `gpt-5-mini` repeatability is not used as a headline or validation analysis because the models, prompts, schemas, and constructs differ.
 
-The API returned only the same unversioned alias, `gpt-5-mini`, and provided no nonempty system fingerprint. The retained calls therefore do not identify a fixed model snapshot. A preflight ledger separately preserves 1,500 extraction requests rejected as `Invalid request format` because the initial strict schema used an unsupported union type. The corrected schema uses scalar text plus an explicit null flag. This incident is direct evidence that interface-level schema failures can affect an entire analytical stage unless request and failure provenance are retained.
+## Silent fallback states motivate logging but do not yield informative rate bounds
 
-### Synthesis eligibility
+The historical code returned EXCLUDE after terminal screening failure, all-null values after terminal extraction failure, and all-UNVERIFIABLE labels after terminal evaluator failure. These fallbacks collide with legitimate analytical states. Because no event log was retained, the historical failure rates cannot be recovered.
 
-A naive requirement of five numeric estimate-and-interval rows admits seven cases. Raising the threshold to ten rows admits five cases. Independent structural review reduces this to four cases that merely remain pending verification, and the complete gate admits none. This ablation demonstrates that populated numeric columns do not establish a common estimand, independent studies, or valid measurements.
+The formal upper bounds—every EXCLUDE, every all-null record, or every all-UNVERIFIABLE record—are arithmetically valid but too wide to be substantively informative. They are retained only to demonstrate why failure logging is necessary. They are not empirical estimates or headline findings.
 
-Cases 3 and 15 may support narrow sensitivity analyses after full source reconstruction. Case 3 would require a prespecified log hazard-ratio estimand for three-component major adverse cardiovascular events. Case 15 would require a prespecified adjusted odds-ratio estimand for childhood acute lower respiratory infection under a defined fuel contrast. Cases 2 and 6 remain descriptive candidates. The 921 provisional estimate-and-interval rows are retained only as an audit inventory and are explicitly marked unverified.
+## The synthesis gate diagnoses schema insufficiency
 
-### Extraction coverage
+The earlier report said that no case passed the meta-analysis gate. That statement is true but misleading without its design context. The historical extraction schemas generally did not capture enough information to establish an outcome definition, time point, effect measure, compatible comparator, uncertainty, report-to-study identity, and independence. The gate therefore diagnoses **schema insufficiency for synthesis**, not failure of the LLM outputs to contain valid evidence.
 
-Cases 16 through 20 stop at 200 extracted records. Across those capped cases, 7,776 of the 19,276 historical `INCLUDE` decisions have no archived extraction row. This attrition must appear in the manuscript because pooled field-level summaries otherwise imply coverage that did not occur.
+A naive numeric-completeness rule admitted seven cases at a five-row threshold and five at a ten-row threshold. The stricter gate rejected them because the required analytical context was not collected or verified. No pooled estimate or calibrated propagation analysis will be reported. The general lesson is that downstream analytical requirements must be encoded in the data model before extraction begins.
 
-## What can and cannot enter the manuscript now
+Cases 16–20 also stopped at 200 extracted records. Across those cases, 7,776 of 19,276 records labelled INCLUDE have no archived extraction row. This is a documented coverage limit, not evidence about factual extraction quality.
 
-The manuscript can report the corpus counts, configured truncation flags, metadata completeness, residual duplicate candidates, missingness profile, complete evaluator-verdict denominators, prospective repeatability, human-reference sampling design, 20-case synthesis gate, and deterministic sensitivity analyses. These results are supported by retained files and reproducible scripts.
+## Corpus and provenance findings retained under the new scope
 
-The manuscript cannot yet report screening sensitivity, specificity, precision, negative predictive value, or F-scores. It also cannot report extraction accuracy, evaluator sensitivity, evaluator specificity, injection-test detection rates, calibrated propagation results, or validated pooled meta-analysis estimates. Those tables remain empty by design.
+The archive contains 95,292 pre-deduplication records and 94,522 retained records. Six cases reached or exceeded their configured retrieval limit. Historical source totals were not retained, so corpus completeness cannot be reconstructed. Current source-count comparisons are temporal diagnostics only.
 
-The earlier pooled hazard-ratio stability result should not be carried forward as substantive evidence. The current audit cannot establish that the archived rows represent compatible effects from independent studies. Repeating a statistical calculation would not resolve that data-quality failure.
+Titles, abstracts, DOIs, and valid years have measurable completeness. Language and source-native record identifiers were not collected. Exact normalized DOI matching found no residual duplicate rows, while title-based methods generated candidates rather than confirmed duplicates.
 
-## Human work required to unlock the remaining analyses
+Across all 20 historical cases, the archive lacks a versioned model snapshot, prompt version, and failure log. The prospective responses return the alias `gpt-5-mini` but no system fingerprint. These are reportable provenance deficiencies. They prevent attribution to fixed deployed model snapshots.
 
-Two reviewers must independently label the 1,192 screening records and 1,504 extraction fields, after which disagreements must be adjudicated. The 200 retained duplicate-pair candidates also require human labels. Historical removed pairs are needed if false-merge performance is to be estimated.
+A separate interface incident rejected all 1,500 preflight extraction requests because the strict response schema contained an unsupported union. After the schema was changed to scalar text plus an explicit null flag, all 1,500 corrected requests completed. This is evidence about client–service interface conformance, not model quality.
 
-For the evaluator experiment, human-verified source-field pairs must be selected and controlled candidate values constructed under the frozen 11-error taxonomy. The initial design requires 660 items evaluated by two model families, for 1,320 calls.
+## Status under the current manuscript scope
 
-For any meta-analysis, full-text source verification must establish the effect measure, outcome, comparator, population, time point, and uncertainty for every included estimate. Reports must be linked to underlying studies. One estimate per independent study must be prespecified, or a justified dependence model must be used. At least five independent verified studies are required for any synthesis, and at least ten are required for a primary propagation case.
-
-## Reproducibility state
-
-The repository contains a deterministic offline runner, 67 passing unit and regression tests, a continuous-integration workflow, an environment manifest, and a SHA-256 artifact manifest. The end-to-end runner completed successfully. It excludes new bibliographic queries and new model calls because those operations are time-sensitive or input-dependent and must be invoked separately with their own provenance.
-
-The historical dataset remains outside Git but is frozen locally with file hashes. Generated reviewer packets and raw model responses remain under ignored paths because they may contain bibliographic text. All tracked result tables use explicit empty outputs when an estimand is not currently identifiable.
+| Workstream | Status | Use in current paper |
+|---|---|---|
+| Historical repository preservation and data inventory | Complete | Reproducibility and provenance |
+| Retrieval, metadata, and configured-limit audit | Complete | Primary evidence |
+| Deduplication candidate generation | Complete for ground-truth-free scope | Candidate counts only; no false-merge rate |
+| Failure-state reconstruction | Complete | Primary methodological evidence |
+| Human reference sampling and annotation | Archived; not planned | Not used |
+| Screening and extraction validation | Archived; not estimable | Not used |
+| Evaluator error-injection experiment | Archived; not run | Not used |
+| Prospective `gpt-5-mini` same-request experiment | Complete | Separate, model-specific demonstration |
+| Normalized and non-null repeatability sensitivity | Complete | Primary prospective analysis |
+| Meta-analysis code | Tested but not used substantively | Supplementary software only |
+| Calibrated error propagation | Not estimable and removed from paper | Not used |
+| Offline reproducibility package | Complete | Primary artifact |
 
 ## Recommended manuscript direction
 
-The paper should emphasize a checkpoint-based audit of **retrieval limits, provenance loss, dependent evaluation, denominator sensitivity, extraction attrition, and synthesis eligibility**. The completed results already support the claim that aggregate agreement can be manufactured by denominator restriction and that downstream synthesis readiness cannot be inferred from populated numeric fields.
+The current paper should lead with the three generalizable controls supported by the evidence:
 
-A stronger causal claim about evaluator performance or statistical error propagation should wait for the human-reference and source-verification work. If those activities cannot be completed, the manuscript should be reframed as a reproducible audit and methods paper rather than presenting human-referenced model accuracy or empirical propagation.
+1. **Failure states must be orthogonal to analytical labels.** A failed screening call cannot be stored as EXCLUDE, and a failed extraction cannot be stored as an ordinary null.
+2. **Quality percentages require denominator ledgers.** Every stage must retain attempted, completed, parseable, non-null, assessable, and excluded counts.
+3. **Models, prompts, schemas, and parsers require versioned provenance.** A provider alias without a model snapshot is insufficient for longitudinal reproducibility.
+
+The prospective repeatability experiment can illustrate the additional need to distinguish exact string agreement, normalized agreement, null-state stability, and semantic equivalence. It cannot characterize the historical models.
+
+The paper should be submitted, if pursued, as a JDIQ Experience Paper. The required title prefix is `Experience:`. The substantive title should avoid claiming validation or error propagation.
 
 ## References
 
-[1]: https://dl.acm.org/journal/jdiq/author-guidelines "ACM Journal of Data and Information Quality Author Guidelines"
-[2]: https://training.cochrane.org/handbook/current/chapter-04 "Cochrane Handbook Chapter 4: Searching for and Selecting Studies"
-[3]: https://training.cochrane.org/handbook/current/chapter-10 "Cochrane Handbook Chapter 10: Analysing Data and Undertaking Meta-Analyses"
-[4]: https://doi.org/10.18637/jss.v036.i03 "Conducting Meta-Analyses in R with the metafor Package"
-[5]: https://json-schema.org/draft/2020-12/json-schema-core "JSON Schema Core Specification, Draft 2020-12"
-[6]: https://numpy.org/doc/stable/reference/random/bit_generators/pcg64dxsm.html "NumPy PCG64DXSM Bit Generator"
+[1]: https://dl.acm.org/journal/jdiq/call-for-papers "JDIQ Call for Papers"
+
+[2]: https://dl.acm.org/journal/jdiq/author-guidelines "JDIQ Author Guidelines"

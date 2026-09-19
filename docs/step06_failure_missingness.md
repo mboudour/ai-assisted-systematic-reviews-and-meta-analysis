@@ -25,7 +25,7 @@ Evaluator `UNVERIFIABLE` values similarly conflate source insufficiency and eval
 | All-null extraction records | 23 | 0.20% of extracted records |
 | All-UNVERIFIABLE evaluator records | 22 | 0.19% of extracted records |
 
-Conditional agreement is shown only to reconcile the historical headline measure. It is not an accuracy estimate and must be presented beside the 40.73% UNVERIFIABLE rate.
+Conditional agreement is shown only to reconcile the historical headline measure. It is not an accuracy estimate and must be presented beside the 40.73% UNVERIFIABLE rate. The near-coincidence of null and UNVERIFIABLE states is structurally expected because a null supplies no candidate value to confirm. The informative exceptions are 218 null fields with a non-UNVERIFIABLE label and 458 non-null fields labelled UNVERIFIABLE.
 
 ## Prospective implementation
 
@@ -33,7 +33,7 @@ Conditional agreement is shown only to reconcile the historical headline measure
 
 ## Limitation
 
-No historical failure rate, retry-success rate, or mis-exclusion rate is estimated here. Those quantities require prospective reruns on the frozen validation samples. Treating all-null or all-UNVERIFIABLE rows as known failures would overstate what the archive shows.
+No historical failure rate, retry-success rate, or mis-exclusion rate is estimated here. Treating all-null or all-UNVERIFIABLE rows as known failures would overstate what the archive shows. Trivial bounds that assign every collided analytical state to failure are useful only as motivation for event logging and are not reported as empirical findings.
 
 ## References
 

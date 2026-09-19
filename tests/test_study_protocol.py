@@ -90,5 +90,19 @@ def test_prospective_model_choices_are_in_the_frozen_catalog() -> None:
     assert roles["independent_evaluator_robustness_check"]["model_id"] in model_ids
 
 
-def test_amendment_register_starts_empty() -> None:
-    assert (ROOT / "config/amendments.jsonl").read_text(encoding="utf-8") == ""
+def test_scope_amendment_is_explicit_and_preserves_model_boundary() -> None:
+    lines = [
+        line
+        for line in (ROOT / "config/amendments.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    assert len(lines) == 1
+    amendment = json.loads(lines[0])
+    assert amendment["amendment_id"] == "A-2026-09-19-01"
+    assert amendment["timing"].startswith("after inspection")
+    assert "gpt-4.1-mini" in amendment["model_boundary"]
+    assert "gpt-4o-mini" in amendment["model_boundary"]
+    assert "gpt-5-mini" in amendment["model_boundary"]
+    assert "not as repeatability of the historical models" in amendment["model_boundary"]

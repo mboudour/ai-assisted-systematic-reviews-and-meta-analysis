@@ -5,12 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "evidence-quality-pipeline"
 version = "0.1.0"
-description = "Reproducible validation and error-propagation analyses for LLM-assisted evidence synthesis"
+description = "Reproducible ground-truth-free data-quality audits for LLM-assisted evidence synthesis"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=2.0",
   "openai>=1.0",
+  "pandas>=3.0",
   "scipy>=1.14",
 ]
 
