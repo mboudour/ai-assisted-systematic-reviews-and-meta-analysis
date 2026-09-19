@@ -86,3 +86,9 @@ Deterministic, stratified samples of 1,192 screening records and 1,504 extractio
 **Date:** 19 September 2026
 
 The archived decision profile was separated from accuracy reporting. It contains 19,276 historical INCLUDE decisions among 94,522 screened records. A design-weighted validation script and schema-correct result table are ready, but the accuracy table remains empty until adjudicated human labels are imported.
+
+## Extraction and evaluator-validation implementation
+
+**Date:** 19 September 2026
+
+The historical evaluator profile now reports all 90,554 requested fields without dropping `UNVERIFIABLE`. Those verdicts comprise 20.66% of categorical fields, 72.89% of other numeric fields, and 64.66% of potentially synthesis-critical fields. These are dependent evaluator verdicts, not accuracy estimates. Human-referenced extraction and evaluator metrics remain empty until adjudication.
