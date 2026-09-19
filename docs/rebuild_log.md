@@ -56,3 +56,9 @@ The archive contains 20 raw/post-deduplication CSVs, 20 screened CSVs, and 20 ex
 Protocol version `1.0.0` was frozen before new primary computations. It defines six primary estimands, eight separate data-quality dimensions, explicit failure and source-adequacy states, human-reference sampling rules, evaluator error-injection rules, meta-analysis eligibility gates, propagation models, random-number streams, and an append-only amendment policy.
 
 Historical script declarations were extracted programmatically from source commit `0a74f80eb30113aad2ebad024541920d2f8558a4`. Unknown historical model snapshots, prompt versions, run dates, and call failures remain null rather than being inferred. A live model-catalog snapshot was retained for the prospective audit model choices.
+
+## Retrieval and corpus-quality audit
+
+**Date:** 19 September 2026
+
+The audit confirmed 95,292 reported pre-deduplication records and 94,522 retained records. Six cases reached their historical configured retrieval limits. Current source-reported counts were obtained for 16 cases and retained strictly as temporal audit evidence, not as replacements for historical counts. Metadata completeness, conformance, truncation flags, request status, timestamps, and response hashes were written to tracked result tables.
