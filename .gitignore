@@ -1,6 +1,49 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+api_keys.env
+*.pem
+*.key
+
+# Python
 __pycache__/
 *.py[cod]
-.env
-.streamlit/secrets.toml
-*.DS_Store
-data/cache/*.json
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+
+# Immutable or reconstructable data are excluded until release review
+data/raw_snapshot/**
+!data/raw_snapshot/.gitkeep
+data/interim/**
+!data/interim/.gitkeep
+data/processed/**
+!data/processed/.gitkeep
+
+# Local logs, caches, and temporary artifacts
+logs/
+.cache/
+tmp/
+temp/
+*.log
+
+# Manuscript build artifacts
+manuscript/*.aux
+manuscript/*.bbl
+manuscript/*.blg
+manuscript/*.fdb_latexmk
+manuscript/*.fls
+manuscript/*.log
+manuscript/*.out
+manuscript/*.synctex.gz
