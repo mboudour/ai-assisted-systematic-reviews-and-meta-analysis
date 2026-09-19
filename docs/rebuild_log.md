@@ -74,3 +74,9 @@ The retained corpora were checked for exact normalized DOI groups, normalized-ti
 **Date:** 19 September 2026
 
 Historical screening failures were classified as not identifiable because no failure flags were retained. Extraction nulls and evaluator `UNVERIFIABLE` verdicts were audited without reclassifying them as known failures. The audit found 36,641 null extraction cells and 36,881 `UNVERIFIABLE` evaluator cells among 90,554 requested fields. A mandatory prospective event schema and empty table template now separate technical status, source status, and analytical labels.
+
+## Human reference sample preparation
+
+**Date:** 19 September 2026
+
+Deterministic, stratified samples of 1,192 screening records and 1,504 extraction fields were created with recorded inclusion probabilities. Two differently ordered local reviewer packets were generated for each task. Historical screening decisions and evaluator verdicts are hidden from the corresponding reviewer packets. Human labels remain pending and will not be replaced by model-generated labels.
