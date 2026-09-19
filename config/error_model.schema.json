@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/evidence-quality/error_model.schema.json",
+  "title": "Empirically Calibrated Pipeline Error Model",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "calibration_status", "mechanisms"],
+  "properties": {
+    "version": {"type": "string"},
+    "calibration_status": {
+      "type": "string",
+      "enum": ["pending_human_validation", "calibrated"]
+    },
+    "source_tables": {"type": "array", "items": {"type": "string"}},
+    "mechanisms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "probability", "parameter_source"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "screening_omission",
+              "additive_effect_error",
+              "multiplicative_ratio_error",
+              "variance_error",
+              "wrong_target_selection",
+              "technical_failure",
+              "joint_pipeline_error"
+            ]
+          },
+          "probability": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "parameter_source": {"type": "string"},
+          "parameters": {"type": "object"}
+        }
+      }
+    }
+  }
+}

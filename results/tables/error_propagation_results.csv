@@ -1,0 +1,1 @@
+case_id,mechanism,requested_draws,valid_draws,invalid_draws,baseline_estimate,mean_estimate_shift,median_estimate_shift,shift_p025,shift_p975,mean_tau2_shift,conclusion_change_probability,status

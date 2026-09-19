@@ -32,7 +32,7 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 ## Execution sequence
 
-The rebuild follows a 16-step plan. **Steps 1, 3, 4, 6, 12, and 13 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Steps 5 and 7–10 have complete computational implementations, but their human-referenced estimates and evaluator experiment remain pending verified human inputs. The Step 12 gate found no currently eligible case, so Step 13 correctly produces no pooled estimate while retaining tested fixed-effect, DerSimonian–Laird, and REML Hartung–Knapp code. Step reports are under [`docs/`](docs/).
+The rebuild follows a 16-step plan. **Steps 1, 3, 4, 6, 12, and 13 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Steps 5, 7–10, and 14 have complete computational implementations but remain empirically pending human inputs. The Step 12 gate found no currently eligible case, so Steps 13 and 14 correctly produce no pooled or propagation estimates while retaining tested statistical code. Step reports are under [`docs/`](docs/).
 
 ## Safety rules
 

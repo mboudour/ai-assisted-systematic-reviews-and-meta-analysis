@@ -110,3 +110,9 @@ Twenty independent case reviews were consolidated with deterministic completenes
 **Date:** 19 September 2026
 
 Fixed-effect inverse-variance, DerSimonian–Laird, and REML Hartung–Knapp estimators were implemented and numerically tested. The production runner requires a verified common scale, human-verified values, and one selected estimate per independent study. Because no case passes the Step 12 gate, the final pooled-result and weight tables are intentionally empty.
+
+## Error-propagation engine
+
+**Date:** 19 September 2026
+
+A deterministic PCG64DXSM Monte Carlo engine now implements screening omission, additive and multiplicative effect errors, variance errors, wrong-target shifts, technical failure, and joint pipeline error. Every replicate uses a SHA-256-derived independent stream. The empirical error model retains null probabilities until human validation and prospective event logs are available, so the final propagation table is intentionally empty.

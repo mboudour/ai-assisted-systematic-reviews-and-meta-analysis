@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "calibration_status": "pending_human_validation",
+  "source_tables": [
+    "results/tables/screening_validation_metrics.csv",
+    "results/tables/extraction_validation_metrics.csv",
+    "results/tables/error_injection_metrics.csv"
+  ],
+  "mechanisms": [
+    {"id": "screening_omission", "probability": null, "parameter_source": "P1 human screening validation", "parameters": {}},
+    {"id": "additive_effect_error", "probability": null, "parameter_source": "human extraction disagreement magnitudes", "parameters": {}},
+    {"id": "multiplicative_ratio_error", "probability": null, "parameter_source": "human ratio-field disagreements", "parameters": {}},
+    {"id": "variance_error", "probability": null, "parameter_source": "human interval and variance disagreements", "parameters": {}},
+    {"id": "wrong_target_selection", "probability": null, "parameter_source": "human outcome comparator subgroup and timepoint disagreements", "parameters": {}},
+    {"id": "technical_failure", "probability": null, "parameter_source": "prospective call event logs", "parameters": {}},
+    {"id": "joint_pipeline_error", "probability": null, "parameter_source": "joint record-level validation observations", "parameters": {}}
+  ]
+}
