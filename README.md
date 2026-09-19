@@ -32,7 +32,7 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 ## Execution sequence
 
-The rebuild follows a 16-step plan. **Steps 1, 3, and 4 are complete.** The data portion of Step 2 is complete, while the historical non-data files in [`data/manifests/transfer_gaps.csv`](data/manifests/transfer_gaps.csv) remain outstanding. The frozen study design is documented in [`docs/step03_frozen_protocol.md`](docs/step03_frozen_protocol.md). Retrieval and corpus-quality findings are documented in [`docs/step04_retrieval_corpus_quality.md`](docs/step04_retrieval_corpus_quality.md).
+The rebuild follows a 16-step plan. **Steps 1, 3, and 4 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Step 5 has completed its structural duplicate audit and created a deterministic 200-pair review sample, but empirical deduplication accuracy remains pending human pair labels and recovery of the removed-pair log. Step reports are under [`docs/`](docs/).
 
 ## Safety rules
 

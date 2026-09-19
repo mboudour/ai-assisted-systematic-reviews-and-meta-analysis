@@ -62,3 +62,9 @@ Historical script declarations were extracted programmatically from source commi
 **Date:** 19 September 2026
 
 The audit confirmed 95,292 reported pre-deduplication records and 94,522 retained records. Six cases reached their historical configured retrieval limits. Current source-reported counts were obtained for 16 cases and retained strictly as temporal audit evidence, not as replacements for historical counts. Metadata completeness, conformance, truncation flags, request status, timestamps, and response hashes were written to tracked result tables.
+
+## Deduplication structural audit
+
+**Date:** 19 September 2026
+
+The retained corpora were checked for exact normalized DOI groups, normalized-title groups, and deterministic high-similarity title candidates. A blinded 200-pair retained-record review form was generated. The historical false-merge estimate remains unavailable because the pre-deduplication rows and removed-pair decision log were not supplied; this limitation is preserved explicitly rather than imputed.
