@@ -68,3 +68,9 @@ The audit confirmed 95,292 reported pre-deduplication records and 94,522 retaine
 **Date:** 19 September 2026
 
 The retained corpora were checked for exact normalized DOI groups, normalized-title groups, and deterministic high-similarity title candidates. A blinded 200-pair retained-record review form was generated. The historical false-merge estimate remains unavailable because the pre-deduplication rows and removed-pair decision log were not supplied; this limitation is preserved explicitly rather than imputed.
+
+## Failure and missingness-state audit
+
+**Date:** 19 September 2026
+
+Historical screening failures were classified as not identifiable because no failure flags were retained. Extraction nulls and evaluator `UNVERIFIABLE` verdicts were audited without reclassifying them as known failures. The audit found 36,641 null extraction cells and 36,881 `UNVERIFIABLE` evaluator cells among 90,554 requested fields. A mandatory prospective event schema and empty table template now separate technical status, source status, and analytical labels.

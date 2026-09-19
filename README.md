@@ -32,7 +32,7 @@ The project does not treat model-generated labels or same-model evaluator verdic
 
 ## Execution sequence
 
-The rebuild follows a 16-step plan. **Steps 1, 3, and 4 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Step 5 has completed its structural duplicate audit and created a deterministic 200-pair review sample, but empirical deduplication accuracy remains pending human pair labels and recovery of the removed-pair log. Step reports are under [`docs/`](docs/).
+The rebuild follows a 16-step plan. **Steps 1, 3, 4, and 6 are complete.** The data portion of Step 2 is complete, while historical non-data files remain outstanding. Step 5 has completed its structural duplicate audit and created a deterministic 200-pair review sample, but empirical deduplication accuracy remains pending human pair labels and recovery of the removed-pair log. Step reports are under [`docs/`](docs/).
 
 ## Safety rules
 

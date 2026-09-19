@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/evidence-quality/pipeline_event.schema.json",
+  "title": "Evidence Quality Pipeline Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "run_id",
+    "case_id",
+    "record_id",
+    "stage",
+    "attempt",
+    "started_utc",
+    "ended_utc",
+    "call_status",
+    "code_commit"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "case_id": {"type": "integer", "minimum": 1, "maximum": 20},
+    "record_id": {"type": "string", "minLength": 1},
+    "stage": {
+      "type": "string",
+      "enum": ["retrieval", "deduplication", "screening", "extraction", "evaluation", "synthesis"]
+    },
+    "field_name": {"type": ["string", "null"]},
+    "attempt": {"type": "integer", "minimum": 1},
+    "started_utc": {"type": "string", "format": "date-time"},
+    "ended_utc": {"type": "string", "format": "date-time"},
+    "call_status": {
+      "type": "string",
+      "enum": ["ok", "api_error", "timeout", "rate_limited", "invalid_response", "parse_error", "cancelled"]
+    },
+    "error_type": {"type": ["string", "null"]},
+    "error_message_redacted": {"type": ["string", "null"]},
+    "requested_model_id": {"type": ["string", "null"]},
+    "returned_model_id": {"type": ["string", "null"]},
+    "system_fingerprint": {"type": ["string", "null"]},
+    "request_id": {"type": ["string", "null"]},
+    "prompt_sha256": {"type": ["string", "null"]},
+    "schema_sha256": {"type": ["string", "null"]},
+    "source_snapshot_sha256": {"type": ["string", "null"]},
+    "code_commit": {"type": "string", "minLength": 7},
+    "latency_ms": {"type": ["integer", "null"], "minimum": 0},
+    "input_tokens": {"type": ["integer", "null"], "minimum": 0},
+    "output_tokens": {"type": ["integer", "null"], "minimum": 0},
+    "retryable": {"type": ["boolean", "null"]},
+    "raw_response_path": {"type": ["string", "null"]},
+    "output_path": {"type": ["string", "null"]}
+  }
+}

@@ -1,0 +1,1 @@
+event_id,run_id,case_id,record_id,stage,field_name,attempt,started_utc,ended_utc,call_status,error_type,error_message_redacted,requested_model_id,returned_model_id,system_fingerprint,request_id,prompt_sha256,schema_sha256,source_snapshot_sha256,code_commit,latency_ms,input_tokens,output_tokens,retryable,raw_response_path,output_path
