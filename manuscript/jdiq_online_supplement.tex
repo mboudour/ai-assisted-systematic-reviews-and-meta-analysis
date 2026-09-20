@@ -160,7 +160,7 @@ A preflight extraction request used an unsupported union-type response schema. A
 
 \subsection{Screening results}
 
-The screening frame first selected up to 30 records per case-by-historical-label stratum by the master-seed SHA-256 rank. It contained 1,192 records. The repeatability runner ranked the frame by \texttt{SHA256(seed | screening | sample\_id)} and selected the first 200, so selection was reproducible and independent of file order but was not a second probability sample. The subset covered all 20 cases and contained 96 historical INCLUDE and 104 historical EXCLUDE records.
+The screening frame first selected up to 30 records per case-by-historical-label stratum by the master-seed SHA-256 rank. It contained 1,192 records. The repeatability runner ranked the frame by \texttt{SHA256(seed | screening | sample\_id)} and selected the first 200, so selection was reproducible and independent of file order but was not a second probability sample. The subset covered all 20 cases and contained 96 historical INCLUDE (48.00\%) and 104 historical EXCLUDE records. It therefore enriched INCLUDE relative to its 20.39\% prevalence among all 94,522 archived screening decisions.
 
 Of the 200 screening records, 190 had identical labels across all three calls, yielding 95.00\% exact three-call stability in the realized subset. Across the 400 adjacent repeat comparisons, 13 changed label: seven INCLUDE-to-EXCLUDE and six EXCLUDE-to-INCLUDE. The remaining comparisons comprised 145 INCLUDE-to-INCLUDE and 242 EXCLUDE-to-EXCLUDE transitions. These results measure prospective same-request stability, not screening accuracy or historical-model repeatability.
 
@@ -246,7 +246,7 @@ A new logged run would answer a different question. It could measure current ope
 \midrule
 Committed historical screening script & \texttt{gpt-4.1-mini} \\
 Historical empirical README & \texttt{gpt-4o-mini} \\
-Prior report, Section 4.5.1 & \texttt{gpt-4o} \\
+Prior report & \texttt{gpt-4o} \\
 \bottomrule
 \end{tabularx}
 \end{table}

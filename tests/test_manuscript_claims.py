@@ -96,7 +96,8 @@ def test_screening_repeatability_and_retrieval_limits_are_reported() -> None:
         "up to 30 records within each case-by-historical-label stratum",
         "seeded SHA-256",
         "1,192 frame records",
-        "96 historical INCLUDE and 104 historical EXCLUDE",
+        "96 historical INCLUDE (48.00\\%) and 104 historical EXCLUDE",
+        "20.39\\% archive prevalence",
     ):
         assert expected in text
     supplement = SUPPLEMENT.read_text(encoding="utf-8")
@@ -146,6 +147,7 @@ def test_amendments_and_cross_document_references_are_accurate() -> None:
     assert "config/amendments.jsonl" in supplement
     assert "earlier manuscript" not in paper
     assert "earlier manuscript" not in supplement
+    assert "Prior report, Section 4.5.1" not in supplement
     assert "Screening labels and null states are largely stable" in paper
     assert "11.45\\% design-weighted non-agreement" in paper
 

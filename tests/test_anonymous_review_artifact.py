@@ -48,6 +48,23 @@ def test_builder_excludes_historical_and_identity_bearing_material(tmp_path: Pat
         "A-2026-09-19-01",
         "A-2026-09-19-02",
     ]
+    amendment_text = (target / "config/amendments.jsonl").read_text(
+        encoding="utf-8"
+    ).casefold()
+    for forbidden in (
+        "boudourides",
+        "moses",
+        "northwestern",
+        "mboudour",
+        "/home/",
+        "file://",
+        "http://",
+        "https://",
+        "github.com",
+        "ssrn",
+        "10.2139/",
+    ):
+        assert forbidden not in amendment_text
 
     manifest = json.loads((target / "artifact_manifest.json").read_text(encoding="utf-8"))
     assert manifest["identity_scan"] == "passed"
@@ -75,7 +92,7 @@ def test_builder_excludes_historical_and_identity_bearing_material(tmp_path: Pat
     combined = "\n".join(
         path.read_text(encoding="utf-8", errors="ignore")
         for path in target.rglob("*")
-        if path.is_file() and path.suffix in {".md", ".py", ".json", ".csv", ".toml"}
+        if path.is_file() and path.suffix in {".md", ".py", ".json", ".jsonl", ".csv", ".toml"}
     ).casefold()
     assert "mboudour" not in combined
     assert "northwestern" not in combined

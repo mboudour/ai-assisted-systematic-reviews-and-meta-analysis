@@ -56,6 +56,7 @@ def scan_text(target: Path, forbidden: list[str]) -> None:
     text_suffixes = {
         ".csv",
         ".json",
+        ".jsonl",
         ".md",
         ".py",
         ".toml",
