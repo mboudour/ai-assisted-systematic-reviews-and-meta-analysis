@@ -37,6 +37,17 @@ def test_builder_excludes_historical_and_identity_bearing_material(tmp_path: Pat
     assert (target / "results/tables/evaluator_verdict_cube.csv").exists()
     assert (target / "results/tables/screening_repeatability_summary.json").exists()
     assert (target / "results/tables/sensitivity_ablations.csv").exists()
+    assert (target / "config/amendments.jsonl").exists()
+
+    amendments = [
+        json.loads(line)
+        for line in (target / "config/amendments.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [row["amendment_id"] for row in amendments] == [
+        "A-2026-09-19-01",
+        "A-2026-09-19-02",
+    ]
 
     manifest = json.loads((target / "artifact_manifest.json").read_text(encoding="utf-8"))
     assert manifest["identity_scan"] == "passed"

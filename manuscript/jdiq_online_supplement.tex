@@ -18,6 +18,7 @@
 \usepackage{pdflscape}
 \usepackage{microtype}
 \usepackage{enumitem}
+\usepackage{placeins}
 \graphicspath{{figures/}}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
@@ -42,7 +43,7 @@ The original protocol was frozen before the new primary computations. It specifi
 
 The amended primary question is: which data-quality properties of an LLM-assisted evidence-synthesis workflow are observable and identifiable without external reference labels, and how do denominator rules, fallback-state collisions, provenance gaps, interface conformance, and output representation affect those measurements? Human-reference, error-injection, pooled meta-analysis, and calibrated-propagation branches remain in the research repository as archived code, but they are not used as substantive evidence in the paper.
 
-A second amendment corrected an initial provenance statement. The first amendment described the historical screening model using the alias found in the committed script. Further audit found a three-source conflict: the script declares \texttt{gpt-4.1-mini}, the empirical README reports \texttt{gpt-4o-mini}, and the earlier manuscript reports \texttt{gpt-4o}. No per-call evidence resolves the conflict. The paper therefore treats the historical screening alias as unknown.
+A second amendment corrected an initial provenance statement. The first amendment described the historical screening model using the alias found in the committed script. Further audit found a three-source conflict: the script declares \texttt{gpt-4.1-mini}, the empirical README reports \texttt{gpt-4o-mini}, and the prior report reports \texttt{gpt-4o}. No per-call evidence resolves the conflict. The paper therefore treats the historical screening alias as unknown. Both append-only amendment records are supplied verbatim as \path{config/amendments.jsonl} in the anonymous artifact.
 
 \section{Case Registry and Stage Counts}
 
@@ -159,7 +160,9 @@ A preflight extraction request used an unsupported union-type response schema. A
 
 \subsection{Screening results}
 
-Of the 200 screening records, 190 had identical labels across all three calls, yielding 95.00\% exact three-call stability in the realized deterministic subset. Across the 400 adjacent repeat comparisons, 13 changed label: seven INCLUDE-to-EXCLUDE and six EXCLUDE-to-INCLUDE. The remaining comparisons comprised 145 INCLUDE-to-INCLUDE and 242 EXCLUDE-to-EXCLUDE transitions. These results measure prospective same-request stability, not screening accuracy or historical-model repeatability.
+The screening frame first selected up to 30 records per case-by-historical-label stratum by the master-seed SHA-256 rank. It contained 1,192 records. The repeatability runner ranked the frame by \texttt{SHA256(seed | screening | sample\_id)} and selected the first 200, so selection was reproducible and independent of file order but was not a second probability sample. The subset covered all 20 cases and contained 96 historical INCLUDE and 104 historical EXCLUDE records.
+
+Of the 200 screening records, 190 had identical labels across all three calls, yielding 95.00\% exact three-call stability in the realized subset. Across the 400 adjacent repeat comparisons, 13 changed label: seven INCLUDE-to-EXCLUDE and six EXCLUDE-to-INCLUDE. The remaining comparisons comprised 145 INCLUDE-to-INCLUDE and 242 EXCLUDE-to-EXCLUDE transitions. These results measure prospective same-request stability, not screening accuracy or historical-model repeatability.
 
 \subsection{Weights and cluster bootstrap}
 
@@ -193,13 +196,13 @@ Numeric & 150 & 88.40\% & 88.55\% & 88.55\% & 90.22\% \\
 \end{tabular}
 \end{table}
 
-The case-cluster bootstrap interval for normalized exact agreement is 34.76\%--56.34\% for categorical items and 81.18\%--95.96\% for numeric items. The lexical thresholds are not validated semantic-equivalence cutoffs. They are included to show how conclusions vary under declared representation rules.
+The case-cluster bootstrap interval for normalized exact agreement is 34.76\%--56.34\% for categorical items and 81.18\%--95.96\% for numeric items. Thus, numeric normalized exact agreement still has an 11.45\% design-weighted complement. The lexical thresholds are not validated semantic-equivalence cutoffs. They are included to show how conclusions vary under declared representation rules.
 
 \section{Schema Coverage and Synthesis Readiness}
 
 Table~\ref{tab:schema} reports the required field coverage across the 20 case-specific extraction schemas. A report DOI was retained when available, but no schema contains a study-level identifier capable of linking multiple reports from the same underlying study.
 
-\begin{table*}[t]
+\begin{table}[H]
 \caption{Historical extraction-schema coverage for downstream synthesis requirements.}
 \label{tab:schema}
 \small
@@ -217,12 +220,13 @@ Variance or standard error & 0/20 & No schema directly records within-study vari
 Dependence identifier & 0/20 & Multiple outcomes, contrasts, time points, or reports cannot be grouped. \\
 \bottomrule
 \end{tabularx}
-\end{table*}
+\end{table}
 
 Ten schemas produce 927 complete estimate-and-interval rows. Seven cases pass a naive five-row numeric threshold and five pass a ten-row threshold. However, 0/20 schemas jointly contain a study-level linkage identifier, a dedicated effect-measure label, variance or standard error, and a dependence identifier. This is a schema-only coverage result; it has no human-verification criterion and does not claim that any extracted value is wrong.
 
 Tested fixed-effect, DerSimonian--Laird, and REML with Hartung--Knapp implementations remain in the research code, but no pooled result is reported. A Monte Carlo propagation engine also remains archived, but no calibrated empirical error model exists. Empty output tables are intentional safeguards against turning structurally incomplete records into scientific estimates.
 
+\FloatBarrier
 \section{Historical Failure-State Identifiability}
 
 The screened files retain no call-status, attempt, retry, request, or error fields. Terminal screening failure was mapped to EXCLUDE. Extraction failure produced an all-null record. Evaluator failure produced all-UNVERIFIABLE labels. These values also arise from legitimate analytical outcomes, so the fallbacks are not observable after the fact.
@@ -242,7 +246,7 @@ A new logged run would answer a different question. It could measure current ope
 \midrule
 Committed historical screening script & \texttt{gpt-4.1-mini} \\
 Historical empirical README & \texttt{gpt-4o-mini} \\
-Earlier manuscript, Section 4.5.1 & \texttt{gpt-4o} \\
+Prior report, Section 4.5.1 & \texttt{gpt-4o} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -251,7 +255,7 @@ The screened CSVs contain title, year, DOI, abstract, source, case identifier, a
 
 \section{Reproducibility Package}
 
-The anonymous review artifact contains compact derived inputs, analysis scripts, figure-generation code, declared dependencies, and automated tests. In particular, \path{evaluator_verdict_cube.csv} reports case-by-field-type-by-null-status-by-verdict counts without source text, allowing the evaluator totals and null cross-tabulation to be recomputed. It also contains the 200-item screening manifest, all 600 screening outputs reduced to labels, and the screening summary. The principal commands are:
+The anonymous review artifact contains compact derived inputs, analysis scripts, figure-generation code, declared dependencies, automated tests, and the two append-only amendments. In particular, \path{evaluator_verdict_cube.csv} reports counts by case, field type, null status, and verdict without source text. This table allows the evaluator totals and null cross-tabulation to be recomputed. The artifact also contains the 200-item screening manifest, all 600 screening outputs reduced to labels, and the screening summary. The principal commands are:
 
 \begin{verbatim}
 python3 -m pip install -e '.[dev]'

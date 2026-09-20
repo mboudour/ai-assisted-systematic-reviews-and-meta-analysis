@@ -1,5 +1,5 @@
 {
-  "git_commit_at_manifest_generation": "704809e5f67dbb6b34a2e07ed5a0c6ad7463a7a9",
+  "git_commit_at_manifest_generation": "691d55231ff153fef32e81a79bd4b98fcbfb7bae",
   "machine": "x86_64",
   "packages": {
     "numpy": "2.5.1",

@@ -75,6 +75,7 @@ def test_schema_claims_match_derived_tables() -> None:
     assert "0/20" in text
     assert "does not establish synthesis readiness" in text
     assert "strict synthesis gate" not in text
+    assert "each of four required fields is individually absent from all 20 schemas" in text
 
 
 def test_screening_repeatability_and_retrieval_limits_are_reported() -> None:
@@ -91,6 +92,13 @@ def test_screening_repeatability_and_retrieval_limits_are_reported() -> None:
     text = PAPER.read_text(encoding="utf-8")
     for expected in ("190 retained the same label", "95.00\\%", "13 changed label", "seven INCLUDE-to-EXCLUDE", "six EXCLUDE-to-INCLUDE"):
         assert expected in text
+    for expected in (
+        "up to 30 records within each case-by-historical-label stratum",
+        "seeded SHA-256",
+        "1,192 frame records",
+        "96 historical INCLUDE and 104 historical EXCLUDE",
+    ):
+        assert expected in text
     supplement = SUPPLEMENT.read_text(encoding="utf-8")
     for expected in (
         "3 & OpenAlex & 6,000 & 6,000",
@@ -103,13 +111,17 @@ def test_screening_repeatability_and_retrieval_limits_are_reported() -> None:
         assert expected in supplement
 
 
-def test_ccs_and_public_prior_work_are_disclosed_neutrally() -> None:
+def test_ccs_and_prior_work_are_blinded_for_review() -> None:
     text = PAPER.read_text(encoding="utf-8")
+    bibliography = (ROOT / "manuscript/references.bib").read_text(encoding="utf-8")
     assert "printccs=true" in text
     assert "\\ccsdesc[500]{Information systems~Data provenance}" in text
     assert "\\ccsdesc[500]{Information systems~Data extraction and integration}" in text
-    assert "prior, publicly posted report" in text
-    assert "\\cite{boudourides2026ssrn}" in text
+    assert "A prior report used the same archive" in text
+    assert "\\cite{anonymous2026prior}" in text
+    assert "Citation withheld for double-anonymous review" in bibliography
+    for forbidden in ("publicly posted", "Boudourides", "7346302", "boudourides2026ssrn"):
+        assert forbidden.casefold() not in (text + bibliography).casefold()
     assert "unsuccessful attempt" not in text
 
 
@@ -123,6 +135,19 @@ def test_anonymity_and_post_outcome_disclosure() -> None:
     assert "not preregistered" in combined
     assert "separate prospective question" in combined
     assert combined.startswith("\\documentclass[acmsmall,anonymous,review]{acmart}")
+
+
+def test_amendments_and_cross_document_references_are_accurate() -> None:
+    paper = PAPER.read_text(encoding="utf-8")
+    supplement = SUPPLEMENT.read_text(encoding="utf-8")
+    assert "Supplement Table~S1" not in paper
+    assert "the supplement's retrieval-limit table" in paper
+    assert "amendments are summarized in the supplement and supplied verbatim" in paper
+    assert "config/amendments.jsonl" in supplement
+    assert "earlier manuscript" not in paper
+    assert "earlier manuscript" not in supplement
+    assert "Screening labels and null states are largely stable" in paper
+    assert "11.45\\% design-weighted non-agreement" in paper
 
 
 def test_noel_storr_reference_is_corrected() -> None:

@@ -184,3 +184,17 @@ The meta-analysis readiness discussion is now based only on schema coverage. Hum
 The bibliography now records Anna Noel-Storr correctly from DOI 10.1002/cl2.70074. ACM CCS concepts are visible in the core paper. Every case that reached or exceeded a retrieval limit is listed in the supplement, including the 4,500-record Case 5 limit and the 4,600 records obtained because the OpenAlex loop appended a complete 200-record page before the next stopping-condition check.
 
 The public SSRN prior report (DOI 10.2139/ssrn.7346302) is cited neutrally in the third person. An editor-only disclosure was prepared separately; it is not part of the reviewer-facing package. The final core paper remains exactly 10 pages, the online supplement is 7 pages, and the anonymous artifact rebuilds offline with 11 focused tests.
+
+## Fourth-round pre-submission corrections
+
+**Date:** 20 September 2026
+
+The manuscript and supplement were audited after an external consistency review. The obsolete manual cross-reference to “Supplement Table S1” was removed; all LaTeX references were checked against local labels and both documents compiled without undefined-reference or overfull-box warnings. The paper now states that protocol amendments are summarized in the supplement and supplied verbatim in the anonymous artifact, which now includes `config/amendments.jsonl`.
+
+The prior public report is cited through a double-anonymous placeholder in the reviewer-facing BibTeX database. A separate confidential cover-letter draft documents the public report, the overlap in archive, the present manuscript's revised contribution, and the unsupported historical screening-model attribution. A public correction draft was prepared but not posted because publication of an erratum is an external action requiring author approval.
+
+The screening-repeatability methods now disclose the complete deterministic selection rule: a 1,192-record case-by-historical-label frame created by seeded hashing, followed by a second seeded hash rank selecting 200 records independent of file order. The realized subset covered all 20 cases and contained 96 historical INCLUDE and 104 historical EXCLUDE records.
+
+The schema result now states that each of the four synthesis-critical fields is individually absent from all 20 schemas. Section 4.3 was retitled to cover both screening and extraction repeatability. The paper and supplement explicitly report the 11.45% complement of numeric normalized exact agreement, and the lessons add a versioned controlled-vocabulary recommendation for finite categorical outputs.
+
+The anonymous artifact was rebuilt and tested. It contains `results/tables/evaluator_verdict_cube.csv` and both amendment records, while `expert_structural_review` and `cases_pending_verification` are absent from the sensitivity table. The reviewer-facing package passed an identity scan and contains a 10-page core paper, 7-page supplement, blinded LaTeX/BibTeX source, and the refreshed artifact.

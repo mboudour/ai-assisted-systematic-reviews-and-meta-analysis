@@ -99,6 +99,7 @@ def main() -> None:
         "tests/test_repeatability_normalized.py",
         "tests/test_claim_consequence_matrix.py",
         "tests/test_denominator_figure.py",
+        "config/amendments.jsonl",
         "config/historical_prompts.json",
         "results/tables/evaluator_verdict_cube.csv",
         "results/tables/meta_analysis_input_audit.csv",
@@ -220,7 +221,7 @@ This repository contains the minimal derived data, analysis scripts, figure, and
 2. the all-non-null categorical normalization contrast from 21.58% to 46.13%, together with the design-weighted 1.92% mixed-null estimate; and
 3. the schema audit showing 927 complete estimate-and-interval rows but no study-level linkage or variance field.
 
-It also reproduces the prospective screening result: 190 of 200 records retained the same label across all three calls (95.00%), with 13 changed adjacent transitions among 400 comparisons. The aggregate `evaluator_verdict_cube.csv` contains case-by-field-type-by-null-status-by-verdict counts and no source text; it recomputes the 52,877 CORRECT, 796 INCORRECT, 36,881 UNVERIFIABLE, and null-cross-tab totals used in the paper.
+It also reproduces the prospective screening result: 190 of 200 records retained the same label across all three calls (95.00%), with 13 changed adjacent transitions among 400 comparisons. The aggregate `evaluator_verdict_cube.csv` contains case-by-field-type-by-null-status-by-verdict counts and no source text; it recomputes the 52,877 CORRECT, 796 INCORRECT, 36,881 UNVERIFIABLE, and null-cross-tab totals used in the paper. The two post-outcome amendments are supplied verbatim in `config/amendments.jsonl`.
 
 The artifact does not contain author names, affiliations, acknowledgments, Git history, raw bibliographic records, old manuscripts, or the historical repository snapshot. Historical failure incidence and historical screening-model identity are not estimable from the retained archive and are not represented as effect sizes.
 
