@@ -138,6 +138,21 @@ def test_anonymity_and_post_outcome_disclosure() -> None:
     assert combined.startswith("\\documentclass[acmsmall,anonymous,review]{acmart}")
 
 
+def test_generative_ai_research_use_is_disclosed_in_methods() -> None:
+    paper = PAPER.read_text(encoding="utf-8")
+    for required in (
+        "\\paragraph{Generative-AI use.}",
+        "Manus, a general-purpose generative-AI system",
+        "post-outcome study redesign",
+        "analysis-code development and refactoring",
+        "automated-test construction",
+        "figure generation",
+        "no generative-AI output served as an external truth label",
+        "The author accepts responsibility",
+    ):
+        assert required in paper
+
+
 def test_amendments_and_cross_document_references_are_accurate() -> None:
     paper = PAPER.read_text(encoding="utf-8")
     supplement = SUPPLEMENT.read_text(encoding="utf-8")
