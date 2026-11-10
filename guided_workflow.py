@@ -21,6 +21,10 @@ import day2_networks
 import day2_network_view
 from openaire_notice import OPENAIRE_LIMITATIONS
 
+# The Streamlit host can retain imported modules while syncing newer page files.
+# Pages require this release marker and reload a stale cached renderer once.
+GUIDED_PROVIDER_RELEASE = 1
+
 
 GUIDED_DATA_DIR = Path(__file__).resolve().parent / "data" / "guided_fixed"
 SCREEN_DECISION = "Screening decision"

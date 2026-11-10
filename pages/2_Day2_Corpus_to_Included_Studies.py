@@ -39,7 +39,9 @@ if str(_repo_root) not in sys.path:
 from day2_networks import build_network
 from day2_network_view import make_network_html
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
-import guided_workflow
+from guided_loader import load_guided_workflow
+
+guided_workflow = load_guided_workflow()
 
 def corpus_digest(df):
     """Detect changes to values, row indices, column names, ordering and types."""

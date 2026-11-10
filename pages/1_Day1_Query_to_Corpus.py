@@ -52,7 +52,9 @@ from openaire_client import OpenAIREError, fetch_openaire
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
 from day2_networks import build_network
 from day2_network_view import make_network_html
-import guided_workflow
+from guided_loader import load_guided_workflow
+
+guided_workflow = load_guided_workflow()
 
 OPENAIRE_CHOICE = "OpenAIRE (multidisciplinary; no participant key)"
 
