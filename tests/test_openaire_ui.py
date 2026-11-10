@@ -29,19 +29,17 @@ def warning_text(app):
 
 
 class OpenAIREUITests(unittest.TestCase):
-    def test_every_worked_example_offers_a_warned_openaire_preset(self):
+    def test_openaire_is_configurable_directly_in_byod(self):
         app = AppTest.from_file(str(DAY1), default_timeout=90).run()
-        app.sidebar.radio[0].set_value('📌 Guided Examples').run()
-        self.assertEqual(len(app.exception), 0)
-        for example in ('ex1_health', 'ex2_ubi', 'ex3_microplastics', 'ex4_csr'):
-            self.assertEqual(app.button(key=f'openaire_practice_{example}').label,
-                             'Use OpenAIRE practice search in BYOD')
-        self.assertEqual(warning_text(app).count('OpenAIRE limitations:'), 4)
-        app.button(key='openaire_practice_ex4_csr').click().run()
+        app.sidebar.radio[0].set_value('🔎 BYOD — Your Own Query').run()
+        app.selectbox(key='byod_api_widget').set_value(CHOICE).run()
+        query = '("corporate social responsibility" OR "CSR") AND "profitability"'
+        app.text_input(key='byod_query_widget').set_value(query)
+        app.slider(key='openaire_max_pages').set_value(2).run()
         self.assertEqual(len(app.exception), 0)
         self.assertEqual(app.selectbox(key='byod_api_widget').value, CHOICE)
-        self.assertEqual(app.text_input(key='byod_query_widget').value,
-                         '("corporate social responsibility" OR "CSR") AND ("financial performance" OR "profitability")')
+        self.assertEqual(app.text_input(key='byod_query_widget').value, query)
+        self.assertEqual(app.slider(key='openaire_max_pages').value, 2)
         self.assertIn('up to 60 per hour', warning_text(app))
         self.assertIn('non-peer-reviewed', warning_text(app))
         self.assertFalse(any('API key' in widget.label for widget in app.text_input))

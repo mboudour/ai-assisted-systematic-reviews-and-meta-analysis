@@ -1,0 +1,180 @@
+{
+  "case_key": "ex3_microplastics",
+  "source": "Crossref",
+  "endpoint": "https://api.crossref.org/works",
+  "retrieved_at_utc": "2026-11-10T07:35:39Z",
+  "query": "microplastics marine fish freshwater environmental health",
+  "parameters": {
+    "query": "microplastics marine fish freshwater environmental health",
+    "rows": 50,
+    "select": "DOI,title,author,published,container-title,abstract,reference"
+  },
+  "request_url": "https://api.crossref.org/works?query=microplastics+marine+fish+freshwater+environmental+health&rows=50&select=DOI%2Ctitle%2Cauthor%2Cpublished%2Ccontainer-title%2Cabstract%2Creference",
+  "request_method": "GET",
+  "request_attempts": 1,
+  "pages_fetched": 1,
+  "pagination": "First page only; no additional pages requested.",
+  "scope": "Provider-specific plain-text relevance search; no Boolean interpretation assumed.",
+  "filters": [],
+  "returned": 50,
+  "total_matches": 8023868,
+  "possibly_truncated": true,
+  "field_coverage": {
+    "DOI": 50,
+    "Title": 50,
+    "Year": 48,
+    "Authors": 45,
+    "Venue": 44,
+    "Abstract": 4,
+    "Abstract_License": 4,
+    "References": 35
+  },
+  "corpus_file": "ex3_microplastics_corpus.csv",
+  "corpus_sha256": "3531157f46deb8b9c04474324d967a08b0f768b79c639dead3e4cae8f0da5ec8",
+  "raw_response_file": null,
+  "raw_response_sha256": "5a636fd42752ae7f49b418d1acee5f5529bf39d54f1d497174cc401a4a9abd41",
+  "raw_response_gzip_sha256": "6993924b5795839231ec461d4351c3964bdc4fed325d7531fe25fc2c3e343f60",
+  "screening": {
+    "method": "Case-insensitive, whitespace-normalized substring match on title or abstract: at least one inclusion term and no exclusion term. Human review is required. Calculated after abstract reuse filtering; missing or reuse-unconfirmed text cannot match.",
+    "inclusion_terms": [
+      "microplastic"
+    ],
+    "exclusion_terms": [],
+    "matching_records": 26,
+    "original_pre_license_filter_matching_records": 27,
+    "excluded_records": 24
+  },
+  "field_notes": {
+    "References": "JSON array of unique explicit reference DOIs, normalized as doi: identifiers; a blank means no usable DOI was supplied, not that the work has no references. Other raw reference entries are not retained.",
+    "Concepts": "Blank: not supplied by this Crossref request.",
+    "Citations": "Blank: not supplied by this Crossref request.",
+    "Abstract": "JATS/XML tags were stripped for display. A blank means missing or reuse-unconfirmed; it does not establish that the provider lacked an abstract. Withholding may affect teaching-screen decisions.",
+    "Abstract_License": "URL disclosed by the DOI- and abstract-matched supplementary record for the retained abstract. Use the title, authors and DOI for attribution; independently verify applicability and terms."
+  },
+  "license": "Crossref bibliographic metadata and abstracts may have different rights. Abstracts can retain publisher or author copyright; do not assume they are CC0. The deposited license metadata is an indicator, not independent verification of rights or scope. Attribute CC BY material and verify the applicable license and any third-party rights.",
+  "license_info_url": "https://www.crossref.org/documentation/retrieve-metadata/",
+  "limitations": "A single bounded relevance-ranked page is a teaching sample, not an exhaustive or validated systematic-review search. Coverage and record fields vary; no publication-type, date, or abstract filter was applied to the original API query. Abstracts were later filtered locally for reuse, and missing text can change screening outcomes. Search results and license metadata can change over time.",
+  "original_corpus_sha256": "2a838d743f9ae51f0be3eb3a637aba0477a56416eb637c9ad7d8923f41aada1e",
+  "raw_response_retention": "The original uncompressed HTTP response SHA-256 is preserved, but no raw response body is retained. The original gzip archive was deleted; its recorded gzip SHA-256 is historical only. A digest cannot reconstruct the response or independently establish its contents.",
+  "license_screening": {
+    "policy": "Keep a cleaned abstract only when the same Crossref item has a valid DOI and explicitly discloses an exact creativecommons.org CC BY (versions 1.0, 2.0, 2.5, 3.0, 4.0) or CC0 1.0 license URL in the standard license or legalcode form. Exclude NC, ND, other terms and ambiguous URLs. The license content-version must be vor, unspecified, or absent; TDM-only and accepted-manuscript-only entries are not used. Any supplied start date must be parseable and not in the future. Record the deposited URL for attribution. Metadata is not proof that the license covers the abstract or all third-party content; users must verify applicability and comply with all terms, including attribution.",
+    "source": "The original query did not select license. A later same-query Crossref request selected DOI, abstract and license. The supplementary page supplied evidence only and did not replace the originally captured records.",
+    "matching_policy": "Require a valid DOI unique in both original corpus and supplementary page, plus exact equality of the cleaned, nonblank original and supplementary abstract before considering the supplementary license; otherwise withhold.",
+    "supplementary_request": {
+      "source": "Crossref",
+      "endpoint": "https://api.crossref.org/works",
+      "request_method": "GET",
+      "parameters": {
+        "query": "microplastics marine fish freshwater environmental health",
+        "rows": 50,
+        "select": "DOI,abstract,license"
+      },
+      "request_url": "https://api.crossref.org/works?query=microplastics+marine+fish+freshwater+environmental+health&rows=50&select=DOI%2Cabstract%2Clicense",
+      "request_started_at_utc": "2026-11-10T07:42:28Z",
+      "retrieved_at_utc": "2026-11-10T07:42:33Z",
+      "request_attempts": 1,
+      "returned": 50,
+      "total_matches": 8023868,
+      "raw_response_sha256": "ed3d09ec048882ffae72ae20586ec17fa7438b23c829f1090d8fc12e646af091",
+      "raw_response_file": null,
+      "raw_response_retention": "Hash only; no unfiltered supplementary raw response body is retained. A hash cannot reconstruct the response or independently prove its contents."
+    },
+    "original_corpus_abstracts_recorded": 14,
+    "unique_doi_matches": 50,
+    "matching_cleaned_abstracts": 14,
+    "retained_abstracts": 4,
+    "recorded_abstracts_withheld_reuse_unconfirmed": 10,
+    "missing_or_reuse_unconfirmed": 46,
+    "included_records_with_licensed_abstract": 4,
+    "retained_license_evidence": [
+      {
+        "doi": "10.3390/microplastics5020125",
+        "abstract_sha256": "41a2503ed1136d4ee290d719ba8a7884e91c6109bba34a27af8f25d9a8ee2297",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "vor",
+          "start": {
+            "date-parts": [
+              [
+                2026,
+                6,
+                15
+              ]
+            ],
+            "date-time": "2026-06-15T00:00:00Z",
+            "timestamp": 1781481600000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.3390/microplastics5040218",
+        "abstract_sha256": "d7f05826c306bc08ca0b6457a98d2dedece0335841ba5d57bb34553ae45ed96f",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "vor",
+          "start": {
+            "date-parts": [
+              [
+                2026,
+                11,
+                1
+              ]
+            ],
+            "date-time": "2026-11-01T00:00:00Z",
+            "timestamp": 1793491200000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.3390/w13162214",
+        "abstract_sha256": "4b999b48a55962bc65ee45ff9dae14085166e8a7d1cc6eed51a7a8cb5312e60e",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "vor",
+          "start": {
+            "date-parts": [
+              [
+                2021,
+                8,
+                14
+              ]
+            ],
+            "date-time": "2021-08-14T00:00:00Z",
+            "timestamp": 1628899200000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.20944/preprints202605.0575.v1",
+        "abstract_sha256": "e185d3ffc857631a73f2e3239ecb94e97b942cac0a991aac2f29dfde1797eea5",
+        "license": {
+          "URL": "http://creativecommons.org/licenses/by/4.0",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2026,
+                5,
+                11
+              ]
+            ],
+            "date-time": "2026-05-11T00:00:00Z",
+            "timestamp": 1778457600000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      }
+    ]
+  }
+}

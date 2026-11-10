@@ -1,0 +1,181 @@
+{
+  "case_key": "ex2_ubi",
+  "source": "Crossref",
+  "endpoint": "https://api.crossref.org/works",
+  "retrieved_at_utc": "2026-11-10T07:35:30Z",
+  "query": "universal basic income policy evaluation employment outcomes",
+  "parameters": {
+    "query": "universal basic income policy evaluation employment outcomes",
+    "rows": 50,
+    "select": "DOI,title,author,published,container-title,abstract,reference"
+  },
+  "request_url": "https://api.crossref.org/works?query=universal+basic+income+policy+evaluation+employment+outcomes&rows=50&select=DOI%2Ctitle%2Cauthor%2Cpublished%2Ccontainer-title%2Cabstract%2Creference",
+  "request_method": "GET",
+  "request_attempts": 1,
+  "pages_fetched": 1,
+  "pagination": "First page only; no additional pages requested.",
+  "scope": "Provider-specific plain-text relevance search; no Boolean interpretation assumed.",
+  "filters": [],
+  "returned": 50,
+  "total_matches": 5477716,
+  "possibly_truncated": true,
+  "field_coverage": {
+    "DOI": 50,
+    "Title": 50,
+    "Year": 48,
+    "Authors": 38,
+    "Venue": 39,
+    "Abstract": 4,
+    "Abstract_License": 4,
+    "References": 18
+  },
+  "corpus_file": "ex2_ubi_corpus.csv",
+  "corpus_sha256": "ab90b64a9bd9163461bd57a36d68ac60ac35a05ee684b24bdaedb1257d1935bd",
+  "raw_response_file": null,
+  "raw_response_sha256": "9e4b998a6423fe90698f5eb3dd0b44c466a5464db191469d2bdec88f7e6dc172",
+  "raw_response_gzip_sha256": "3d3fa096b816d49e5d32f662c58fbe7df31a136f408eab042fe161a07aa409bf",
+  "screening": {
+    "method": "Case-insensitive, whitespace-normalized substring match on title or abstract: at least one inclusion term and no exclusion term. Human review is required. Calculated after abstract reuse filtering; missing or reuse-unconfirmed text cannot match.",
+    "inclusion_terms": [
+      "basic income",
+      "guaranteed income"
+    ],
+    "exclusion_terms": [],
+    "matching_records": 45,
+    "original_pre_license_filter_matching_records": 45,
+    "excluded_records": 5
+  },
+  "field_notes": {
+    "References": "JSON array of unique explicit reference DOIs, normalized as doi: identifiers; a blank means no usable DOI was supplied, not that the work has no references. Other raw reference entries are not retained.",
+    "Concepts": "Blank: not supplied by this Crossref request.",
+    "Citations": "Blank: not supplied by this Crossref request.",
+    "Abstract": "JATS/XML tags were stripped for display. A blank means missing or reuse-unconfirmed; it does not establish that the provider lacked an abstract. Withholding may affect teaching-screen decisions.",
+    "Abstract_License": "URL disclosed by the DOI- and abstract-matched supplementary record for the retained abstract. Use the title, authors and DOI for attribution; independently verify applicability and terms."
+  },
+  "license": "Crossref bibliographic metadata and abstracts may have different rights. Abstracts can retain publisher or author copyright; do not assume they are CC0. The deposited license metadata is an indicator, not independent verification of rights or scope. Attribute CC BY material and verify the applicable license and any third-party rights.",
+  "license_info_url": "https://www.crossref.org/documentation/retrieve-metadata/",
+  "limitations": "A single bounded relevance-ranked page is a teaching sample, not an exhaustive or validated systematic-review search. Coverage and record fields vary; no publication-type, date, or abstract filter was applied to the original API query. Abstracts were later filtered locally for reuse, and missing text can change screening outcomes. Search results and license metadata can change over time.",
+  "original_corpus_sha256": "8a6d3d58e96b0f6ad54e7be3dcecfbd42d52e85cecff675df64a635f85bb6f24",
+  "raw_response_retention": "The original uncompressed HTTP response SHA-256 is preserved, but no raw response body is retained. The original gzip archive was deleted; its recorded gzip SHA-256 is historical only. A digest cannot reconstruct the response or independently establish its contents.",
+  "license_screening": {
+    "policy": "Keep a cleaned abstract only when the same Crossref item has a valid DOI and explicitly discloses an exact creativecommons.org CC BY (versions 1.0, 2.0, 2.5, 3.0, 4.0) or CC0 1.0 license URL in the standard license or legalcode form. Exclude NC, ND, other terms and ambiguous URLs. The license content-version must be vor, unspecified, or absent; TDM-only and accepted-manuscript-only entries are not used. Any supplied start date must be parseable and not in the future. Record the deposited URL for attribution. Metadata is not proof that the license covers the abstract or all third-party content; users must verify applicability and comply with all terms, including attribution.",
+    "source": "The original query did not select license. A later same-query Crossref request selected DOI, abstract and license. The supplementary page supplied evidence only and did not replace the originally captured records.",
+    "matching_policy": "Require a valid DOI unique in both original corpus and supplementary page, plus exact equality of the cleaned, nonblank original and supplementary abstract before considering the supplementary license; otherwise withhold.",
+    "supplementary_request": {
+      "source": "Crossref",
+      "endpoint": "https://api.crossref.org/works",
+      "request_method": "GET",
+      "parameters": {
+        "query": "universal basic income policy evaluation employment outcomes",
+        "rows": 50,
+        "select": "DOI,abstract,license"
+      },
+      "request_url": "https://api.crossref.org/works?query=universal+basic+income+policy+evaluation+employment+outcomes&rows=50&select=DOI%2Cabstract%2Clicense",
+      "request_started_at_utc": "2026-11-10T07:42:21Z",
+      "retrieved_at_utc": "2026-11-10T07:42:27Z",
+      "request_attempts": 1,
+      "returned": 50,
+      "total_matches": 5477716,
+      "raw_response_sha256": "5b8565e8b5bc6a42637c887907b8c66151dd2ac475ce70987e7841c38618eed3",
+      "raw_response_file": null,
+      "raw_response_retention": "Hash only; no unfiltered supplementary raw response body is retained. A hash cannot reconstruct the response or independently prove its contents."
+    },
+    "original_corpus_abstracts_recorded": 14,
+    "unique_doi_matches": 50,
+    "matching_cleaned_abstracts": 14,
+    "retained_abstracts": 4,
+    "recorded_abstracts_withheld_reuse_unconfirmed": 10,
+    "missing_or_reuse_unconfirmed": 46,
+    "included_records_with_licensed_abstract": 3,
+    "retained_license_evidence": [
+      {
+        "doi": "10.1017/s0047279423000582",
+        "abstract_sha256": "f8385d2ef0face32d1bc20f014c745611d7e37bf6d41687f8430a8b5acd5c4b9",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2023,
+                12,
+                7
+              ]
+            ],
+            "date-time": "2023-12-07T00:00:00Z",
+            "timestamp": 1701907200000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.21203/rs.3.rs-2322594/v1",
+        "abstract_sha256": "6bb9596c968a9b6dd44eda56847799b0c602c468d53c063bb4ba76491236e0ca",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2022,
+                12,
+                2
+              ]
+            ],
+            "date-time": "2022-12-02T00:00:00Z",
+            "timestamp": 1669939200000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.61173/ihcs10922",
+        "abstract_sha256": "7d5239fdfb16993335ca8da73978529132d4ce5864b87920872ada69bdb5c704",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2026,
+                10,
+                1
+              ]
+            ],
+            "date-time": "2026-10-01T00:00:00Z",
+            "timestamp": 1790812800000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.1007/978-3-030-75706-9_3",
+        "abstract_sha256": "8716e63b95ce802f144f0da3b434f9d2be39e03a9ef285d6fbbe99f5eed5f373",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0",
+          "content-version": "vor",
+          "start": {
+            "date-parts": [
+              [
+                2021,
+                11,
+                20
+              ]
+            ],
+            "date-time": "2021-11-20T00:00:00Z",
+            "timestamp": 1637366400000
+          },
+          "delay-in-days": 323
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      }
+    ]
+  }
+}

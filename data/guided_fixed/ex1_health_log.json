@@ -1,0 +1,315 @@
+{
+  "case_key": "ex1_health",
+  "source": "Crossref",
+  "endpoint": "https://api.crossref.org/works",
+  "retrieved_at_utc": "2026-11-10T07:35:24Z",
+  "query": "health inequalities diabetes care socioeconomic",
+  "parameters": {
+    "query": "health inequalities diabetes care socioeconomic",
+    "rows": 50,
+    "select": "DOI,title,author,published,container-title,abstract,reference"
+  },
+  "request_url": "https://api.crossref.org/works?query=health+inequalities+diabetes+care+socioeconomic&rows=50&select=DOI%2Ctitle%2Cauthor%2Cpublished%2Ccontainer-title%2Cabstract%2Creference",
+  "request_method": "GET",
+  "request_attempts": 1,
+  "pages_fetched": 1,
+  "pagination": "First page only; no additional pages requested.",
+  "scope": "Provider-specific plain-text relevance search; no Boolean interpretation assumed.",
+  "filters": [],
+  "returned": 50,
+  "total_matches": 7279463,
+  "possibly_truncated": true,
+  "field_coverage": {
+    "DOI": 50,
+    "Title": 50,
+    "Year": 40,
+    "Authors": 42,
+    "Venue": 31,
+    "Abstract": 10,
+    "Abstract_License": 10,
+    "References": 20
+  },
+  "corpus_file": "ex1_health_corpus.csv",
+  "corpus_sha256": "1f2ca835c3fde84bbc42326c8b123b3efddab4f6c33706dedf339548bda71418",
+  "raw_response_file": null,
+  "raw_response_sha256": "6cc0ef4451ced52f6a872706c232baa9ad7c4450bde537406020bffa4e897ffa",
+  "raw_response_gzip_sha256": "a5e755d7e9a364acac4bf8a2c523810dc6c6cd853241ea87cb541ec1c968136f",
+  "screening": {
+    "method": "Case-insensitive, whitespace-normalized substring match on title or abstract: at least one inclusion term and no exclusion term. Human review is required. Calculated after abstract reuse filtering; missing or reuse-unconfirmed text cannot match.",
+    "inclusion_terms": [
+      "diabetes",
+      "hypertension",
+      "cardiovascular",
+      "chronic disease"
+    ],
+    "exclusion_terms": [],
+    "matching_records": 13,
+    "original_pre_license_filter_matching_records": 13,
+    "excluded_records": 37
+  },
+  "field_notes": {
+    "References": "JSON array of unique explicit reference DOIs, normalized as doi: identifiers; a blank means no usable DOI was supplied, not that the work has no references. Other raw reference entries are not retained.",
+    "Concepts": "Blank: not supplied by this Crossref request.",
+    "Citations": "Blank: not supplied by this Crossref request.",
+    "Abstract": "JATS/XML tags were stripped for display. A blank means missing or reuse-unconfirmed; it does not establish that the provider lacked an abstract. Withholding may affect teaching-screen decisions.",
+    "Abstract_License": "URL disclosed by the DOI- and abstract-matched supplementary record for the retained abstract. Use the title, authors and DOI for attribution; independently verify applicability and terms."
+  },
+  "license": "Crossref bibliographic metadata and abstracts may have different rights. Abstracts can retain publisher or author copyright; do not assume they are CC0. The deposited license metadata is an indicator, not independent verification of rights or scope. Attribute CC BY material and verify the applicable license and any third-party rights.",
+  "license_info_url": "https://www.crossref.org/documentation/retrieve-metadata/",
+  "limitations": "A single bounded relevance-ranked page is a teaching sample, not an exhaustive or validated systematic-review search. Coverage and record fields vary; no publication-type, date, or abstract filter was applied to the original API query. Abstracts were later filtered locally for reuse, and missing text can change screening outcomes. Search results and license metadata can change over time.",
+  "original_corpus_sha256": "66efe43ceecc0130fd82783579c381e8f6ff784ca98a888f53a921d358e9c21f",
+  "raw_response_retention": "The original uncompressed HTTP response SHA-256 is preserved, but no raw response body is retained. The original gzip archive was deleted; its recorded gzip SHA-256 is historical only. A digest cannot reconstruct the response or independently establish its contents.",
+  "license_screening": {
+    "policy": "Keep a cleaned abstract only when the same Crossref item has a valid DOI and explicitly discloses an exact creativecommons.org CC BY (versions 1.0, 2.0, 2.5, 3.0, 4.0) or CC0 1.0 license URL in the standard license or legalcode form. Exclude NC, ND, other terms and ambiguous URLs. The license content-version must be vor, unspecified, or absent; TDM-only and accepted-manuscript-only entries are not used. Any supplied start date must be parseable and not in the future. Record the deposited URL for attribution. Metadata is not proof that the license covers the abstract or all third-party content; users must verify applicability and comply with all terms, including attribution.",
+    "source": "The original query did not select license. A later same-query Crossref request selected DOI, abstract and license. The supplementary page supplied evidence only and did not replace the originally captured records.",
+    "matching_policy": "Require a valid DOI unique in both original corpus and supplementary page, plus exact equality of the cleaned, nonblank original and supplementary abstract before considering the supplementary license; otherwise withhold.",
+    "supplementary_request": {
+      "source": "Crossref",
+      "endpoint": "https://api.crossref.org/works",
+      "request_method": "GET",
+      "parameters": {
+        "query": "health inequalities diabetes care socioeconomic",
+        "rows": 50,
+        "select": "DOI,abstract,license"
+      },
+      "request_url": "https://api.crossref.org/works?query=health+inequalities+diabetes+care+socioeconomic&rows=50&select=DOI%2Cabstract%2Clicense",
+      "request_started_at_utc": "2026-11-10T07:42:15Z",
+      "retrieved_at_utc": "2026-11-10T07:42:20Z",
+      "request_attempts": 1,
+      "returned": 50,
+      "total_matches": 7279463,
+      "raw_response_sha256": "ecf8ac1f1048031671fa8d8c26aaceedd8485b74d0d5a57b774a053def022ae1",
+      "raw_response_file": null,
+      "raw_response_retention": "Hash only; no unfiltered supplementary raw response body is retained. A hash cannot reconstruct the response or independently prove its contents."
+    },
+    "original_corpus_abstracts_recorded": 15,
+    "unique_doi_matches": 50,
+    "matching_cleaned_abstracts": 15,
+    "retained_abstracts": 10,
+    "recorded_abstracts_withheld_reuse_unconfirmed": 5,
+    "missing_or_reuse_unconfirmed": 40,
+    "included_records_with_licensed_abstract": 4,
+    "retained_license_evidence": [
+      {
+        "doi": "10.21203/rs.3.rs-9714842/v1",
+        "abstract_sha256": "e0364be8fbf52e4e0f24a129265073ea999bc85d538aea23d7d120e541403874",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2026,
+                11,
+                4
+              ]
+            ],
+            "date-time": "2026-11-04T00:00:00Z",
+            "timestamp": 1793750400000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.21203/rs.3.rs-19668/v3",
+        "abstract_sha256": "5142cbfe674c6f52b01abf7ae926bb13b61cac4af2378c53f142b8e3a7639f26",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2020,
+                8,
+                13
+              ]
+            ],
+            "date-time": "2020-08-13T00:00:00Z",
+            "timestamp": 1597276800000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.21203/rs.3.rs-19668/v2",
+        "abstract_sha256": "5142cbfe674c6f52b01abf7ae926bb13b61cac4af2378c53f142b8e3a7639f26",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2020,
+                6,
+                8
+              ]
+            ],
+            "date-time": "2020-06-08T00:00:00Z",
+            "timestamp": 1591574400000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.21203/rs.3.rs-19668/v1",
+        "abstract_sha256": "5bdcbe9f0f6340e649139bd403d8f05e0a0e8f3a8dd2b87004f023dca3ee34de",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2020,
+                3,
+                30
+              ]
+            ],
+            "date-time": "2020-03-30T00:00:00Z",
+            "timestamp": 1585526400000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.21203/rs.3.rs-19668/v4",
+        "abstract_sha256": "86450bc6264014027e3aa6be7ad19efc0b09e7fa2ef658e9269adad589b0caa4",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2020,
+                9,
+                23
+              ]
+            ],
+            "date-time": "2020-09-23T00:00:00Z",
+            "timestamp": 1600819200000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.21203/rs.3.rs-44307/v2",
+        "abstract_sha256": "dbdc3a5022054f0b344131ce9fbec1ad13c1fb704f74052868908b25905c9b3e",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2021,
+                1,
+                25
+              ]
+            ],
+            "date-time": "2021-01-25T00:00:00Z",
+            "timestamp": 1611532800000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.1186/s12889-023-16606-7",
+        "abstract_sha256": "bc24f291cfb36716f30803958f3a1f124277c6983a0a5592f290f1e1022b4d00",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0",
+          "content-version": "vor",
+          "start": {
+            "date-parts": [
+              [
+                2023,
+                8,
+                30
+              ]
+            ],
+            "date-time": "2023-08-30T00:00:00Z",
+            "timestamp": 1693353600000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.36502/2021/hcr.6195",
+        "abstract_sha256": "df1f058f245927186d4b22519d67386abd9ab028d5c36853d61d93d4dfe70d00",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "unspecified",
+          "start": {
+            "date-parts": [
+              [
+                2021,
+                7,
+                1
+              ]
+            ],
+            "date-time": "2021-07-01T00:00:00Z",
+            "timestamp": 1625097600000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.1186/s12889-022-13392-6",
+        "abstract_sha256": "f0b2fec934aa2af6cc54f135d6ec551ddac987a9b2bc050de72218501a3d5ca0",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0",
+          "content-version": "vor",
+          "start": {
+            "date-parts": [
+              [
+                2022,
+                5,
+                15
+              ]
+            ],
+            "date-time": "2022-05-15T00:00:00Z",
+            "timestamp": 1652572800000
+          },
+          "delay-in-days": 0
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      },
+      {
+        "doi": "10.1093/eurpub/ckac129.159",
+        "abstract_sha256": "211a672722ac0781e597c436b28eac18c080a481430f3ee82df1bb3d6fdcdc4b",
+        "license": {
+          "URL": "https://creativecommons.org/licenses/by/4.0/",
+          "content-version": "vor",
+          "start": {
+            "date-parts": [
+              [
+                2022,
+                10,
+                25
+              ]
+            ],
+            "date-time": "2022-10-25T00:00:00Z",
+            "timestamp": 1666656000000
+          },
+          "delay-in-days": 24
+        },
+        "supplementary_unique_doi_match": true,
+        "supplementary_cleaned_abstract_match": true
+      }
+    ]
+  }
+}

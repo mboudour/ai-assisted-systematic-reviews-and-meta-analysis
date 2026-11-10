@@ -1,0 +1,55 @@
+[
+  {
+    "key": "ex1_health",
+    "label": "Health Sciences: Health Inequalities in Chronic Disease Care",
+    "question": "What does the empirical literature say about socioeconomic health inequalities in the care and outcomes of patients with chronic diseases such as diabetes, hypertension, and cardiovascular disease?",
+    "query": "health inequalities diabetes care socioeconomic",
+    "inclusion_terms": [
+      "diabetes",
+      "hypertension",
+      "cardiovascular",
+      "chronic disease"
+    ],
+    "exclusion_terms": [],
+    "corpus_file": "ex1_health_corpus.csv",
+    "log_file": "ex1_health_log.json"
+  },
+  {
+    "key": "ex2_ubi",
+    "label": "Social Sciences: Universal Basic Income Policy Outcomes",
+    "question": "What are the empirically measured outcomes of Universal Basic Income programmes and pilots in terms of employment, poverty, and well-being?",
+    "query": "universal basic income policy evaluation employment outcomes",
+    "inclusion_terms": [
+      "basic income",
+      "guaranteed income"
+    ],
+    "exclusion_terms": [],
+    "corpus_file": "ex2_ubi_corpus.csv",
+    "log_file": "ex2_ubi_log.json"
+  },
+  {
+    "key": "ex3_microplastics",
+    "label": "Science / Engineering: Microplastic Pollution in Aquatic Environments",
+    "question": "What does the experimental literature report about the concentration, distribution, and ecological impact of microplastic pollution in aquatic environments?",
+    "query": "microplastics marine fish freshwater environmental health",
+    "inclusion_terms": [
+      "microplastic"
+    ],
+    "exclusion_terms": [],
+    "corpus_file": "ex3_microplastics_corpus.csv",
+    "log_file": "ex3_microplastics_log.json"
+  },
+  {
+    "key": "ex4_csr",
+    "label": "Management / Business: Corporate Social Responsibility and Firm Financial Performance",
+    "question": "What is the empirical evidence on the relationship between Corporate Social Responsibility activities and firm financial performance?",
+    "query": "corporate social responsibility firm financial performance empirical",
+    "inclusion_terms": [
+      "corporate social responsibility",
+      "csr"
+    ],
+    "exclusion_terms": [],
+    "corpus_file": "ex4_csr_corpus.csv",
+    "log_file": "ex4_csr_log.json"
+  }
+]

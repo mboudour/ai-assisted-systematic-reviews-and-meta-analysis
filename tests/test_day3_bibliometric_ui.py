@@ -172,27 +172,26 @@ class Day3BibliometricUITests(unittest.TestCase):
                          {"upload-A", "upload-B"})
         self.assertNotIn("Stale", " ".join(table.astype(str).to_numpy().flatten()))
 
-    def test_guided_snapshots_and_fixtures_are_explicitly_separate(self):
+    def test_guided_workflow_is_complete_and_does_not_touch_byod_state(self):
         app = AppTest.from_file(str(PAGE), default_timeout=90).run()
+        original = handoff_records()
+        app.session_state["byod_included_df"] = original.copy(deep=True)
         app.sidebar.radio[0].set_value("📌 Guided Examples").run()
         self.assert_ok(app)
-        for name in ("ex1_health", "ex2_ubi", "ex3_microplastics", "ex4_csr"):
-            self.assertEqual(app.selectbox(key=f"d3_biblio_kind_{name}").value, "Co-authorship")
-            self.assertIn("cached include-labelled snapshot", app.radio(key=f"d3_biblio_source_{name}").value)
-        self.assertIn("not the source of the Day 3 extraction fixture", captions(app))
-        self.assertIn("neither its search provenance nor the screening labels are verified", captions(app))
-        self.assertIn("No lineage to the fixture is inferred", captions(app))
-        before = len(app.get("iframe"))
-        app.selectbox(key="d3_biblio_kind_ex1_health").set_value("Bibliographic coupling").run()
+        self.assertEqual(len(app.expander), 4)
+        self.assertEqual(len(app.tabs), 16)
+        self.assertEqual(len(app.text_input), 0)
+        self.assertEqual(len(app.text_area), 0)
+        names = ("ex1_health", "ex2_ubi", "ex3_microplastics", "ex4_csr")
+        for number, name in enumerate(names, 1):
+            widget = app.selectbox(key=f"guided_day3_{name}_{number}_network_kind")
+            self.assertEqual(widget.value, "Co-authorship")
+            self.assertIn("Bibliographic coupling", widget.options)
+        pd.testing.assert_frame_equal(app.session_state["byod_included_df"], original)
+        app.selectbox(key="guided_day3_ex1_health_1_network_kind").set_value("Bibliographic coupling").run()
         self.assert_ok(app)
-        self.assertIn("No usable References data", infos(app))
-        self.assertEqual(len(app.get("iframe")), before - 1)
-        app.radio(key="d3_biblio_source_ex1_health").set_value("Day 3 extraction fixture").run()
-        app.selectbox(key="d3_biblio_kind_ex1_health").set_value("Co-authorship").run()
-        self.assert_ok(app)
-        self.assertIn("Using the illustrative Day 3 extraction fixture", captions(app))
-        self.assertIn("Usable author data: 0 of 15 selected records", captions(app))
-        self.assertIn("No usable Authors data", infos(app))
+        self.assertIn("Usable reference data:", captions(app))
+        pd.testing.assert_frame_equal(app.session_state["byod_included_df"], original)
 
     def test_renderer_failure_still_offers_link_download(self):
         with patch("day2_network_view.make_network_html", side_effect=ValueError("Local library unavailable")), \

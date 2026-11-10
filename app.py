@@ -51,15 +51,16 @@ st.markdown("---")
 # ── Navigation ─────────────────────────────────────────────────────────────────
 st.markdown("### How to Navigate")
 st.markdown("""
-Use the **sidebar** to select a day. Each day has guided examples plus a BYOD extension. The
-worked examples are connected by menus, but their checked-in inputs are teaching snapshots—not
-a verified historical end-to-end search.
+Use the **sidebar** to select a day, then choose either **Guided Examples** or **BYOD**.
+These are separate paths. Each guided example contains all stages, uses fixed, read-only
+settings, and shows how its results come from the same saved input records. BYOD is for
+participants who want to select providers, enter searches and criteria, and use their own data.
 
 | Day | Date | Theme | Main Objective |
 |-----|------|-------|----------------|
-| **Day 1** | June 10 | From Query to Corpus | Use search menus to inspect cached examples, try suggested searches, or retrieve/upload a corpus |
-| **Day 2** | June 11 | From Corpus to Included Studies | Review cached screening examples or run deterministic keyword screening on a supplied corpus |
-| **Day 3** | June 12 | From Studies to Evidence | Use illustrative teaching fixtures or carry a Day 2 BYOD included-studies CSV into extraction and synthesis |
+| **Day 1** | June 10 | From Query to Corpus | Explore fixed worked searches and saved records or retrieve/upload your own corpus |
+| **Day 2** | June 11 | From Corpus to Included Studies | Inspect fixed screening steps or configure screening on your own corpus |
+| **Day 3** | June 12 | From Studies to Evidence | Examine the worked extraction and descriptive synthesis or use your own included records |
 """)
 
 st.info("👈 Select a day from the sidebar to begin.")
@@ -78,7 +79,7 @@ with already included studies. The menus make those entry points visible without
 | **2. Deduplicate** | Clean the corpus | Inspect API results or uploaded records and download a corpus CSV/RIS; provider fields and coverage differ |
 | **3. Screen** | Triage and verify records | Upload a Day 1 CSV, enter inclusion/exclusion terms, run the deterministic heuristic, inspect the full screening log, and verify decisions manually |
 | **4. Extract** | Pull structured fields from study inputs | Upload included studies, choose a schema, and use the available NLP/AI extraction options; extracted values are drafts for verification |
-| **5. Synthesize & Map** | Visualise and export | Produce teaching or BYOD charts, PRISMA-style diagrams, networks, tables, and downloadable outputs; interpret counts according to their provenance |
+| **5. Synthesize & Map** | Visualise and export | Produce teaching or BYOD charts, networks, tables, and downloadable outputs; interpret counts according to their provenance |
 """)
 
 st.markdown("---")
@@ -101,23 +102,20 @@ st.markdown("---")
 # ── Four Guided Case Studies ───────────────────────────────────────────────────
 st.markdown("### Four Guided Case Studies")
 st.markdown("""
-The Day 1 guided menu shows four discipline-spanning examples. Opening an example loads its
-cached teaching corpus and offers a **clickable practice search** that suggests query text,
-years, publication types, and other menu settings in the BYOD search form. These suggestions are
-new practice inputs, not the original provenance of the cached file.
-
-The cached Day 1/Day 2 snapshots do **not** establish a verified historical query string, search
-date, filters, or API response. Day 3 guided pages likewise use illustrative/synthetic teaching
-fixtures and narratives; they are not a live retrieval, screening, or empirical synthesis run.
-For a reproducible review, run your own search, retain its log, and carry the resulting files
-through the BYOD path.
+Each guided example is self-contained: it shows the saved Crossref search and retrieved records,
+fixed screening criteria and decisions, extraction from the included records, and a descriptive
+synthesis and networks. The same saved records are used across the steps. Queries and criteria are
+read-only; visualization controls let you explore a network without changing the example's inputs.
+The examples are small, bounded search samples and their automatic screening is a teaching heuristic,
+not a validated systematic review or a substitute for human judgment. Descriptive synthesis does
+not create unverified clinical or financial effect sizes.
 
 | # | Discipline | Topic | Worked teaching emphasis |
 |---|-----------|-------|---------------------------|
-| 1 | 🏥 **Health Sciences** | Health Inequalities in Chronic Disease Care | PICO framing and Risk Ratio illustration |
-| 2 | 🏛️ **Social Sciences** | Universal Basic Income (UBI) Policy Outcomes | SPIDER framing and narrative synthesis illustration |
-| 3 | ⚗️ **Science / Engineering** | Microplastic Pollution in Aquatic Environments | Concentration summary and chart illustration |
-| 4 | 💼 **Management / Business** | Corporate Social Responsibility & Firm Financial Performance | Correlation/meta-analysis illustration |
+| 1 | 🏥 **Health Sciences** | Health Inequalities in Chronic Disease Care | Fixed search, screening, extraction and descriptive synthesis |
+| 2 | 🏛️ **Social Sciences** | Universal Basic Income (UBI) Policy Outcomes | Fixed search, screening, extraction and descriptive synthesis |
+| 3 | ⚗️ **Science / Engineering** | Microplastic Pollution in Aquatic Environments | Fixed search, screening, extraction and descriptive synthesis |
+| 4 | 💼 **Management / Business** | Corporate Social Responsibility & Firm Financial Performance | Fixed search, screening, extraction and descriptive synthesis |
 """)
 
 st.markdown("---")
@@ -142,7 +140,7 @@ to up to 60 per hour; users of one hosted app may share that limit. The app retr
 number of pages and applies no year, specific publication-type or abstract filters. Coverage varies,
 metadata and abstracts may be missing, and publication results can include non-peer-reviewed work.
 The search covers broad metadata, not just titles and abstracts. Verify records and acknowledge
-OpenAIRE as the data source. Each Day 1 OpenAIRE practice search and BYOD search repeats these caveats.
+OpenAIRE as the data source. The app repeats these caveats when OpenAIRE is used.
 
 **OpenAlex credentials:** each participant supplies their own email-verified OpenAlex key and
 email in masked, session-specific inputs. The app sends the key to OpenAlex only as an HTTPS
@@ -162,15 +160,15 @@ records (exploratory only). Co-occurrence links count records containing both it
 are not disambiguated.
 
 **Day 3 BYOD:** Carry forward the Day 2 included-studies CSV, choose the extraction schema, and
-use the available NLP or optional AI extraction route. Generate tables, charts, networks, and
-PRISMA-style outputs as appropriate. These are analysis aids: confirm extracted fields, effect
-sizes, denominators, and flow counts against the source studies. The guided Day 3 route is
-illustrative/synthetic; only the BYOD route represents a participant-supplied pipeline.
+use the available NLP or optional AI extraction route. Additional AI instructions are editable.
+Generate tables, charts and networks as appropriate. These are analysis aids: confirm extracted fields, effect
+sizes, denominators, and flow counts against the source studies. The guided route uses its own
+fixed teaching samples; BYOD uses participant-supplied data and settings.
 
 **Co-authorship and bibliographic coupling on all days:** Co-authorship uses the supplied author
 names. Bibliographic coupling connects studies by the number of reference identifiers they share.
-New OpenAlex and Crossref searches retain reference IDs when available. The saved teaching
-snapshots and some other inputs lack reference lists, and missing metadata can leave links absent;
+New OpenAlex and Crossref searches retain reference IDs when available. Some records and inputs
+lack reference lists, and missing metadata can leave links absent;
 the app explains this rather than drawing an empty coupling network. Identifier namespaces are
 not automatically mapped, and the network node cap can bias which studies are displayed.
 """)

@@ -1,8 +1,7 @@
 """
 Day 1 — From Query to Corpus
-Five guided examples (Health, Social Science, Engineering, Business, Zotero) + BYOD extension.
-Guided examples load exclusively from pre-cached CSVs — no live API calls required.
-All outputs render immediately when the expander is opened — no button click needed.
+Four self-contained guided cases and a separate BYOD workflow.
+Guided cases use captured Crossref results without live API calls.
 No coding required.
 
 APIs covered: OpenAlex, Crossref, Europe PMC, and OpenAIRE
@@ -12,7 +11,6 @@ Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network lin
 """
 
 import io
-import os
 import re
 import json
 import time
@@ -47,8 +45,6 @@ st.set_page_config(
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
-CACHE_DIR = _repo_root / "data" / "cache"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from openalex_client import OpenAlexError, fetch_works
@@ -56,171 +52,10 @@ from openaire_client import OpenAIREError, fetch_openaire
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
 from day2_networks import build_network
 from day2_network_view import make_network_html
+import guided_workflow
 
-# ── Guided example definitions ─────────────────────────────────────────────────
-GUIDED_EXAMPLES = [
-    {
-        "label": "🏥 Example 1 — Health Sciences: Health Inequalities in Chronic Disease Care",
-        "cache_file": "day1_ex1_health_corpus.csv",
-        "session_key": "ex1_health",
-        "source": "OpenAlex",
-        "query": "health inequalities diabetes care socioeconomic",
-        "year_from": 2000,
-        "year_to": 2024,
-        "pub_types": ["journal-article"],
-        "description": """
-**Research question:** What does the empirical literature say about socioeconomic health
-inequalities in the care and outcomes of patients with chronic diseases such as diabetes,
-hypertension, and cardiovascular disease?
-
-**Search strategy:** Boolean combination of *health inequalities*, *socioeconomic* factors,
-and *diabetes care* — a standard PICO-informed search on OpenAlex.
-
-**Why this topic?** One of the most active areas of systematic review in health sciences.
-The corpus supports a full PICO extraction and meta-analysis on Day 3.
-        """,
-    },
-    {
-        "label": "🏛️ Example 2 — Social Sciences: Universal Basic Income (UBI) Policy Outcomes",
-        "cache_file": "day1_ex2_ubi_corpus.csv",
-        "session_key": "ex2_ubi",
-        "source": "OpenAlex",
-        "query": "universal basic income policy evaluation employment outcomes",
-        "year_from": 2010,
-        "year_to": 2024,
-        "pub_types": ["journal-article", "book-chapter"],
-        "description": """
-**Research question:** What are the empirically measured outcomes of Universal Basic Income
-(UBI) programmes and pilots in terms of employment, poverty, and well-being?
-
-**Search strategy:** Targets empirical policy evaluations of UBI, excluding opinion pieces,
-editorials, and grey literature.
-
-**Why this topic?** UBI is one of the most actively debated policy interventions in the
-social sciences, spanning economics, sociology, and political science.
-        """,
-    },
-    {
-        "label": "⚗️ Example 3 — Science / Engineering: Microplastic Pollution in Aquatic Environments",
-        "cache_file": "day1_ex3_microplastics_corpus.csv",
-        "session_key": "ex3_microplastics",
-        "source": "OpenAlex",
-        "query": "microplastics aquatic marine pollution concentration",
-        "year_from": 2010,
-        "year_to": 2024,
-        "pub_types": ["journal-article"],
-        "description": """
-**Research question:** What does the experimental literature report about the concentration,
-distribution, and ecological impact of microplastic pollution in aquatic environments?
-
-**Search strategy:** Combines *microplastics* with *aquatic* or *marine* environments,
-targeting experimental and observational studies.
-
-**Why this topic?** One of the fastest-growing areas of environmental systematic review,
-supporting a quantitative synthesis of concentration estimates on Day 3.
-        """,
-    },
-    {
-        "label": "💼 Example 4 — Management / Business: CSR and Firm Financial Performance",
-        "cache_file": "day1_ex4_csr_corpus.csv",
-        "session_key": "ex4_csr",
-        "source": "OpenAlex",
-        "query": "corporate social responsibility firm financial performance empirical",
-        "year_from": 2000,
-        "year_to": 2024,
-        "pub_types": ["journal-article"],
-        "description": """
-**Research question:** What is the empirical evidence on the relationship between Corporate
-Social Responsibility (CSR) activities and firm financial performance (ROA, ROE, Tobin's Q)?
-
-**Search strategy:** Targets empirical studies measuring the CSR–financial performance link,
-excluding purely theoretical or conceptual papers.
-
-**Why this topic?** One of the most heavily meta-analysed topics in management research,
-supporting a pooled effect size computation on Day 3.
-        """,
-    },
-    {
-        "label": "🗂️ Example 5 — Zotero Library: AI-Assisted Systematic Reviews (Mixed Sources)",
-        "cache_file": "day1_ex5_zotero_corpus.csv",
-        "session_key": "ex5_zotero",
-        "source": "Zotero",
-        "query": "AI-assisted systematic reviews (researcher's Zotero library)",
-        "year_from": None,
-        "year_to": None,
-        "pub_types": ["All types (Zotero library)"],
-        "description": """
-**What this example demonstrates:** Instead of querying an open API, this example shows
-what happens when a researcher connects their existing **Zotero library** to the pipeline.
-
-**Scenario:** A researcher has been collecting papers on *AI-assisted systematic reviews*
-in Zotero over several months — a mix of journal articles, conference papers, and preprints
-from multiple sources (PubMed, Scopus, Web of Science, arXiv). They connect their Zotero
-library here, and the app retrieves all items, deduplicates them, and feeds them into the
-same pipeline as the API-based examples.
-
-**Why Zotero?** Many researchers already maintain a reference manager. Zotero integration
-means you do not need to re-search databases — you can start the systematic review pipeline
-from your existing collection, regardless of which databases you used to build it.
-
-**Input flexibility:** The BYOD section below also supports direct Zotero connection using
-your personal User ID and API Key (available from your Zotero account settings).
-        """,
-    },
-]
-
-# These are new practice searches, not verified historical retrieval queries.
-PRACTICE_SEARCHES = {
-    "ex1_health": '("health inequality" OR "health inequalities" OR socioeconomic) AND (diabetes OR "chronic disease")',
-    "ex2_ubi": '("universal basic income" OR "basic income") AND (employment OR poverty OR wellbeing)',
-    "ex3_microplastics": '(microplastic OR microplastics) AND (aquatic OR marine)',
-    "ex4_csr": '("corporate social responsibility" OR CSR) AND ("financial performance" OR profitability)',
-}
-
-OPENAIRE_PRACTICE_SEARCHES = {
-    "ex1_health": '("health inequality" OR "health inequalities" OR "socioeconomic") AND ("diabetes" OR "chronic disease")',
-    "ex2_ubi": '("universal basic income" OR "basic income") AND ("employment" OR "poverty" OR "wellbeing")',
-    "ex3_microplastics": '("microplastic" OR "microplastics") AND ("aquatic" OR "marine")',
-    "ex4_csr": '("corporate social responsibility" OR "CSR") AND ("financial performance" OR "profitability")',
-}
 OPENAIRE_CHOICE = "OpenAIRE (multidisciplinary; no participant key)"
 
-def load_practice_search(example, provider="OpenAlex"):
-    """Put the example's suggested settings into the actual BYOD widgets."""
-    st.session_state["day1_section"] = "🔎 BYOD — Your Own Query"
-    if provider == "OpenAIRE":
-        st.session_state["byod_api_widget"] = OPENAIRE_CHOICE
-        st.session_state["byod_query_widget"] = OPENAIRE_PRACTICE_SEARCHES[example["session_key"]]
-        return
-    st.session_state["byod_api_widget"] = "OpenAlex (recommended for most disciplines)"
-    st.session_state["byod_query_widget"] = PRACTICE_SEARCHES[example["session_key"]]
-    st.session_state["byod_scope_widget"] = "Title and abstract (no stemming)"
-    st.session_state["byod_abstract_widget"] = True
-    st.session_state["byod_use_year"] = True
-    st.session_state["byod_yr_slider"] = (example["year_from"], example["year_to"])
-    st.session_state["byod_type_widget"] = [
-        "article" if value == "journal-article" else value
-        for value in example["pub_types"]
-    ]
-
-def send_snapshot_to_day2(df, example):
-    """Carry the exact cached file forward without inventing its provenance."""
-    st.session_state.pop("byod_screening_run", None)
-    st.session_state.pop("byod_included_df", None)
-    st.session_state["byod_df"] = df.copy()
-    st.session_state["byod_api"] = "Cached teaching snapshot (historical retrieval not documented)"
-    st.session_state["byod_query"] = "Historical search not recorded"
-    st.session_state["byod_year_from"] = None
-    st.session_state["byod_year_to"] = None
-    st.session_state["byod_pub_types"] = []
-    snapshot = CACHE_DIR / example["cache_file"]
-    st.session_state["byod_log"] = {
-        "source": "cached teaching snapshot",
-        "snapshot_file": example["cache_file"],
-        "snapshot_sha256": hashlib.sha256(snapshot.read_bytes()).hexdigest(),
-        "records": len(df),
-        "historical_query_and_filters": "not recorded in the repository",
-    }
 
 def forget_openalex_credentials():
     """Clear only this browser session's masked credential widgets."""
@@ -601,18 +436,6 @@ keywords. **Drag nodes, scroll to zoom, hover for community and frequency detail
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def load_cached_corpus(cache_file):
-    """Load a pre-cached corpus CSV. Returns (DataFrame, error_message)."""
-    path = CACHE_DIR / cache_file
-    if path.exists():
-        try:
-            df = pd.read_csv(path)
-            return df, None
-        except Exception as e:
-            return None, f"Could not read cached file: {e}"
-    return None, f"Cache file not found: {cache_file}"
-
-
 def _extract_tfidf_keywords(texts, top_n=8):
     """Extract top TF-IDF keywords per document from a list of abstract texts.
     Returns a list of lists (one list of keyword strings per document).
@@ -897,7 +720,7 @@ def render_bibliometric_networks(df, session_key):
         st.caption(f"Usable authors: {graph['records_with_data']} of {graph['total_records']} records. Shown: {len(graph['nodes'])} authors and {len(graph['edges'])} links.")
     if not graph["edges"]:
         if kind == "coupling" and not graph["records_with_data"]:
-            st.info("No usable reference identifiers are available in these records, so bibliographic coupling cannot be calculated. The existing teaching snapshots may not contain reference lists. Search OpenAlex or Crossref using this updated app, or upload a CSV with a References column; references are never invented.")
+            st.info("No usable reference identifiers are available in these records, so bibliographic coupling cannot be calculated. Search OpenAlex or Crossref, or upload a CSV with a References column; references are never invented.")
         elif kind == "coupling":
             st.info(f"No study pair shares at least {minimum} recognized reference ID(s) among the shown studies. Missing references, incompatible identifier namespaces, or the node cap may hide matches; lower the threshold or increase the node limit where possible.")
         else:
@@ -994,7 +817,7 @@ def display_corpus(df, source_label, session_key):
             key=f"dl_ris_{session_key}",
         )
 
-    st.info("For Day 2, carry your live BYOD results forward in this session, or download the CSV and upload it in Day 2. For a guided snapshot, use its Day 2 handoff button above.")
+    st.info("For Day 2 BYOD, use a corpus saved from a live search or explicitly sent from a CSV upload in this session, or download this CSV and upload it in Day 2 BYOD.")
 
 
 # ── Live API helpers (BYOD only) ───────────────────────────────────────────────
@@ -1333,6 +1156,12 @@ and how it facilitates reproducibility. Because APIs evolve and results may chan
 time, reproducibility requires logging queries and timestamps — a practice the app
 supports automatically.
 
+The guided path presents four complete cases based on recorded, bounded Crossref searches.
+Each case shows its retrieval, fixed keyword screening, source-linked extraction, descriptive
+synthesis and bibliometric maps together. Crossref relevance matching is not guaranteed to
+interpret a query as Boolean, and a bounded result set is not an exhaustive review search.
+The guided cases are independent of the BYOD workflow.
+
 ### Open APIs Covered
 
 | API | Discipline Focus | Strengths |
@@ -1363,7 +1192,8 @@ Participants do not need to start from a Boolean query. The BYOD section accepts
 
 ### Visualisation Options
 
-The available maps depend on the fields supplied for a guided example or your own corpus:
+The guided cases show the full workflow together. In BYOD, available maps depend on the
+fields supplied with your corpus:
 
 1. **Interactive keyword co-occurrence network (pyvis)** — built directly in this app.
    Drag nodes, scroll to zoom, hover for details. Instantly shows which topics cluster together.
@@ -1384,54 +1214,12 @@ Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Your Own Qu
     """)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# GUIDED EXAMPLES — all render immediately, no button required
+# GUIDED EXAMPLES
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif section == "📌 Guided Examples":
     st.title("📌 Day 1 — Guided Examples")
-    st.markdown("""These examples display **saved teaching snapshots**, not live searches.
-The first four contain OpenAlex identifiers. The fifth is a Zotero-style teaching fixture.
-Expand an example to inspect the records, visualisations and downloads.
-
-**Important provenance limitation:** the repository does not contain the original
-search logs, retrieval dates or filters for these snapshots. Earlier labels for dates
-and publication types do not always match the files. We cannot reconstruct or verify
-the historical searches. The practice queries below are new suggestions, not claims
-about how the existing snapshots were created.""")
-
-    for ex in GUIDED_EXAMPLES:
-        st.markdown("---")
-        with st.expander(ex["label"], expanded=False):
-            st.caption(f"Saved input file: data/cache/{ex['cache_file']}")
-            if ex["source"] != "Zotero":
-                st.markdown("**New suggested practice search:**")
-                st.code(PRACTICE_SEARCHES[ex["session_key"]])
-                st.caption(
-                    f"Suggested BYOD settings: title and abstract, abstract required, "
-                    f"{ex['year_from']}–{ex['year_to']}; types: "
-                    f"{', '.join('article' if p == 'journal-article' else p for p in ex['pub_types'])}. "
-                    "These are practice settings, not verified settings for the snapshot."
-                )
-                st.button("Use this practice search in BYOD", key=f"practice_{ex['session_key']}",
-                          on_click=load_practice_search, args=(ex,))
-                st.caption("This OpenAlex button fills the BYOD search menus; run it with your OpenAlex key. Live results may differ from this snapshot.")
-                st.markdown("**Alternative OpenAIRE practice search** (new suggestion, not the historical snapshot search):")
-                st.code(OPENAIRE_PRACTICE_SEARCHES[ex["session_key"]])
-                st.warning(OPENAIRE_LIMITATIONS)
-                st.caption("The OpenAIRE practice search uses the same topic, but its broad search and lack of year/type/abstract filters differ from the OpenAlex settings above.")
-                st.button("Use OpenAIRE practice search in BYOD", key=f"openaire_practice_{ex['session_key']}",
-                          on_click=load_practice_search, args=(ex, "OpenAIRE"))
-            else:
-                st.info("This is a Zotero-style illustrative fixture, not a verified export from a named user's live library. There is no OpenAlex search for it.")
-
-            df, err = load_cached_corpus(ex["cache_file"])
-            if err:
-                st.error(f"❌ {err}")
-            else:
-                if st.button("Use this exact snapshot in Day 2 BYOD", key=f"send_{ex['session_key']}"):
-                    send_snapshot_to_day2(df, ex)
-                    st.success("Snapshot copied to this browser session. Open Day 2 → BYOD to screen it; the historical query is marked as unknown.")
-                display_corpus(df, ex["label"], ex["session_key"])
+    guided_workflow.render_guided_examples("day1")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BYOD — BRING YOUR OWN DATA
@@ -1609,7 +1397,10 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                     except Exception:
                         st.error("Unable to retrieve or process the results. Check the selected provider and query, then try again. No credentials are included in this message.")
 
-        if "byod_df" in st.session_state and st.session_state["byod_df"] is not None:
+        _legacy_snapshot = st.session_state.get("byod_log", {}).get("source") == "cached teaching snapshot"
+        if _legacy_snapshot:
+            st.info("A teaching snapshot left by an older version is not used as a BYOD result. Run your own search or upload your own corpus.")
+        if "byod_df" in st.session_state and st.session_state["byod_df"] is not None and not _legacy_snapshot:
             df = st.session_state["byod_df"]
             _yr_from = st.session_state.get("byod_year_from")
             _yr_to = st.session_state.get("byod_year_to")
@@ -1622,7 +1413,7 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                 f"**Query:** `{st.session_state.get('byod_query', '')}`  \n"
                 f"**Time period:** {_period} &nbsp;|&nbsp; **Publication types:** {_types_disp}"
             )
-            st.caption("Results below are from the last successfully completed search or selected snapshot, not from unsubmitted changes to the menus.")
+            st.caption("Results below are from the last successfully completed search or saved BYOD corpus, not from unsubmitted changes to the menus.")
             if st.session_state.get("byod_api") == "OpenAIRE":
                 st.warning(OPENAIRE_LIMITATIONS)
             if df.empty:
@@ -1648,7 +1439,7 @@ If you have already searched traditional databases (PubMed, Scopus, Web of Scien
 CINAHL, PsycINFO, etc.) and exported the results as a **RIS** file,
 upload it here. The app will parse the file, deduplicate the records, and produce
 the same corpus preview, year chart, interactive keyword co-occurrence network,
-VOSviewer bibliometric network export, and download options as the guided examples.
+VOSviewer bibliometric network export, and download options for your own corpus.
         """)
         uploaded_file = st.file_uploader(
             "Upload your RIS file",

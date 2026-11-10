@@ -1,196 +1,84 @@
 # AI-Assisted Systematic Reviews and Meta-Analysis
 
-**instats Seminar — June 10, 11, and 12, 2026**
+**instats seminar — June 10, 11 and 12, 2026**
+
 **Instructor:** Moses Boudourides, Data Science Graduate Program, School of Professional Studies, Northwestern University
 
-> ### 📋 Registration
-> **[Register now at instats.org](https://instats.org/seminar/ai-assisted-systematic-reviews-and-meta)**
+[Open the Streamlit app](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app) | [Seminar registration](https://instats.org/seminar/ai-assisted-systematic-reviews-and-meta)
 
-[![Streamlit App](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app) [Streamlit App](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app)
+## Two separate ways to use the app
 
----
+The workshop is no-code: choose a day from the sidebar, then select one of two **independent** paths.
 
-## Overview
+1. **Guided Examples:** Explore a complete, fixed teaching example, from a recorded search and saved corpus through screening, extraction, descriptive synthesis and networks. Search queries and criteria are displayed read-only; network display settings can be adjusted. Guided examples do not send data or settings to BYOD.
+2. **BYOD — Bring Your Own Data:** Use your own research question or files and configure the available providers, search settings, screening criteria, extraction options and visualizations. Your Day 1 BYOD corpus can be carried to Day 2 BYOD, and included studies can be carried to Day 3 BYOD.
 
-This repository is the companion resource for the three-day instats seminar
-[AI-Assisted Systematic Reviews and Meta-Analysis](https://instats.org/seminar/ai-assisted-systematic-reviews-and-meta).
+Both paths require critical appraisal. Automated screening and extraction are aids, not a substitute for independent review.
 
-The seminar is a **no-code** research methods workshop: participants are not expected to write or
-modify a single line of code. Operations are performed through a
-[Streamlit application](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app)
-that exposes menus for cached teaching examples, live or uploaded Day 1 inputs, screening, and
-Day 3 extraction/synthesis.
+## Guided examples
 
-The repaired workflow is deliberately explicit about provenance. The checked-in Day 1 and Day 2
-files are cached teaching snapshots. They do not establish the historical query string, search
-date, filters, or API response that produced them. Day 1's clickable practice searches are new
-suggestions that load proposed query/menu settings into the BYOD form; they are useful exercises,
-not claims about the original cached retrieval. Guided Day 3 pages use illustrative/synthetic
-teaching fixtures rather than a live empirical end-to-end run.
+Each of the four case studies appears in the guided section of every day. Expand a case to inspect **all of its stages** without leaving the guided path:
 
----
+| Case | Topic |
+|---|---|
+| Health Sciences | Health inequalities in chronic disease care |
+| Social Sciences | Universal basic income and policy outcomes |
+| Science / Engineering | Microplastic pollution in aquatic environments |
+| Management / Business | Corporate social responsibility and financial performance |
 
-## Seminar Structure
+The examples use small saved Crossref samples with their actual query and retrieval metadata. Crossref's `query` is a relevance search, not guaranteed Boolean search; a bounded first-page sample is not an exhaustive literature search, and a later run may return different records. The displayed fixed screening decisions are a transparent, simplified keyword heuristic, not human-verified eligibility decisions, independent active-learning results or an LLM screening run. Extraction and descriptive synthesis use the included records from the same example; no clinical outcomes, effect sizes, validated recall, or meta-analysis results are invented. The record snapshots and logs are stored under `data/guided_fixed/`; the older historical teaching fixtures remain in the repository but are not the source of these new examples.
 
-| Day | Date | Theme | Main Objective |
-|-----|------|-------|----------------|
-| **Day 1** | June 10, 2026 | From Query to Corpus | Inspect cached examples, try suggested searches, or collect/upload a corpus via the available menus |
-| **Day 2** | June 11, 2026 | From Corpus to Included Studies | Review cached labels or run deterministic keyword screening on a supplied corpus, followed by human verification |
-| **Day 3** | June 12, 2026 | From Studies to Evidence | Explore illustrative teaching outputs or continue a Day 2 BYOD included-studies CSV into extraction and synthesis |
+To reduce redistribution of copyrighted material, the saved samples retain abstracts only where Crossref metadata report a CC BY or CC0 license; other abstracts have been withheld. A missing abstract therefore does **not** necessarily mean the provider lacked one. The original response body is not published; its hash and the later license-check details are logged. Metadata about a license is not conclusive: verify its applicability, attribution requirements and the original source before further reuse.
 
-The intended live handoff is **Day 1 BYOD → Day 2 BYOD → Day 3 BYOD**. Save the files and logs
-from each step; the guided path is for teaching and does not reconstruct historical provenance.
+Each example also shows a **precomputed AI extraction illustration for one included record**: its original source, exact fixed prompt, model and extracted quotations. No new AI call is made when a participant opens it. Exact quotation matching does not establish that a quotation is an appropriate interpretation; check the source and context. The AI illustration is not an extraction of every included record or a full evidence synthesis.
 
----
+Each case can also display co-authorship and bibliographic-coupling networks when its metadata support them. Missing author or reference information is reported rather than fabricated.
 
-## Four Guided Case Studies
+## BYOD — your own configurable workflow
 
-The Day 1 **Guided Examples** menu contains four discipline-spanning worked examples. Opening an
-example loads its cached corpus and provides a clickable **practice search** suggestion tied to the
-search menus (query text, years, publication types, and related settings). These practice searches
-are suggestions, not verified historical searches for the cached files.
+### Day 1: Build a corpus
 
-| # | Discipline | Topic | API Source |
-|---|-----------|-------|---|
-| 1 | Health Sciences | Health Inequalities in Chronic Disease Care | OpenAlex teaching snapshot |
-| 2 | Social Sciences | Universal Basic Income (UBI) Policy Outcomes | OpenAlex teaching snapshot |
-| 3 | Science / Engineering | Microplastic Pollution in Aquatic Environments | OpenAlex teaching snapshot |
-| 4 | Management / Business | CSR and Firm Financial Performance | OpenAlex teaching snapshot |
+Choose **OpenAlex, Crossref, Europe PMC, or OpenAIRE**, enter a search and choose the options supported by that provider. Alternatively, upload RIS or a corpus CSV or use Zotero. Provider coverage, query syntax, fields and filters differ. Save the query log and corpus; record caps and missing metadata can make a result incomplete.
 
-The Day 2 guided pages similarly load checked-in screening snapshots and expose screening-log
-downloads. They do not prove the original Day 1 query, date, filters, or API response. The Day 3
-guided pages display illustrative extraction tables, narratives, charts, and PRISMA-style teaching
-outputs; their counts and performance values are not a live retrieval or screening run.
+- **OpenAlex:** Participants supply their own email-verified API key and email in masked, session-specific fields. The key is sent over HTTPS to OpenAlex in an authorization header. It is not put in query logs; the app/server operator may nevertheless have access to session data, so use a trusted deployment. Searches use bounded pagination.
+- **Crossref:** No participant key is required. This app retrieves one page using Crossref relevance search; Boolean interpretation and complete abstracts are not guaranteed.
+- **OpenAIRE:** No participant key or email is required. The app uses anonymous, bounded Graph API v3 searches. Anonymous requests can be rate-limited and participants on one hosted app may share the allowance. Its broad metadata search is not restricted to title/abstract, and the app does not apply year, specific publication-type or abstract filters for this source. Coverage varies; records may be non-peer-reviewed, and DOIs, author data and descriptions can be missing. Descriptions are not necessarily formal abstracts, and OpenAIRE subject labels are not OpenAlex concepts. Search expressions use quoted operands, e.g. `("creativity" OR "creative") AND "artificial intelligence"`. Check eligibility, retain the query log, and acknowledge OpenAIRE in accordance with [its terms](https://graph.openaire.eu/docs/apis/terms). OpenAIRE-derived records retain source notices in later stages when identifiable.
 
----
+### Day 2: Screen a corpus
 
-## BYOD — Bring Your Own Data
+Upload a corpus CSV or use the Day 1 BYOD session handoff. Select the PICO or SPIDER framework, enter the descriptive fields and set inclusion and exclusion terms. The current screening method is a deterministic case-insensitive substring heuristic over title and abstract; it is **not** an LLM or an independently validated active-learning model. Inspect and verify its decisions manually. Keep the included-studies file and screening record for Day 3.
 
-A central feature of the seminar is the **BYOD (Bring Your Own Data)** extension, which lets
-participants apply the pipeline to their own research questions. The intended path is a real file
-handoff from Day 1 to Day 2 to Day 3.
+Day 2 also offers concept, title/abstract term, co-authorship and bibliographic-coupling networks where the required fields are available. Mapping all screened records is exploratory and does not mean they were included.
 
-### Day 1: Build Your Own Corpus
+### Day 3: Extract and synthesize
 
-Use the search menus to choose OpenAlex, Crossref, Europe PMC, or OpenAIRE, enter a query,
-and set the available scope, year, publication-type, and abstract filters. OpenAlex is retrieved
-with bounded pagination: page size and maximum pages impose a retrieval cap, so a large result set
-may be truncated. The query log records the actual query, filters, provider, retrieval metadata,
-and timestamp; download and retain it for reproducibility. Provider syntax, indexing, coverage,
-metadata, and filters differ. Crossref is a one-page relevance search and needs no account or key;
-it does not guarantee Boolean interpretation or complete abstracts. Alternatively, upload RIS,
-a corpus CSV, or use the Zotero path. A Day 1 CSV can be sent to Day 2 in the same session.
+Upload the included-studies CSV or use the Day 2 BYOD handoff. Choose PICO, thematic or custom extraction fields, edit the optional AI extraction instruction, and use the available NLP or optional AI extraction method. AI extraction sends each title, up to 1,200 abstract characters, the schema and instruction to OpenAI and may incur charges. Review all extracted values against the source studies; do not assume the outputs are accurate. Use charts or effect-size analyses only where the required, compatible data and documented counts are actually available. The generic forest plot pools supplied values on their given scale; ratios need appropriate transformation and all studies need compatible measures. The app no longer fabricates unknown full-text counts for a PRISMA-style diagram.
 
-**OpenAlex participant credentials:** each participant uses their own email-verified OpenAlex key.
-The app collects the key and email in masked, session-specific inputs. The key is sent to OpenAlex
-only over HTTPS in an `Authorization: Bearer` header; the email is not sent with searches. The key
-and email are not written to query logs or error metadata. This is not a promise of complete
-privacy from the operator or hosting environment: participants must assess operator/hosting trust
-and use credentials they are comfortable entering.
+## Co-authorship and bibliographic coupling
 
-**OpenAIRE:** participants need no key or email. The app uses anonymous Graph API v3 search with
-bounded paging (default one page; at most three), not authenticated service access. OpenAIRE's
-published anonymous limit is up to 60 requests/hour and participants on one hosted app may share
-that allowance; rate limiting can occur. A page is an API request. OpenAIRE aggregates metadata
-across disciplines but has uneven coverage; its publication results can include non-peer-reviewed
-outputs. Abstract-like descriptions, DOIs and other fields may be missing, and descriptions are not
-necessarily formal abstracts. The Concepts column contains OpenAIRE subject labels, not OpenAlex
-concepts. Search is across broad metadata; the app applies no OpenAIRE year,
-specific publication-type or abstract filters. Boolean search values must be double-quoted, e.g.
-`("creativity" OR "creative") AND "artificial intelligence"`. Live results may be truncated.
-Check eligibility, save the query log, and acknowledge OpenAIRE as the data source in accordance
-with [its terms](https://graph.openaire.eu/docs/apis/terms). RIS exports label OpenAIRE records
-as generic rather than verified journal articles and record OpenAIRE in the database field. The guided examples' OpenAIRE practice
-queries are new suggestions, not the verified searches behind the saved teaching snapshots.
+All three days provide these network types in both paths:
 
-### Day 2: Screen Your Own Corpus
+- **Co-authorship:** nodes are author names; links count records listing both authors. Names in CSVs should be separated by semicolons. Names are not disambiguated and source author lists can be incomplete.
+- **Bibliographic coupling:** nodes are studies; a link counts distinct shared cited-reference identifiers. This differs from direct citation and co-citation. OpenAlex may supply referenced-work IDs and Crossref may supply DOI reference IDs. Some records or providers do not supply these fields, so a missing link does not prove no common reference exists. DOI, OpenAlex and PMID identifiers are not resolved across namespaces.
 
-Upload the Day 1 corpus CSV (or another CSV containing titles and abstracts), enter inclusion and
-exclusion terms, and run the current BYOD screening path. The implementation is a deterministic,
-case-insensitive substring heuristic over Title + Abstract. It does **not** require or use an
-actual LLM for this BYOD run. The output includes an included-studies CSV and a full screening log,
-but the decisions are first-pass triage and need human eligibility verification. Any displayed
-recall, precision, F1, or WSS-style values are descriptive diagnostics, not validated metrics
-without an independently adjudicated reference set.
+For CSV uploads, `References` may contain a JSON array such as `["doi:10.1234/example", "openalex:W123"]`; a semicolon-separated list is also accepted when the identifiers themselves do not contain semicolons. The app's RIS export does not contain cited-reference links for VOSviewer coupling or citation analysis. Displayed node caps and link thresholds can affect the visualized network and downloaded tables.
 
-Day 2 offers concept co-occurrence, title/abstract term co-occurrence, co-authorship and
-bibliographic coupling. Choose included studies or all screened records (the latter is exploratory).
-For terms, concepts and authors, link weights count records containing both items. Terms are
-lexical, not OpenAlex concepts, and author names are not disambiguated. Only displayed top nodes
-and links are exported. Title/abstract terms are selected with TF-IDF (up to eight per record) and
-depend on the selected record set. No concepts are invented when the source field is empty.
+## Running locally
 
-### Day 3: Synthesize Your Own Evidence
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-Upload or carry forward the Day 2 included-studies CSV, choose a PICO, Thematic Synthesis, or
-custom schema, and use the available NLP route or optional AI extraction route. Generate structured
-tables, temporal/network views, and narrative or quantitative charts when the data support them.
-Check extracted values, effect sizes, denominators, and flow counts against the source studies.
-The guided Day 3 route is illustrative/synthetic; the BYOD route is the route for participant-
-supplied inputs and outputs.
+The app can also be used directly through the [hosted deployment](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app). It does not require participants to edit code.
 
-### Co-authorship and bibliographic coupling across the three days
+## Workshop resources
 
-All three days offer co-authorship and bibliographic-coupling controls. Co-authorship requires an
-`Authors` column with semicolon-separated names; names are not disambiguated and providers or
-older snapshots may omit or truncate author lists. Coupling nodes are studies, and an edge is the number of distinct
-reference identifiers that both studies cite. It is not a direct citation or a co-citation network.
-
-New OpenAlex searches retain `referenced_works` OpenAlex work IDs; new Crossref searches retain
-DOIs from explicit reference entries when supplied. Coverage can be incomplete. OpenAIRE,
-Europe PMC, RIS/Zotero imports, and the checked-in teaching snapshots do not currently supply
-reference lists through this app. The `Citations` total does not contain cited references. When
-reference lists are missing or no links meet the selected settings, the app explains this instead
-of displaying an empty coupling graph. It never fabricates references.
-
-The CSV `References` column stores a JSON array, e.g. `["doi:10.1234/example", "openalex:W123"]`.
-Legacy semicolon-separated IDs are also accepted when no ID contains a semicolon; use JSON for
-IDs with semicolons. Prefixed PMIDs are accepted. Identifier namespaces are not mapped to one
-another, so DOI and OpenAlex IDs for the same work are not automatically recognized as equal.
-On large corpora the node cap retains the studies with the most reference IDs and can bias the map.
-The app's RIS export does not provide VOSviewer with cited-reference links. Day 3 guided maps can
-use the separate Day 2 include-labelled teaching snapshot; it is not the source of the illustrative
-Day 3 extraction fixture. BYOD maps use the original uploaded or handed-off included records.
-
----
-
-## No-Code Streamlit App
-
-The live Streamlit app is available at:
-**https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app**
-
-No installation is required to use the app. Participants interact with menus, upload files,
-run bounded searches or local heuristics, and export results through the browser interface.
-
----
-
-## LLM Architecture
-
-The current repaired BYOD Day 2 screening implementation is **not an actual LLM call**: it uses a
-simple deterministic keyword heuristic and requires human verification. Day 3 offers an optional
-AI extraction route when configured, alongside a no-key NLP route; the guided examples remain
-illustrative teaching fixtures. Do not infer that every workflow stage uses an LLM or that any
-output is validated without review.
-
----
-
-## Manuscript about the Workshop
-
-A manuscript describing the workshop is available here:
-
-[AI-Assisted Systematic Reviews and Meta-Analysis Manuscript](./ai_systematic_review_paper.pdf)
-
-## Workshop Slides
-
-- [Day 1: From Query to Corpus](./slides/day1_slides.pdf)
-- [Day 1 additional slides](./slides/additional_slides_day1.pdf)
-- [Day 2: From Corpus to Included Studies](./slides/day2_slides.pdf)
-- [Day 2 additional slides](./slides/additional_slides_day2.pdf)
-- [Day 3: From Studies to Evidence](./slides/day3_slides.pdf)
-- [Day 3 additional slides](./slides/additional_slides_day3.pdf)
-
----
+- [Manuscript](./ai_systematic_review_paper.pdf)
+- [Day 1 slides](./slides/day1_slides.pdf) and [additional slides](./slides/additional_slides_day1.pdf)
+- [Day 2 slides](./slides/day2_slides.pdf) and [additional slides](./slides/additional_slides_day2.pdf)
+- [Day 3 slides](./slides/day3_slides.pdf) and [additional slides](./slides/additional_slides_day3.pdf)
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE). Provider metadata remain subject to their respective terms and data limitations.

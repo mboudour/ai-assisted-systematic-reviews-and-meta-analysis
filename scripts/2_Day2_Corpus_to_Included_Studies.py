@@ -1,10 +1,8 @@
 """
 Day 2 — From Corpus to Included Studies
-Four guided examples (Health, Social Science, Engineering, Business) + BYOD extension.
-Guided examples load exclusively from pre-cached screening CSVs.
-These are illustrative/cached teaching inputs, not evidence that a historical Day 1
-query produced them. No live API calls are made by the guided examples; BYOD can use
-the live Day 1 session or a user-supplied download.
+Four self-contained guided cases and a separate BYOD workflow.
+Guided cases use captured Crossref results without live API calls; BYOD can use
+the Day 1 BYOD session or a user-supplied corpus.
 No coding required.
 
 Covers: PICO/SPIDER criteria, Active Learning (TF-IDF + Logistic Regression),
@@ -12,7 +10,6 @@ LLM zero-shot screening, Transparency Log, recall-oriented metrics,
 inter-rater reliability, PRISMA-S, comparison with Rayyan/Covidence.
 """
 
-import os
 import io
 import re
 import pathlib
@@ -37,13 +34,12 @@ st.set_page_config(
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
-CACHE_DIR = _repo_root / "data" / "cache"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from day2_networks import build_network
 from day2_network_view import make_network_html
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
+import guided_workflow
 
 def corpus_digest(df):
     """Detect changes to values, row indices, column names, ordering and types."""
@@ -54,111 +50,6 @@ def corpus_digest(df):
     digest = hashlib.sha256(json.dumps(schema, ensure_ascii=True).encode("utf-8"))
     digest.update(pd.util.hash_pandas_object(df, index=True).values.tobytes())
     return digest.hexdigest()
-
-# ── Guided example definitions ─────────────────────────────────────────────────
-GUIDED_EXAMPLES = [
-    {
-        "label": "🏥 Example 1 — Health Sciences: Health Inequalities in Chronic Disease Care",
-        "screened_file": "day2_ex1_health_screened.csv",
-        "session_key": "ex1_health",
-        "year_from": 2000, "year_to": 2024, "pub_types": ["journal-article"],
-        "framework": "PICO",
-        "population": "Adults with chronic diseases (diabetes, hypertension, cardiovascular disease)",
-        "intervention": "Standard or enhanced care access",
-        "comparison": "High vs. low socioeconomic status groups",
-        "outcome": "Disease control, mortality, care utilisation",
-        "inclusion_criteria": (
-            "Include empirical studies (observational, experimental, or mixed-methods) "
-            "that measure health outcomes or access to care for patients with chronic diseases "
-            "(diabetes, hypertension, cardiovascular disease) and report differences by "
-            "socioeconomic status, race, ethnicity, or geographic area. "
-            "Exclude editorials, opinion pieces, conference abstracts, and purely theoretical papers."
-        ),
-        "include_terms": [
-            "socioeconomic", "health inequalit", "disparity", "disparities",
-            "diabetes", "hypertension", "cardiovascular", "chronic disease",
-            "access to care", "racial", "income", "poverty",
-        ],
-        "exclude_terms": [
-            "editorial", "letter to the editor", "commentary", "book review",
-        ],
-    },
-    {
-        "label": "🏛️ Example 2 — Social Sciences: Universal Basic Income (UBI) Policy Outcomes",
-        "screened_file": "day2_ex2_ubi_screened.csv",
-        "session_key": "ex2_ubi",
-        "year_from": 2010, "year_to": 2024, "pub_types": ["journal-article", "book-chapter"],
-        "framework": "SPIDER",
-        "population": "Adults in UBI pilot programmes or policy evaluations",
-        "intervention": "Universal Basic Income / guaranteed income transfer",
-        "comparison": "Control groups or pre-intervention periods",
-        "outcome": "Employment, poverty, well-being, social behaviour",
-        "inclusion_criteria": (
-            "Include empirical evaluations (quantitative, qualitative, or mixed-methods) "
-            "of Universal Basic Income programmes or pilots that report measured outcomes "
-            "on employment, poverty, well-being, or social behaviour. "
-            "Exclude opinion pieces, editorials, theoretical proposals, and grey literature "
-            "without peer review."
-        ),
-        "include_terms": [
-            "universal basic income", "basic income", "guaranteed income",
-            "cash transfer", "pilot", "evaluation", "employment", "poverty",
-        ],
-        "exclude_terms": [
-            "opinion", "commentary", "book review", "policy proposal", "editorial",
-        ],
-    },
-    {
-        "label": "⚗️ Example 3 — Science / Engineering: Microplastic Pollution in Aquatic Environments",
-        "screened_file": "day2_ex3_microplastics_screened.csv",
-        "session_key": "ex3_microplastics",
-        "year_from": 2010, "year_to": 2024, "pub_types": ["journal-article"],
-        "framework": "PICO",
-        "population": "Aquatic environments (freshwater, marine, estuarine)",
-        "intervention": "Presence and concentration of microplastic particles",
-        "comparison": "Baseline or reference measurements",
-        "outcome": "Concentration levels (particles/L or mg/kg), ecological impact",
-        "inclusion_criteria": (
-            "Include experimental or observational studies that measure microplastic "
-            "concentrations, distribution, or ecological impact in freshwater or marine "
-            "aquatic environments. Studies must report quantitative measurements. "
-            "Exclude purely laboratory studies with no environmental relevance, reviews, "
-            "and studies focused on terrestrial environments only."
-        ),
-        "include_terms": [
-            "microplastic", "marine", "freshwater", "aquatic", "concentration",
-            "polymer", "sampling", "detection",
-        ],
-        "exclude_terms": [
-            "terrestrial", "soil contamination", "atmospheric", "review article",
-        ],
-    },
-    {
-        "label": "💼 Example 4 — Management / Business: CSR and Firm Financial Performance",
-        "screened_file": "day2_ex4_csr_screened.csv",
-        "session_key": "ex4_csr",
-        "year_from": 2000, "year_to": 2024, "pub_types": ["journal-article"],
-        "framework": "PICO",
-        "population": "Publicly listed firms across industries and countries",
-        "intervention": "Corporate Social Responsibility (CSR) activities",
-        "comparison": "Low vs. high CSR firms; pre/post CSR adoption",
-        "outcome": "Financial performance (ROA, ROE, Tobin's Q, stock returns)",
-        "inclusion_criteria": (
-            "Include empirical studies that quantitatively measure the relationship between "
-            "Corporate Social Responsibility (CSR) activities and firm financial performance "
-            "metrics (ROA, ROE, Tobin's Q, stock returns, or similar). "
-            "Exclude purely conceptual or theoretical papers, qualitative case studies without "
-            "quantitative financial performance data, and editorials."
-        ),
-        "include_terms": [
-            "corporate social responsibility", "csr", "esg", "roa", "roe",
-            "tobin", "financial performance", "firm performance", "empirical",
-        ],
-        "exclude_terms": [
-            "conceptual framework", "editorial", "commentary", "book review",
-        ],
-    },
-]
 
 # ── VOSviewer helpers ──────────────────────────────────────────────────────────
 
@@ -362,7 +253,7 @@ def render_day2_networks(screened_df, included_df, session_key):
     if not graph["edges"]:
         if not graph["records_with_data"]:
             if kind == "coupling":
-                st.info("No usable reference identifiers are available in these records, so coupling cannot be calculated. Search OpenAlex or Crossref with the updated Day 1 app or upload a CSV containing a References column. Existing teaching snapshots may not have reference lists; no references are invented.")
+                st.info("No usable reference identifiers are available in these records, so coupling cannot be calculated. Search OpenAlex or Crossref in Day 1 BYOD or upload a CSV containing a References column. No references are invented.")
             else:
                 st.info("No usable data for this network type in the selected records. Try title/abstract terms or another network type.")
         elif kind == "coupling":
@@ -406,49 +297,6 @@ def render_day2_networks(screened_df, included_df, session_key):
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
-
-def load_screened(screened_file):
-    path = CACHE_DIR / screened_file
-    if path.exists():
-        try:
-            return pd.read_csv(path), None
-        except Exception as e:
-            return None, str(e)
-    return None, f"Screened file not found: {screened_file}"
-
-
-def render_guided_provenance(ex, df):
-    """Explain the checked-in handoff without implying a reproducible historical search."""
-    day1_file = ex["screened_file"].replace("day2_", "day1_").replace("_screened", "_corpus")
-    day1_path = CACHE_DIR / day1_file
-    id_check = "not available"
-    day1_count = "not available"
-    if day1_path.exists():
-        try:
-            day1_df = pd.read_csv(day1_path)
-            day1_count = len(day1_df)
-            if "ID" in day1_df.columns and "ID" in df.columns:
-                day1_ids = set(day1_df["ID"].dropna().astype(str))
-                day2_ids = set(df["ID"].dropna().astype(str))
-                id_check = "match" if day1_ids == day2_ids else (
-                    f"do not match ({len(day1_ids - day2_ids)} only in Day 1; "
-                    f"{len(day2_ids - day1_ids)} only in Day 2)"
-                )
-        except Exception as e:
-            id_check = f"unavailable ({e})"
-    st.info(
-        f"**Teaching-input provenance:** this screen is loaded from the checked-in "
-        f"`data/cache/{ex['screened_file']}` ({len(df)} rows). The corresponding Day 1 "
-        f"corpus file is `data/cache/{day1_file}` "
-        f"({'present' if day1_path.exists() else 'not present'}). These files are "
-        f"visible as **Day 1 rows = {day1_count}; Day 2 rows = {len(df)}; ID-set check = {id_check}** "
-        "(row order may differ). Both are cached teaching snapshots; the repository "
-        "does not establish the historical Day 1 search parameters, date, or API response "
-        "that produced them. Day 2 displays existing screening labels and criteria and "
-        "offers the included-study CSV and full "
-        "screening-log downloads below."
-    )
-
 
 def render_recall_chart(df, session_key):
     """Render a simulated recall curve showing how Active Learning surfaces relevant papers."""
@@ -636,19 +484,19 @@ a live Active Learning or LLM model.
 
 The second day focuses on the most time-consuming phase of a systematic review: screening
 thousands of titles and abstracts against pre-specified inclusion and exclusion criteria.
-You will learn about AI-assisted approaches, inspect cached teaching labels for the four
-case studies, and explore networks built from the available study metadata.
+You will learn about AI-assisted approaches, inspect four guided cases, and explore
+networks built from the available study metadata.
 
 ### Where Day 2 Fits in the Pipeline
 
-**Day 1 → Day 2 → Day 3:** Day 1 supplies a corpus CSV; Day 2 screens that corpus and
-offers an **included-studies CSV** plus a **full screening-log CSV**; Day 3 extracts fields
-and synthesizes evidence. The guided path uses checked-in teaching snapshots so it can
-render without a live search. It is not a reconstruction of the historical Day 1 search:
-the checked-in CSVs do not prove the original query string, search date, filters, or API
-response. Use **Day 1 → Guided Examples** to inspect/download the example corpus, or
-**Day 1 → BYOD** to run or upload your own corpus and download its CSV before using it
-here. In a reproducible review, retain the Day 1 query log and search metadata separately.
+Each guided case presents a recorded, bounded Crossref search, fixed keyword screening,
+direct source-linked extraction, descriptive synthesis, and bibliometric maps together.
+The screen is not LLM or independent human review; a bounded Crossref relevance search is
+not exhaustive and does not guarantee Boolean interpretation. The guided cases are
+separate from BYOD. In **BYOD**, Day 1 supplies a
+corpus, Day 2 screens it and offers an **included-studies CSV** plus a **full screening-log
+CSV**, and Day 3 extracts fields and synthesizes evidence. Retain your query log and search
+metadata separately for a reproducible review.
 
 ### Screening Frameworks: PICO and SPIDER
 
@@ -660,7 +508,7 @@ framework. The two most widely used are:
 | **PICO** | Population, Intervention, Comparison, Outcome | Clinical and health sciences, management research |
 | **SPIDER** | Sample, Phenomenon of Interest, Design, Evaluation, Research type | Social sciences, qualitative and mixed-methods research |
 
-Both frameworks are used in this seminar. Examples 1 and 4 use PICO; Example 2 uses SPIDER.
+Both frameworks are introduced in this seminar.
 
 ### Two Screening Approaches — Background
 
@@ -683,23 +531,21 @@ or a validated screening workflow.
 
 Recall matters because a false negative can omit an eligible paper. Metrics such as
 precision, recall and **WSS@95** require independently adjudicated reference labels.
-The teaching snapshot diagnostics are not validated estimates of screening performance.
+Illustrative examples are not a substitute for validated screening performance estimates.
 
 ### Inter-Rater Reliability
 
 In any systematic review, at least two independent reviewers should screen a random
 sample of abstracts to assess agreement. The **Cohen's κ** statistic is the standard
-measure: κ ≥ 0.61 is considered substantial agreement. In the guided teaching snapshots,
-the AL/LLM decision columns are displayed for audit practice; their agreement is
-descriptive and does not establish two independently run validated screeners. In BYOD,
-both columns are produced by the deterministic heuristic described above.
+measure: κ ≥ 0.61 is considered substantial agreement. In BYOD, both decision columns
+are produced by the same deterministic heuristic, not independent reviewers.
 
 ### Session Structure
 
 | Hour | Content |
 |------|---------|
 | **Hour 1** | Present the bottleneck of abstract screening. Introduce PICO and SPIDER frameworks. Explain Active Learning and LLM zero-shot screening. Introduce recall-oriented metrics and inter-rater reliability. |
-| **Hour 2** | Inspect the four cached screening examples and their descriptive diagnostics. |
+| **Hour 2** | Inspect the four guided cases and their screening decisions. |
 | **Hour 3** | Discuss LLM screening, check the screening log, and explore the networks; verify eligibility manually. |
 
 ### Learning Outcome
@@ -717,26 +563,7 @@ Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Screen Your
 
 elif section == "📌 Guided Examples":
     st.title("📌 Day 2 — Guided Examples")
-    st.markdown("""
-Each example below loads **cached screening-result labels** from checked-in teaching CSVs.
-The matching Day 1 corpus CSV is shown as a reference input, but these files do not prove
-that a particular historical query created the snapshot. **Expand any example** to see the PICO/SPIDER criteria, Active Learning
-rankings, recall curve, recall-oriented metrics, LLM decisions, and Transparency Log.
-No button click required — results render immediately. Download the included-study CSV or
-full screening log at the bottom of each example, then open Day 3 and upload the included
-CSV if session carry-over is unavailable.
-    """)
-
-    for ex in GUIDED_EXAMPLES:
-        st.markdown("---")
-        with st.expander(ex["label"], expanded=False):
-            df, err = load_screened(ex["screened_file"])
-            if err:
-                st.error(f"❌ {err}")
-            else:
-                st.success(f"✅ Screening results loaded: {len(df)} records.")
-                render_guided_provenance(ex, df)
-                display_screening_results(df, ex["session_key"], ex)
+    guided_workflow.render_guided_examples("day2")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BYOD
@@ -745,10 +572,10 @@ CSV if session carry-over is unavailable.
 elif section == "🔎 BYOD — Screen Your Own Corpus":
     st.title("🔎 Day 2 — Bring Your Own Data")
     st.markdown("""
-Use this section to screen **your own corpus** from Day 1. In Day 1, use the **Download
-corpus as CSV** control in a guided example or BYOD result, then upload that file here (or
-use the corpus saved in the current session). Define your PICO/SPIDER criteria as inclusion
-and exclusion terms, and the app will rank and screen your records automatically using a
+Use this section to screen **your own corpus**. Upload a CSV from your Day 1 BYOD result
+or another source, or use the corpus saved from Day 1 BYOD in the current session. Define
+your PICO/SPIDER criteria as inclusion and exclusion terms, and the app will screen your
+records automatically using a
 deterministic case-insensitive substring heuristic over Title + Abstract (not a live LLM or
 independent Active Learning model). The
 resulting **included studies CSV** and **full screening log CSV** appear after screening;
@@ -758,7 +585,11 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
 
     uploaded = st.file_uploader("Upload your Day 1 corpus CSV", type=["csv"])
 
-    if uploaded is None and "byod_df" in st.session_state:
+    _legacy_snapshot = st.session_state.get("byod_log", {}).get("source") == "cached teaching snapshot"
+    if uploaded is None and _legacy_snapshot:
+        st.info("A teaching snapshot left by an older version is not used in BYOD. Upload your own corpus or run your own Day 1 search.")
+        df = None
+    elif uploaded is None and "byod_df" in st.session_state:
         st.info("Using corpus from Day 1 BYOD session.")
         df = st.session_state["byod_df"]
         _yr_from = st.session_state.get("byod_year_from")
@@ -887,6 +718,7 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
             digest = corpus_digest(df)
             st.session_state["byod_screening_run"] = {"digest": digest, "results": result_df, "criteria": byod_ex}
             st.session_state["byod_included_df"] = result_df[result_df["AL_Decision"] == "Include"].copy()
+            st.session_state["byod_included_origin"] = "uploaded" if uploaded is not None else "byod session"
 
         run = st.session_state.get("byod_screening_run")
         if run is not None:
