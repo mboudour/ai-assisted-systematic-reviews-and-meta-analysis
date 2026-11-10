@@ -18,6 +18,7 @@ import re
 import pathlib
 import sys
 import hashlib
+import json
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -43,6 +44,16 @@ if str(_repo_root) not in sys.path:
 from day2_networks import build_network
 from day2_network_view import make_network_html
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
+
+def corpus_digest(df):
+    """Detect changes to values, row indices, column names, ordering and types."""
+    schema = {
+        "columns": [(type(name).__name__, repr(name)) for name in df.columns],
+        "dtypes": [str(dtype) for dtype in df.dtypes],
+    }
+    digest = hashlib.sha256(json.dumps(schema, ensure_ascii=True).encode("utf-8"))
+    digest.update(pd.util.hash_pandas_object(df, index=True).values.tobytes())
+    return digest.hexdigest()
 
 # ── Guided example definitions ─────────────────────────────────────────────────
 GUIDED_EXAMPLES = [
@@ -854,13 +865,13 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
                 "include_terms": include_terms,
                 "exclude_terms": exclude_terms,
             }
-            digest = hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values.tobytes()).hexdigest()
+            digest = corpus_digest(df)
             st.session_state["byod_screening_run"] = {"digest": digest, "results": result_df, "criteria": byod_ex}
             st.session_state["byod_included_df"] = result_df[result_df["AL_Decision"] == "Include"].copy()
 
         run = st.session_state.get("byod_screening_run")
         if run is not None:
-            current_digest = hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values.tobytes()).hexdigest()
+            current_digest = corpus_digest(df)
             if current_digest != run["digest"]:
                 st.warning("The corpus has changed since the last screening. Run screening again to update the results and networks.")
                 st.session_state.pop("byod_included_df", None)

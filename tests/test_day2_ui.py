@@ -66,6 +66,33 @@ class Day2UITests(unittest.TestCase):
         self.assertEqual(len(app.session_state['byod_included_df']), 1)
         self.assertIn('d2_network_kind_byod', app.session_state)
 
+    def test_renamed_concepts_column_invalidates_old_results(self):
+        original = pd.DataFrame([{
+            'Title': 'An empirical study of creativity and artificial intelligence',
+            'Abstract': 'This empirical study describes creative collaboration and teamwork.',
+            'Authors': 'Alex One; Blake Two', 'Concepts': 'creativity; collaboration',
+        }])
+        app = AppTest.from_file(str(PAGE), default_timeout=90)
+        app.session_state['byod_df'] = original
+        app.run().sidebar.radio[0].set_value('🔎 BYOD — Screen Your Own Corpus').run()
+        app.button(key='byod_screen').click().run()
+        self.assertEqual(app.selectbox(key='d2_network_kind_byod').value, 'Concept co-occurrence')
+        self.assertIn('byod_included_df', app.session_state)
+
+        # The record values are unchanged; only the schema changes.
+        app.session_state['byod_df'] = original.rename(columns={'Concepts': 'Subject'})
+        app.run()
+        self.assertEqual(len(app.exception), 0)
+        self.assertTrue(any('corpus has changed' in item.value for item in app.warning))
+        self.assertNotIn('byod_included_df', app.session_state)
+        self.assertNotIn('d2_network_kind_byod', app.session_state)
+
+        app.button(key='byod_screen').click().run()
+        self.assertEqual(len(app.exception), 0)
+        self.assertEqual(app.selectbox(key='d2_network_kind_byod').value,
+                         'Title and abstract term co-occurrence')
+        self.assertTrue(any('1 of 1' in item.value for item in app.caption))
+
 
 if __name__ == '__main__':
     unittest.main()
