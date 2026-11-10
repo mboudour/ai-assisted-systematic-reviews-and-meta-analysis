@@ -105,9 +105,9 @@ st.markdown("### Four Guided Case Studies")
 st.markdown("""
 Each guided example is self-contained: choose OpenAlex, Crossref, Europe PMC or OpenAIRE at the
 top of the case. The provider's fixed search and records feed the screening criteria and decisions,
-extraction, descriptive synthesis and networks. Crossref offers a recorded sample; other providers
-can be searched live with a fixed query. Queries and criteria are read-only; visualization controls
-let you explore a network without changing the example's inputs.
+extraction, descriptive synthesis and networks. Each provider has its own recorded sample, available
+immediately without a key. Where offered, a fixed live search is optional. Queries and criteria are
+read-only; visualization controls let you explore a network without changing the example's inputs.
 The examples are small, bounded search samples and their automatic screening is a teaching heuristic,
 not a validated systematic review or a substitute for human judgment. Descriptive synthesis does
 not create unverified clinical or financial effect sizes.

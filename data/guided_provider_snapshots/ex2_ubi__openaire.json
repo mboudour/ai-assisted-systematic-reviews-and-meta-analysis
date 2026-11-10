@@ -1,0 +1,79 @@
+{
+  "case_key": "ex2_ubi",
+  "provider": "OpenAIRE",
+  "source": "OpenAIRE",
+  "query": "(\"universal basic income\" OR \"guaranteed income\") AND (\"employment\" OR \"poverty\" OR \"well-being\")",
+  "endpoint": "https://api.openaire.eu/graph/v3/research-products",
+  "request_method": "GET",
+  "parameters": {
+    "search": "(\"universal basic income\" OR \"guaranteed income\") AND (\"employment\" OR \"poverty\" OR \"well-being\")",
+    "type": "publication",
+    "pageSize": 25,
+    "cursor": "*"
+  },
+  "request_parameters_verified_against_prepared_url": true,
+  "timestamp_utc": "2026-11-10T09:00:38Z",
+  "retrieved_at_utc": "2026-11-10T09:00:38Z",
+  "request_attempts": 1,
+  "request_attempt_details": [
+    {
+      "started_at_utc": "2026-11-10T09:00:35Z",
+      "finished_at_utc": "2026-11-10T09:00:38Z",
+      "http_status": 200,
+      "raw_records_received": 25,
+      "timeout_seconds": 30,
+      "parameters_verified": true
+    }
+  ],
+  "pages_fetched": 1,
+  "page_size": 25,
+  "per_page_cap": 25,
+  "raw_records_received": 25,
+  "returned": 25,
+  "record_count": 25,
+  "total_matches": 790,
+  "possibly_truncated": true,
+  "corpus_file": "ex2_ubi__openaire.csv",
+  "log_file": "ex2_ubi__openaire.json",
+  "corpus_sha256": "f4b59f1cd3b60f64fb42d4b632ef93868201767b4336772db97972e3d52e72cb",
+  "raw_response_file": null,
+  "raw_response_retention": "No raw response body, provider response archive, request URL or credentials are stored.",
+  "abstract_note": "All abstracts and descriptions are withheld from this public capture because reuse rights were not independently verified for each actual text. Blank fields do not establish that the provider lacked text; screening is title-only and may miss matches.",
+  "screening": {
+    "method": "Case-insensitive, whitespace-normalized literal substring match in title OR abstract; any inclusion term and no exclusion term. Human review is required.",
+    "inclusion_terms": [
+      "basic income",
+      "guaranteed income"
+    ],
+    "exclusion_terms": [],
+    "matching_records": 4,
+    "excluded_records": 21,
+    "note": "All abstracts are withheld, so this count reflects title matches only and may miss studies that would match available abstracts."
+  },
+  "field_coverage": {
+    "ID": 25,
+    "DOI": 1,
+    "Title": 25,
+    "Year": 24,
+    "Authors": 25,
+    "Venue": 0,
+    "Abstract": 0,
+    "Citations": 25,
+    "Concepts": 25,
+    "References": 0,
+    "Source": 25
+  },
+  "field_notes": {
+    "Abstract": "Every abstract/description is deliberately withheld from this publicly shareable capture because rights were not independently verified at record/content level. A blank is not evidence the provider lacked one. Withholding can change screening, extraction and synthesis results.",
+    "Abstract Source": "A uniform withholding notice, not an assertion about whether the original provider had text.",
+    "References": "JSON array of explicit normalized identifiers supplied by the existing converter; a blank is not evidence that the article has no references. Europe PMC and OpenAIRE converters do not supply references.",
+    "Other metadata": "Fields are provider-supplied and may be incomplete or stale; no missing bibliographic values are inferred."
+  },
+  "rights_note": "Abstracts and descriptions may be copyrighted and no record-level CC BY/CC0 assessment was independently made, so all such text is withheld. Bibliographic metadata may have separate terms: verify provider and source rights before redistribution and acknowledge OpenAIRE as the data source for its records.",
+  "sample_note": "A real anonymous single-page bounded teaching sample, not an exhaustive or validated systematic search; provider ranking and results can change. No records are fabricated, merged, or borrowed from another provider.",
+  "limitations": [
+    "Only one page was fetched, up to 25 records. A total of null is unknown; possibly_truncated is conservative, and the sample is not proof of completeness even when the reported total is reached.",
+    "Queries use each provider's own matching and coverage; some matches may be in withheld abstracts or, for OpenAIRE, other research-product fields.",
+    "The deterministic screening heuristic is not an eligibility determination; absent abstract text limits extraction and evidence synthesis."
+  ]
+}

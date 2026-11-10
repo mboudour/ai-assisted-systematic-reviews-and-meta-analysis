@@ -44,10 +44,12 @@ def fixture_cases(directory: Path) -> list[dict]:
              "Year": "2000", "Authors": f"Excluded {number}; Other {number}",
              "Abstract": "No matching subject.", "References": ""},
         ]
-        pd.DataFrame(rows).to_csv(directory / case["corpus_file"], index=False)
-        log = {"endpoint": "https://api.crossref.org/works", "query": case["query"],
-               "timestamp_utc": "2026-01-01T12:00:00Z", "parameters": {"query": case["query"], "rows": 4},
-               "returned": 4, "total_matches": 100, "possibly_truncated": True}
+        pd.DataFrame(rows).assign(Source="Crossref").to_csv(directory / case["corpus_file"], index=False)
+        log = {"case_key": case["key"], "source": "Crossref", "endpoint": "https://api.crossref.org/works", "query": case["query"],
+               "retrieved_at_utc": "2026-01-01T12:00:00Z", "parameters": {"query": case["query"], "rows": 4},
+               "returned": 4, "total_matches": 100, "possibly_truncated": True,
+               "corpus_file": case["corpus_file"],
+               "corpus_sha256": hashlib.sha256((directory / case["corpus_file"]).read_bytes()).hexdigest()}
         (directory / case["log_file"]).write_text(json.dumps(log), encoding="utf-8")
         cases.append(case)
     (directory / "cases.json").write_text(json.dumps(cases), encoding="utf-8")
@@ -291,6 +293,12 @@ class GuidedUITests(unittest.TestCase):
             frame["References"] = ""
             frame.to_csv(directory / "1.csv", index=False)
             pd.DataFrame(columns=frame.columns).to_csv(directory / "2.csv", index=False)
+            for number in (1, 2):
+                path = directory / f"{number}.json"
+                log = json.loads(path.read_text(encoding="utf-8"))
+                log["corpus_sha256"] = hashlib.sha256((directory / f"{number}.csv").read_bytes()).hexdigest()
+                log["returned"] = 4 if number == 1 else 0
+                path.write_text(json.dumps(log), encoding="utf-8")
             (directory / "3.csv").unlink()
             (directory / "4.json").unlink()
             app = app_for(directory).run()
@@ -299,7 +307,7 @@ class GuidedUITests(unittest.TestCase):
             self.assertEqual(len(app.tabs), 16)
             self.assertTrue(any("No usable References" in e.value for e in app.info))
             self.assertTrue(any("no heuristic-included records to map" in e.value.lower() for e in app.info))
-            self.assertTrue(any("corpus unavailable" in e.value.lower() for e in app.warning))
+            self.assertTrue(any("snapshot unavailable" in e.value.lower() for e in app.warning))
             self.assertTrue(any("actual query, source, date and parameters cannot be verified" in e.value for e in app.error))
             self.assertEqual(len(guided.load_case_data(cases[1], directory)[0]), 0)
 

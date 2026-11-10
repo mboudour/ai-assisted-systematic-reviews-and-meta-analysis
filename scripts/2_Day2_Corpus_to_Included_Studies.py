@@ -39,7 +39,7 @@ if str(_repo_root) not in sys.path:
 from day2_networks import build_network
 from day2_network_view import make_network_html
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
-from guided_loader import load_guided_workflow
+from guided_loader_v2 import load_guided_workflow
 
 guided_workflow = load_guided_workflow()
 
@@ -493,8 +493,8 @@ networks built from the available study metadata.
 
 Each guided case offers OpenAlex, Crossref, Europe PMC and OpenAIRE at the top. It presents
 the selected provider's bounded search and records, fixed keyword screening, direct
-source-linked extraction, descriptive synthesis and bibliometric maps together. Crossref
-uses a saved capture; the other provider searches run on request. The screen is not LLM or
+source-linked extraction, descriptive synthesis and bibliometric maps together. Each provider
+has a ready-to-view saved capture; fixed live searches are optional. The screen is not LLM or
 independent human review, and bounded searches are not exhaustive. The guided cases are
 separate from BYOD. In **BYOD**, Day 1 supplies a
 corpus, Day 2 screens it and offers an **included-studies CSV** plus a **full screening-log

@@ -1,0 +1,78 @@
+{
+  "case_key": "ex3_microplastics",
+  "provider": "OpenAlex",
+  "source": "OpenAlex",
+  "query": "microplastics AND (marine OR freshwater OR aquatic)",
+  "endpoint": "https://api.openalex.org/works",
+  "request_method": "GET",
+  "parameters": {
+    "search.title_and_abstract.exact": "microplastics AND (marine OR freshwater OR aquatic)",
+    "per-page": 25,
+    "cursor": "*",
+    "select": "id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count,concepts,type,referenced_works"
+  },
+  "request_parameters_verified_against_prepared_url": true,
+  "timestamp_utc": "2026-11-10T09:00:40Z",
+  "retrieved_at_utc": "2026-11-10T09:00:40Z",
+  "request_attempts": 1,
+  "request_attempt_details": [
+    {
+      "started_at_utc": "2026-11-10T09:00:39Z",
+      "finished_at_utc": "2026-11-10T09:00:40Z",
+      "http_status": 200,
+      "raw_records_received": 25,
+      "timeout_seconds": 30,
+      "parameters_verified": true
+    }
+  ],
+  "pages_fetched": 1,
+  "page_size": 25,
+  "per_page_cap": 25,
+  "raw_records_received": 25,
+  "returned": 25,
+  "record_count": 25,
+  "total_matches": 19861,
+  "possibly_truncated": true,
+  "corpus_file": "ex3_microplastics__openalex.csv",
+  "log_file": "ex3_microplastics__openalex.json",
+  "corpus_sha256": "0c1615886f019ce66045cd47340b816d571ed4d3a4baa4332b0ae73ac676d1b1",
+  "raw_response_file": null,
+  "raw_response_retention": "No raw response body, provider response archive, request URL or credentials are stored.",
+  "abstract_note": "All abstracts and descriptions are withheld from this public capture because reuse rights were not independently verified for each actual text. Blank fields do not establish that the provider lacked text; screening is title-only and may miss matches.",
+  "screening": {
+    "method": "Case-insensitive, whitespace-normalized literal substring match in title OR abstract; any inclusion term and no exclusion term. Human review is required.",
+    "inclusion_terms": [
+      "microplastic"
+    ],
+    "exclusion_terms": [],
+    "matching_records": 25,
+    "excluded_records": 0,
+    "note": "All abstracts are withheld, so this count reflects title matches only and may miss studies that would match available abstracts."
+  },
+  "field_coverage": {
+    "ID": 25,
+    "DOI": 24,
+    "Title": 25,
+    "Year": 25,
+    "Authors": 25,
+    "Venue": 25,
+    "Abstract": 0,
+    "Citations": 25,
+    "Concepts": 25,
+    "References": 22,
+    "Source": 25
+  },
+  "field_notes": {
+    "Abstract": "Every abstract/description is deliberately withheld from this publicly shareable capture because rights were not independently verified at record/content level. A blank is not evidence the provider lacked one. Withholding can change screening, extraction and synthesis results.",
+    "Abstract Source": "A uniform withholding notice, not an assertion about whether the original provider had text.",
+    "References": "JSON array of explicit normalized identifiers supplied by the existing converter; a blank is not evidence that the article has no references. Europe PMC and OpenAIRE converters do not supply references.",
+    "Other metadata": "Fields are provider-supplied and may be incomplete or stale; no missing bibliographic values are inferred."
+  },
+  "rights_note": "Abstracts and descriptions may be copyrighted and no record-level CC BY/CC0 assessment was independently made, so all such text is withheld. Bibliographic metadata may have separate terms: verify provider and source rights before redistribution and acknowledge OpenAIRE as the data source for its records.",
+  "sample_note": "A real anonymous single-page bounded teaching sample, not an exhaustive or validated systematic search; provider ranking and results can change. No records are fabricated, merged, or borrowed from another provider.",
+  "limitations": [
+    "Only one page was fetched, up to 25 records. A total of null is unknown; possibly_truncated is conservative, and the sample is not proof of completeness even when the reported total is reached.",
+    "Queries use each provider's own matching and coverage; some matches may be in withheld abstracts or, for OpenAIRE, other research-product fields.",
+    "The deterministic screening heuristic is not an eligibility determination; absent abstract text limits extraction and evidence synthesis."
+  ]
+}

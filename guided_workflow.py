@@ -1,7 +1,7 @@
 """Self-contained guided review examples with fixed searches and criteria.
 
-Crossref uses verified captures; other providers are searched only on demand.
-Live results are isolated in guided-only session keys, never in BYOD state.
+Each provider starts with its own verified, recorded one-page sample. Optional
+live results are isolated in guided-only session keys, never in BYOD state.
 Screening is a simple teaching heuristic, not a validated review process.
 """
 from __future__ import annotations
@@ -23,10 +23,11 @@ from openaire_notice import OPENAIRE_LIMITATIONS
 
 # The Streamlit host can retain imported modules while syncing newer page files.
 # Pages require this release marker and reload a stale cached renderer once.
-GUIDED_PROVIDER_RELEASE = 1
+GUIDED_PROVIDER_RELEASE = 2
 
 
 GUIDED_DATA_DIR = Path(__file__).resolve().parent / "data" / "guided_fixed"
+GUIDED_SNAPSHOT_DIR = GUIDED_DATA_DIR.parent / "guided_provider_snapshots"
 SCREEN_DECISION = "Screening decision"
 INCLUSION_MATCHES = "Inclusion matches"
 EXCLUSION_MATCHES = "Exclusion matches"
@@ -278,61 +279,44 @@ def _download(label: str, frame: pd.DataFrame, filename: str, key: str) -> None:
 
 
 def _render_retrieval(case: dict[str, Any], corpus: pd.DataFrame | None,
-                      log: dict[str, Any] | None, prefix: str) -> None:
-    st.markdown("#### 1. Captured retrieval")
-    st.warning(
-        "This Crossref relevance search is an incomplete, one-page sample, not a "
-        "comprehensive systematic search. Crossref relevance matching is not a "
-        "guaranteed Boolean search; the same query may yield different results later."
-    )
-    if log is None:
-        st.error("The capture log is unavailable: the actual query, source, date and parameters cannot be verified.")
+                      log: dict[str, Any] | None, prefix: str,
+                      provider: str = "Crossref", kind: str = "saved") -> None:
+    st.markdown("#### 1. Selected retrieval")
+    st.warning("This is a bounded one-page teaching sample, not an exhaustive systematic search. Provider matching and coverage vary; results may change over time.")
+    if provider == "Crossref":
+        st.caption("Crossref relevance matching is not a guaranteed Boolean search.")
     else:
-        logged_query = _logged_query(log)
-        if logged_query:
-            st.write("Actual captured query:")
-            st.code(logged_query, language=None)
-        else:
-            st.warning("The actual query was not recorded in a recognized log field; see the complete log below.")
-        configured_query = _text(case.get("query"))
-        if configured_query and logged_query and configured_query != logged_query:
-            st.warning("The case query differs from the capture log. The logged query above is the captured query; check provenance before using this example.")
-            st.write("Query listed in the case manifest:")
-            st.code(configured_query, language=None)
-        endpoint = _first(log, "endpoint", "url", "source")
-        timestamp = _first(log, "timestamp_utc", "retrieved_at_utc", "utc_timestamp", "timestamp", "retrieved_at", "date_utc", "date")
-        source = _first(log, "source", "provider")
-        st.write(f"Recorded source: {_text(source) or 'Not recorded'}")
-        st.write(f"Captured endpoint/source: {_text(endpoint) or 'Not recorded'}")
-        st.write(f"Capture timestamp: {_text(timestamp) or 'Not recorded'} (see log for timezone)")
-        parameters = _first(log, "parameters", "params", "request_params", "request_parameters")
-        st.write("Recorded request parameters:")
-        if isinstance(parameters, (dict, list)):
-            st.json(parameters, expanded=True)
-        else:
-            st.write(_text(parameters) if parameters is not None else "Not recorded separately; see the capture log.")
-        returned = _first(log, "returned", "records_returned", "returned_count")
-        total = _first(log, "total_matches", "total", "total_results")
-        truncated = _first(log, "possibly_truncated", "truncated", "truncation")
-        st.write(f"Returned: {returned if returned is not None else 'Not recorded'}; provider total matches: {total if total is not None else 'Not recorded'}; truncation indicator: {truncated if truncated is not None else 'Not recorded'}.")
-        st.caption("Complete capture log (including any additional parameters and licensing notes):")
-        st.json(log, expanded=False)
-        st.download_button("Download capture log (JSON)", json.dumps(log, indent=2, ensure_ascii=False).encode("utf-8"),
-                           file_name=f"{prefix}_crossref_capture_log.json", mime="application/json",
-                           key=f"{prefix}_capture_log_json")
-        st.caption("The saved sample retains abstracts only where a CC BY or CC0 license was found in Crossref metadata. Missing abstracts can reflect this reuse check; verify the source and license terms before reuse.")
-        if corpus is not None and returned is not None:
-            try:
-                if int(returned) != len(corpus):
-                    st.warning(f"The log reports {returned} returned records, but the CSV contains {len(corpus)} rows. Check this capture's provenance.")
-            except (TypeError, ValueError):
-                st.warning("The returned-record count in the capture log is not a usable integer.")
-    if corpus is None:
-        st.error("The captured record file could not be loaded; the downstream stages cannot be computed.")
+        st.caption(_LIVE_CAVEATS[provider])
+    if corpus is None or log is None:
+        st.error("The saved snapshot is unavailable or failed verification, and no successful live result is selected. The actual query, source, date and parameters cannot be verified; downstream stages cannot be computed.")
         return
-    st.caption(f"Captured CSV: {len(corpus)} records. These are retrieved records, not validated eligible studies.")
+    st.info(f"Using {'verified saved snapshot' if kind == 'saved' else 'successful live retrieval'}: {provider}. This exact sample feeds all four stages.")
+    st.write("Actual recorded query:")
+    st.code(log["query"], language=None)
+    st.write(f"Recorded source: {provider}")
+    st.write(f"Recorded endpoint: {log['endpoint']}")
+    st.write(f"Retrieval timestamp: {log['retrieved_at_utc']}")
+    st.write("Recorded request parameters:")
+    st.json(log["parameters"], expanded=True)
+    total, truncated = log.get("total_matches"), log.get("possibly_truncated")
+    st.write(f"Returned: {len(corpus)}; provider total matches: {total if total is not None else 'Not recorded'}; possibly truncated: {truncated if truncated is not None else 'Not recorded'}.")
+    if kind == "saved":
+        st.caption("Saved abstracts may be missing because the provider did not supply them or because reuse rights could not be confirmed and text was withheld. A blank does not prove the provider lacked an abstract; missing text can affect screening. Verify source and reuse rights.")
+        if isinstance(log.get("abstract_note"), str) and log["abstract_note"]:
+            st.caption(log["abstract_note"])
+    else:
+        st.caption("Live abstracts may be missing; check the original source and reuse rights before using them. Missing text can affect screening.")
+    st.caption("Complete selected retrieval log:")
+    st.json(log, expanded=False)
+    st.download_button(f"Download {'capture' if kind == 'saved' else 'live retrieval'} log (JSON)",
+                       json.dumps(log, indent=2, ensure_ascii=False).encode("utf-8"),
+                       file_name=f"{prefix}_{provider.lower().replace(' ', '_')}_{kind}_log.json",
+                       mime="application/json", key=f"{prefix}_{kind}_log_json")
+    st.caption(f"Selected {provider} sample: {len(corpus)} records. These are retrieved records, not validated eligible studies.")
+    if kind == "saved":
+        st.caption("The log's SHA-256 verifies the original bundled capture; the spreadsheet-safe CSV download is reserialized and may have different bytes.")
     st.dataframe(corpus, use_container_width=True, hide_index=True)
-    _download("Download captured records (CSV)", corpus, f"{prefix}_retrieved.csv", f"{prefix}_retrieved_csv")
+    _download("Download selected records (CSV)", corpus, f"{prefix}_retrieved.csv", f"{prefix}_retrieved_csv")
 
 
 def _render_screening(case: dict[str, Any], screened: pd.DataFrame | None, prefix: str,
@@ -350,7 +334,7 @@ def _render_screening(case: dict[str, Any], screened: pd.DataFrame | None, prefi
     st.write("Fixed inclusion terms (any):", inc if inc is not None else "Not recorded or invalid")
     st.write("Fixed exclusion terms (any overrides inclusion):", exc if exc is not None else "Not recorded or invalid")
     if screened is None:
-        st.error("No teaching-screen decisions are available because the corpus or fixed terms could not be loaded.")
+        st.error("No teaching-screen decisions: the selected snapshot is unavailable or failed verification and no successful live sample is selected, or the fixed screening terms are invalid. See Retrieval and the terms above; a live search is optional.")
         return
     included = included_records(screened)
     label = "Captured records" if provider == "Crossref" else f"{provider} retrieved records"
@@ -369,7 +353,7 @@ def _render_extraction(included: pd.DataFrame | None, prefix: str,
     st.caption(
         f"Fields below are copied from the selected {provider} records included by the nonvalidated teaching screen. "
         "This table is not AI-generated: no PICO elements, outcomes, effects, or other absent facts are inferred or invented. "
-        "Blank fields were not recorded in the source metadata."
+        "Blank fields may be missing from the source or deliberately withheld from a saved capture; check its retrieval log."
     )
     st.caption(
         "Candidate finding excerpt: the first literal sentence in the recorded abstract containing "
@@ -380,7 +364,7 @@ def _render_extraction(included: pd.DataFrame | None, prefix: str,
         "it is not an AI-generated or validated finding."
     )
     if included is None:
-        st.error("Extraction is unavailable because the selected corpus or fixed teaching-screen terms could not be loaded.")
+        st.error("Extraction is unavailable: the selected snapshot did not verify and no successful live sample is selected, or the fixed screening terms are invalid. See Retrieval and Screening.")
         return
     extracted = extract_bibliography(included)
     st.caption(f"Bibliographic rows: {len(extracted)}; exactly the heuristic-included records from stage 2.")
@@ -551,7 +535,7 @@ def _render_synthesis(screened: pd.DataFrame | None, included: pd.DataFrame | No
     st.caption(f"Descriptive counts of this {provider} one-page sample and the same nonvalidated teaching-screen includes; not a meta-analysis, PRISMA flow, treatment effect, or claim of comprehensive evidence.")
     st.info("The sample does not contain verified, compatible effect sizes and full-text screening counts, so no pooled forest plot or full PRISMA flow is invented for this example.")
     if screened is None or included is None:
-        st.error("Synthesis is unavailable because the selected corpus or fixed teaching-screen terms could not be loaded.")
+        st.error("Synthesis is unavailable: the selected snapshot did not verify and no successful live sample is selected, or the fixed screening terms are invalid. See Retrieval and Screening.")
         return
     label = "Captured records" if provider == "Crossref" else f"{provider} retrieved records"
     st.write(f"{label}: {len(screened)}; heuristic-included: {len(included)}; heuristic-excluded: {len(screened) - len(included)}.")
@@ -567,6 +551,7 @@ def _render_synthesis(screened: pd.DataFrame | None, included: pd.DataFrame | No
 
 GUIDED_PROVIDERS = ("Crossref", "OpenAlex", "Europe PMC", "OpenAIRE")
 _ENDPOINTS = {
+    "Crossref": "https://api.crossref.org/works",
     "OpenAlex": "https://api.openalex.org/works",
     "Europe PMC": "https://www.ebi.ac.uk/europepmc/webservices/rest/search",
     "OpenAIRE": "https://api.openaire.eu/graph/v3/research-products",
@@ -608,6 +593,99 @@ def _nonnegative_int(value: Any) -> int | None:
     return None
 
 
+def _has_secret_field(value: Any) -> bool:
+    """Refuse logs with credential-shaped fields, including nested fields."""
+    if isinstance(value, dict):
+        sensitive = re.compile(r"api.?key|authorization|credential|password|secret|token|e.?mail|mailto", re.I)
+        return any(sensitive.search(str(key)) or _has_secret_field(item) for key, item in value.items())
+    if isinstance(value, list):
+        return any(_has_secret_field(item) for item in value)
+    if isinstance(value, str):
+        return bool(re.search(r"(?:[?&]|^)(?:api.?key|authorization|credential|password|secret|(?:access.?)?token|email|mailto)=[^&\s]+|\bBearer\s+\S+", value, re.I))
+    return False
+
+
+def load_provider_snapshot(case: dict[str, Any], provider: str, directory: str | Path,
+                           *, legacy_override: bool = False
+                           ) -> tuple[pd.DataFrame | None, dict[str, Any] | None, list[str]]:
+    """Load only the selected case/provider's verified, logged snapshot.
+
+    Manifest-specified historical Crossref files may also be used; they must
+    still pass every integrity check. The caller selects that source explicitly.
+    No production snapshot or different provider is used as a substitute.
+    """
+    try:
+        key = case.get("key")
+        if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", key) or provider not in GUIDED_PROVIDERS:
+            raise ValueError("invalid case or provider")
+        if legacy_override:
+            if provider != "Crossref":
+                raise ValueError("no provider-specific snapshot")
+            corpus_name, log_name = case.get("corpus_file"), case.get("log_file")
+            expected_queries = {_text(case.get("query"))}
+        else:
+            import guided_provider_search as search
+            stem = f"{key}__{provider.lower().replace(' ', '_')}"
+            corpus_name, log_name = f"{stem}.csv", f"{stem}.json"
+            expected_queries = {search.guided_query(key, provider)}
+            # Historical Crossref captures may use the fixed manifest query,
+            # rather than the newer live-search query. Both identify this case.
+            if provider == "Crossref":
+                expected_queries.add(_text(case.get("query")))
+        root = Path(directory)
+        log = json.loads(_local_file(root, log_name).read_text(encoding="utf-8"))
+        if not isinstance(log, dict) or _has_secret_field(log):
+            raise ValueError("invalid or credential-bearing log")
+        if log.get("case_key") != key:
+            raise ValueError("case identifier mismatch")
+        sources = [log[name] for name in ("provider", "source") if name in log]
+        if not sources or any(source != provider for source in sources):
+            raise ValueError("provider mismatch")
+        query = log.get("query")
+        if not isinstance(query, str) or not query or query not in expected_queries:
+            raise ValueError("fixed query mismatch")
+        params = log.get("parameters")
+        query_key = {"Crossref": "query", "OpenAlex": "search.title_and_abstract.exact",
+                     "Europe PMC": "query", "OpenAIRE": "search"}[provider]
+        if not isinstance(params, dict) or params.get(query_key) != query:
+            raise ValueError("request parameters do not match the logged query")
+        if log.get("endpoint") != _ENDPOINTS[provider]:
+            raise ValueError("provider endpoint mismatch")
+        if _safe_timestamp(log.get("retrieved_at_utc")) == "Not recorded":
+            raise ValueError("retrieval timestamp missing or invalid")
+        if log.get("corpus_file") != corpus_name:
+            raise ValueError("corpus filename mismatch")
+        if "log_file" in log and log["log_file"] != log_name:
+            raise ValueError("capture log filename mismatch")
+        digest = log.get("corpus_sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+            raise ValueError("missing or invalid SHA-256")
+        corpus_bytes = _local_file(root, corpus_name).read_bytes()
+        if hashlib.sha256(corpus_bytes).hexdigest() != digest.lower():
+            raise ValueError("SHA-256 mismatch")
+        corpus = pd.read_csv(io.BytesIO(corpus_bytes), dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        count = _nonnegative_int(log.get("returned"))
+        if count is None or count != len(corpus):
+            raise ValueError("returned row count mismatch")
+        if "Title" not in corpus or "Abstract" not in corpus or "Source" not in corpus:
+            raise ValueError("required record fields are missing")
+        if not corpus["Source"].eq(provider).all():
+            raise ValueError("record source mismatch")
+        return corpus, log, []
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError, ImportError,
+            json.JSONDecodeError, pd.errors.ParserError, pd.errors.EmptyDataError) as exc:
+        # Keep details useful without displaying arbitrary data or file contents.
+        detail = str(exc) if type(exc) is ValueError and str(exc) in {
+            "invalid case or provider", "no provider-specific snapshot", "invalid or credential-bearing log",
+            "case identifier mismatch", "provider mismatch", "fixed query mismatch",
+            "request parameters do not match the logged query", "provider endpoint mismatch",
+            "retrieval timestamp missing or invalid", "corpus filename mismatch",
+            "capture log filename mismatch", "missing or invalid SHA-256", "SHA-256 mismatch", "returned row count mismatch",
+            "required record fields are missing", "record source mismatch",
+        } else "file missing or invalid"
+        return None, None, [f"Saved {provider} snapshot unavailable or could not be verified ({detail})."]
+
+
 def _safe_timestamp(value: Any) -> str:
     # Do not copy arbitrary provider strings (which could contain secrets) into
     # a log. Missing/unrecognized timestamps are honestly marked unavailable.
@@ -624,6 +702,8 @@ def _live_log(case_key: str, provider: str, query: str, params: dict[str, Any],
     for name, expected in (("case_key", case_key), ("provider", provider), ("source", provider), ("query", query)):
         if name in metadata and metadata[name] not in (None, "", expected):
             raise ValueError("Provider response does not match the fixed search")
+    if metadata.get("endpoint") not in (None, "", _ENDPOINTS[provider]):
+        raise ValueError("Provider response endpoint does not match the fixed search")
     if "parameters" in metadata and metadata["parameters"] != params:
         raise ValueError("Provider parameters do not match the fixed search")
     timestamp = _first(metadata, "timestamp_utc", "fetched_at_utc", "retrieved_at_utc")
@@ -647,6 +727,8 @@ def _prepare_live_result(case_key: str, provider: str, query: str,
                          params: dict[str, Any], corpus: Any, metadata: Any) -> dict[str, Any]:
     if not isinstance(corpus, pd.DataFrame):
         raise ValueError("Invalid provider corpus")
+    if "Source" in corpus and not corpus["Source"].map(_text).eq(provider).all():
+        raise ValueError("Provider response contains records from another source")
     # No credential-bearing columns are retained, even if supplied unexpectedly.
     forbidden = re.compile(r"(?:api.?key|authorization|credential|password|secret|token|email)", re.I)
     columns = [column for column in corpus.columns if not forbidden.search(str(column))]
@@ -658,25 +740,27 @@ def _prepare_live_result(case_key: str, provider: str, query: str,
 
 
 def _render_live_retrieval(case_key: str, provider: str, prefix: str
-                           ) -> tuple[pd.DataFrame | None, dict[str, Any] | None]:
-    st.markdown("#### 1. Live fixed retrieval")
-    st.warning("This is a bounded, one-page live teaching sample, not an exhaustive systematic search or a saved reproducible snapshot. Results can change over time.")
-    st.caption(_LIVE_CAVEATS[provider])
+                           ) -> tuple[pd.DataFrame | None, dict[str, Any] | None, str]:
+    st.markdown("##### Optional: run a new fixed live search")
+    st.caption("No search or credential is needed for the saved example. A successful nonempty live result replaces the saved sample for all stages; results can change. A failed, empty or pending attempt uses the verified saved sample instead.")
     try:
         query, params = _live_plan(case_key, provider)
     except (ImportError, AttributeError, ValueError, KeyError):
-        st.error(f"The fixed {provider} search is unavailable for this case; no search was run.")
-        return None, None
-    st.write("Fixed query sent to this provider:")
+        st.info(f"The optional fixed {provider} search is unavailable for this case; no search was run.")
+        return None, None, "unavailable"
+    st.write("Fixed query that would be sent for an optional live search:")
     st.code(query, language=None)
     st.write(f"Endpoint: {_ENDPOINTS[provider]}")
-    st.write("Exact request parameters (one page only; no editable search):")
+    st.write("Planned live request parameters (one page only; no editable search):")
     st.json(params, expanded=True)
     if provider == "OpenAlex":
         st.caption("The browser reads your local JSON credential file and calls OpenAlex directly. The key is not uploaded to the Streamlit server, session state, or logs. The fixed search uses title_abstract_exact, no year/type filter, and does not require an abstract.")
     state_key = f"{prefix}_provider_{provider.lower().replace(' ', '_')}_result"
     active_key = f"{prefix}_openalex_active"
     attempt_key = f"{prefix}_openalex_attempt"
+    if st.button("Use saved sample instead", key=f"{prefix}_{provider.lower().replace(' ', '_')}_use_saved"):
+        st.session_state.pop(state_key, None)
+        st.session_state[active_key] = False
     if provider == "OpenAlex":
         if st.button("Start a new OpenAlex browser search", key=f"{prefix}_openalex_start"):
             # Clear first: a failed or abandoned retry must never show stale results.
@@ -716,45 +800,47 @@ def _render_live_retrieval(case_key: str, provider: str, prefix: str
             # Never echo raw exception text, which can contain request URLs or credentials.
             st.session_state[state_key] = {"status": "error"}
     result = st.session_state.get(state_key)
+    if result is not None and not isinstance(result, dict):
+        st.session_state.pop(state_key, None)
+        result = {"status": "error"}
     if isinstance(result, dict) and result.get("status") == "ok":
         saved_log = result.get("log")
         if (not isinstance(saved_log, dict) or saved_log.get("case_key") != case_key
-                or saved_log.get("provider") != provider or saved_log.get("query") != query
-                or saved_log.get("parameters") != params or not isinstance(result.get("corpus"), pd.DataFrame)):
+                or saved_log.get("provider") != provider or saved_log.get("source") != provider
+                or saved_log.get("endpoint") != _ENDPOINTS[provider] or saved_log.get("query") != query
+                or saved_log.get("parameters") != params or not isinstance(result.get("corpus"), pd.DataFrame)
+                or saved_log.get("returned") != len(result["corpus"])
+                or "Source" not in result["corpus"] or not result["corpus"]["Source"].eq(provider).all()):
             st.session_state.pop(state_key, None)
-            result = None
+            result = {"status": "error"}
     if not result:
-        st.info(f"No {provider} search has completed for this case. Run the fixed search to populate all four stages.")
-        return None, None
+        st.info(f"No optional {provider} live search has completed for this case; the saved sample is used when verified.")
+        return None, None, "pending"
     if result.get("status") != "ok":
-        st.error(f"The {provider} search failed or the response was invalid. No previous result is displayed; retry when ready.")
-        return None, None
+        st.warning(f"The optional {provider} live search failed or its response was invalid. No previous live result is used; the verified saved sample is used if available.")
+        return None, None, "error"
     corpus, log = result["corpus"], result["log"]
-    st.write(f"Recorded source: {provider}; retrieval timestamp (UTC): {log['retrieved_at_utc']}; returned: {len(corpus)}; provider total: {log['total_matches'] if log['total_matches'] is not None else 'Not recorded'}; possibly truncated: {log['possibly_truncated'] if log['possibly_truncated'] is not None else 'Unknown'}.")
-    st.caption("Sanitized live retrieval log (fixed request, source, date, cap and limitations):")
-    st.json(log, expanded=False)
-    st.download_button("Download live retrieval log (JSON)", json.dumps(log, indent=2, ensure_ascii=False).encode("utf-8"),
-                       file_name=f"{prefix}_{provider.lower().replace(' ', '_')}_log.json", mime="application/json",
-                       key=f"{prefix}_{provider.lower().replace(' ', '_')}_log_json")
     if corpus.empty:
-        st.info(f"The {provider} search returned no records. The fixed screen and synthesis therefore contain no records.")
-    else:
-        st.caption(f"{provider} returned {len(corpus)} records; these are not validated eligible studies.")
-    st.dataframe(corpus, use_container_width=True, hide_index=True)
-    _download("Download retrieved records (CSV)", corpus, f"{prefix}_{provider.lower().replace(' ', '_')}_retrieved.csv", f"{prefix}_{provider.lower().replace(' ', '_')}_retrieved_csv")
-    return corpus, log
+        st.info(f"The optional {provider} live search returned no records. No previous live result is used; the verified saved sample is used if available.")
+        return None, None, "empty"
+    return corpus, log, "ok"
 
 
-def render_guided_examples(context: str = "day1", *, data_dir: str | Path | None = None) -> None:
+def render_guided_examples(context: str = "day1", *, data_dir: str | Path | None = None,
+                           snapshot_dir: str | Path | None = None) -> None:
     """Render every guided case as four self-contained stages.
 
     ``context`` namespaces all widget keys when used on different pages.
-    ``data_dir`` optionally overrides the default ``data/guided_fixed`` directory
-    (useful for tests). Captured Crossref files or the selected provider's live
-    data feed every later stage. Live results use guided-only session keys; no
-    credentials or BYOD state are read or written. Returns ``None``.
+    ``data_dir`` overrides the manifest directory and confines snapshot lookup
+    to its ``guided_provider_snapshots`` subdirectory. ``snapshot_dir`` can
+    explicitly override that location. With a custom data directory and no
+    snapshot subdirectory, verified legacy Crossref fixture names are supported.
+    One verified saved or successful live dataset feeds every stage. Live results
+    use guided-only session keys; no credentials or BYOD state are read or written.
     """
     directory = Path(data_dir) if data_dir is not None else GUIDED_DATA_DIR
+    snapshots = (Path(snapshot_dir) if snapshot_dir is not None else
+                 directory / "guided_provider_snapshots" if data_dir is not None else GUIDED_SNAPSHOT_DIR)
     try:
         cases = load_guided_cases(directory)
     except ValueError as exc:
@@ -763,7 +849,7 @@ def render_guided_examples(context: str = "day1", *, data_dir: str | Path | None
     if not cases:
         st.info("No fixed guided cases are available in the manifest.")
         return
-    st.caption("Each case is independent: choose a provider for its fixed search and fixed teaching screen. Crossref is a saved capture; the other sources are live on demand.")
+    st.caption("Each case is independent: choose a provider to use its verified saved, one-page sample immediately. A new fixed live search is optional where offered; all stages use the same selected sample.")
     for position, case in enumerate(cases):
         case_key = _text(case.get("key")) or f"case_{position + 1}"
         prefix = f"guided_{context}_{case_key}_{position + 1}"
@@ -779,33 +865,47 @@ def render_guided_examples(context: str = "day1", *, data_dir: str | Path | None
             retrieval, screening, extraction, synthesis = st.tabs([
                 "1 · Retrieval", "2 · Screening", "3 · Extraction", "4 · Synthesis & networks"
             ])
+            # Existing Crossref captures predate provider-slug filenames. Prefer a
+            # new pair if either half is present (so corruption cannot cause a
+            # silent fallback); otherwise verify the case's original capture.
+            crossref_stem = f"{case_key}__crossref"
+            use_manifest_capture = (provider == "Crossref" and
+                not (snapshots / f"{crossref_stem}.csv").exists() and
+                not (snapshots / f"{crossref_stem}.json").exists() and
+                snapshot_dir is None)
+            corpus, log, errors = load_provider_snapshot(
+                case, provider, directory if use_manifest_capture else snapshots,
+                legacy_override=use_manifest_capture)
+            kind = "saved"
+            stage_prefix = prefix if provider == "Crossref" else f"{prefix}_{provider.lower().replace(' ', '_')}"
             with retrieval:
-                if provider == "Crossref":
-                    corpus, log, errors = load_case_data(case, directory)
+                if provider != "Crossref":
+                    live_corpus, live_log, live_status = _render_live_retrieval(case_key, provider, prefix)
+                    if live_status == "ok":
+                        corpus, log, kind = live_corpus, live_log, "live"
+                if corpus is None:
                     for error in errors:
                         st.warning(error)
-                    if log is None:
-                        # Without provenance the captured data cannot be verified.
-                        corpus = None
-                    if corpus is not None and "Source" not in corpus:
-                        corpus["Source"] = "Crossref"
-                    _render_retrieval(case, corpus, log, prefix)
-                else:
-                    corpus, log = _render_live_retrieval(case_key, provider, prefix)
+                _render_retrieval(case, corpus, log, stage_prefix, provider, kind)
             inc, exc = _case_terms(case, "inclusion_terms"), _case_terms(case, "exclusion_terms")
             if inc is None or exc is None:
                 st.warning("The case's fixed screening terms are invalid; no decisions will be inferred.")
             screened = screen_records(corpus, inc, exc) if corpus is not None and inc is not None and exc is not None else None
             included = included_records(screened) if screened is not None else None
-            stage_prefix = prefix if provider == "Crossref" else f"{prefix}_{provider.lower().replace(' ', '_')}"
+            selected = (f"Data for this stage: {'verified saved snapshot' if kind == 'saved' else 'successful live retrieval'} from {provider}."
+                        if corpus is not None else
+                        f"Data for this stage: no verified {provider} snapshot or successful live retrieval is available; see Retrieval.")
             with screening:
+                st.caption(selected)
                 _render_screening(case, screened, stage_prefix, provider)
             with extraction:
+                st.caption(selected)
                 _render_extraction(included, stage_prefix, provider)
                 _render_ai_illustration(case, included, directory, log, provider)
             with synthesis:
+                st.caption(selected)
                 _render_synthesis(screened, included, stage_prefix, provider)
 
 
 __all__ = ["render_guided_examples", "screen_records", "included_records", "candidate_finding_excerpt", "extract_bibliography",
-           "year_summary", "safe_csv_bytes", "load_guided_cases", "load_case_data"]
+           "year_summary", "safe_csv_bytes", "load_guided_cases", "load_case_data", "load_provider_snapshot"]

@@ -52,7 +52,7 @@ from openaire_client import OpenAIREError, fetch_openaire
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
 from day2_networks import build_network
 from day2_network_view import make_network_html
-from guided_loader import load_guided_workflow
+from guided_loader_v2 import load_guided_workflow
 
 guided_workflow = load_guided_workflow()
 
@@ -1159,8 +1159,8 @@ time, reproducibility requires logging queries and timestamps — a practice the
 supports automatically.
 
 The guided path presents four complete cases. At the top of each case, choose OpenAlex,
-Crossref, Europe PMC or OpenAIRE. Crossref uses a recorded sample; the other providers run
-their own fixed searches on request. Each case shows retrieval, fixed keyword screening,
+Crossref, Europe PMC or OpenAIRE. Each provider has a recorded sample that is ready to view;
+optional live searches use fixed queries. Each case shows retrieval, fixed keyword screening,
 source-linked extraction, descriptive synthesis and bibliometric maps together. A bounded
 result set is not an exhaustive review search. The guided cases are independent of BYOD.
 
