@@ -17,6 +17,7 @@ SUBMIT = "FormSubmitter:openalex_private_credentials-▶ Run My Query"
 def new_byod():
     app = AppTest.from_file(str(PAGE), default_timeout=90).run()
     app.sidebar.radio[0].set_value(SECTION).run()
+    app.radio(key="byod_openalex_credential_method").set_value("Masked manual entry (app server)").run()
     return app
 
 

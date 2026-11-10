@@ -1,8 +1,8 @@
 """
 Day 2 — From Corpus to Included Studies
 Four self-contained guided cases and a separate BYOD workflow.
-Guided cases use captured Crossref results without live API calls; BYOD can use
-the Day 1 BYOD session or a user-supplied corpus.
+Guided cases use a selected provider's fixed search and records; BYOD can use the
+Day 1 BYOD session or a user-supplied corpus.
 No coding required.
 
 Covers: PICO/SPIDER criteria, Active Learning (TF-IDF + Logistic Regression),
@@ -489,10 +489,11 @@ networks built from the available study metadata.
 
 ### Where Day 2 Fits in the Pipeline
 
-Each guided case presents a recorded, bounded Crossref search, fixed keyword screening,
-direct source-linked extraction, descriptive synthesis, and bibliometric maps together.
-The screen is not LLM or independent human review; a bounded Crossref relevance search is
-not exhaustive and does not guarantee Boolean interpretation. The guided cases are
+Each guided case offers OpenAlex, Crossref, Europe PMC and OpenAIRE at the top. It presents
+the selected provider's bounded search and records, fixed keyword screening, direct
+source-linked extraction, descriptive synthesis and bibliometric maps together. Crossref
+uses a saved capture; the other provider searches run on request. The screen is not LLM or
+independent human review, and bounded searches are not exhaustive. The guided cases are
 separate from BYOD. In **BYOD**, Day 1 supplies a
 corpus, Day 2 screens it and offers an **included-studies CSV** plus a **full screening-log
 CSV**, and Day 3 extracts fields and synthesizes evidence. Retain your query log and search

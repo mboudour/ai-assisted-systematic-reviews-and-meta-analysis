@@ -1604,7 +1604,7 @@ descriptive synthesis and bibliometric networks in a **no-code** environment.
 
 ### What You Will Do Today
 
-In the fixed guided cases, the same saved records move from search through screening,
+In each fixed guided case, choose a provider and follow its records from search through screening,
 source-linked extraction and descriptive synthesis. The fixed criteria are shown read-only.
 They are teaching demonstrations, not validated systematic reviews. The independent BYOD
 path offers the available extraction and visualization options for your own data.

@@ -1,7 +1,7 @@
 """
 Day 1 — From Query to Corpus
 Four self-contained guided cases and a separate BYOD workflow.
-Guided cases use captured Crossref results without live API calls.
+Each guided case offers fixed searches for all four supported providers.
 No coding required.
 
 APIs covered: OpenAlex, Crossref, Europe PMC, and OpenAIRE
@@ -1156,11 +1156,11 @@ and how it facilitates reproducibility. Because APIs evolve and results may chan
 time, reproducibility requires logging queries and timestamps — a practice the app
 supports automatically.
 
-The guided path presents four complete cases based on recorded, bounded Crossref searches.
-Each case shows its retrieval, fixed keyword screening, source-linked extraction, descriptive
-synthesis and bibliometric maps together. Crossref relevance matching is not guaranteed to
-interpret a query as Boolean, and a bounded result set is not an exhaustive review search.
-The guided cases are independent of the BYOD workflow.
+The guided path presents four complete cases. At the top of each case, choose OpenAlex,
+Crossref, Europe PMC or OpenAIRE. Crossref uses a recorded sample; the other providers run
+their own fixed searches on request. Each case shows retrieval, fixed keyword screening,
+source-linked extraction, descriptive synthesis and bibliometric maps together. A bounded
+result set is not an exhaustive review search. The guided cases are independent of BYOD.
 
 ### Open APIs Covered
 
@@ -1266,6 +1266,8 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         )
         is_openalex = api_choice.startswith("OpenAlex")
         is_openaire = api_choice.startswith("OpenAIRE")
+        browser_result = None
+        browser_mode = False
         st.caption("Each provider has its own search syntax and usage limits. OpenAlex and OpenAIRE support uppercase AND, OR and NOT, parentheses and quoted phrases, but search different fields.")
         query_input = st.text_input(
             "Search query",
@@ -1299,13 +1301,38 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
             )
             st.caption("OpenAlex calls journal articles ‘article’. Year, type and abstract filters are applied to the API request before records are returned.")
             st.markdown("#### Your OpenAlex credentials")
-            st.markdown("Create a free account at [OpenAlex](https://openalex.org/signup), verify your email, and copy your key from [API settings](https://openalex.org/settings/api-key). A key is required for this app's OpenAlex searches and later cursor pages.")
-            st.caption("Both fields are masked and held in this browser session's Streamlit state; they are not included in downloads or query logs. The app sends the key to OpenAlex over HTTPS in an authorization header. Your email is not sent with searches. The app/server operator can potentially access session data; use a trusted HTTPS deployment and a private browser session.")
-            with st.form("openalex_private_credentials"):
-                openalex_email = st.text_input("Verified OpenAlex account email", type="password", key="openalex_email_widget")
-                openalex_key = st.text_input("OpenAlex API key", type="password", key="openalex_key_widget")
-                run_query = st.form_submit_button("▶ Run My Query")
-            st.button("Forget my OpenAlex credentials", on_click=forget_openalex_credentials, key="forget_openalex")
+            st.markdown("Create a free account at [OpenAlex](https://openalex.org/signup), verify your email, and copy your key from [API settings](https://openalex.org/settings/api-key). This app uses a key for OpenAlex searches.")
+            credential_method = st.radio(
+                "How would you like to provide your OpenAlex credentials?",
+                ["Local JSON file (browser only)", "Masked manual entry (app server)"],
+                key="byod_openalex_credential_method",
+            )
+            browser_mode = credential_method.startswith("Local JSON")
+            if browser_mode:
+                st.caption("The browser reads your local file and sends the key directly to OpenAlex over HTTPS. The app receives the returned records, not your credentials. This depends on trusting the app's supplied code, your browser and its extensions.")
+                run_query = False
+                if query_input.strip():
+                    from browser_openalex import render_browser_openalex
+                    browser_result = render_browser_openalex(
+                        query_input.strip(), key="byod_openalex_browser",
+                        per_page=per_page, max_pages=max_pages,
+                        year_from=byod_year_from, year_to=byod_year_to,
+                        publication_types=byod_pub_types,
+                        search_scope="title_abstract_exact" if scope_label.startswith("Title") else "broad",
+                        require_abstract=require_abstract,
+                    )
+                    if browser_result is not None:
+                        request_id = browser_result[1]["request_id"]
+                        run_query = request_id != st.session_state.get("byod_browser_last_request_id")
+                else:
+                    st.info("Enter your search query above to show the browser-local file picker.")
+            else:
+                st.caption("Both fields are masked and held in this session's Streamlit state. The app server receives the key, and its operator may be able to access it. The key is sent to OpenAlex over HTTPS; the email is not sent with searches. Neither is included in downloads or query logs.")
+                with st.form("openalex_private_credentials"):
+                    openalex_email = st.text_input("Verified OpenAlex account email", type="password", key="openalex_email_widget")
+                    openalex_key = st.text_input("OpenAlex API key", type="password", key="openalex_key_widget")
+                    run_query = st.form_submit_button("▶ Run My Query")
+                st.button("Forget my OpenAlex credentials", on_click=forget_openalex_credentials, key="forget_openalex")
         else:
             if "Crossref" in api_choice:
                 st.info("Crossref needs no account, API key, or email. It retrieves one page; year and publication-type filters are not available in this app. Relevance search may not obey Boolean syntax, and abstracts are often missing.")
@@ -1326,7 +1353,7 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         if run_query:
             if not query_input.strip():
                 st.warning("Please enter a search query above.")
-            elif is_openalex and (not openalex_key.strip() or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", openalex_email.strip())):
+            elif is_openalex and not browser_mode and (not openalex_key.strip() or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", openalex_email.strip())):
                 st.warning("Enter your OpenAlex API key and a valid account email. OpenAlex must have verified the email associated with the key.")
             else:
                 # Avoid presenting an earlier successful corpus as the result of a failed new query.
@@ -1336,14 +1363,18 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                     try:
                         api_name = api_choice.split("(")[0].strip()
                         if is_openalex:
-                            records, request_log = fetch_works(
-                                query_input.strip(), openalex_key.strip(),
-                                per_page=per_page, max_pages=max_pages,
-                                year_from=byod_year_from, year_to=byod_year_to,
-                                publication_types=byod_pub_types,
-                                search_scope="title_abstract_exact" if scope_label.startswith("Title") else "broad",
-                                require_abstract=require_abstract,
-                            )
+                            if browser_mode:
+                                records, request_log = browser_result
+                                st.session_state["byod_browser_last_request_id"] = request_log["request_id"]
+                            else:
+                                records, request_log = fetch_works(
+                                    query_input.strip(), openalex_key.strip(),
+                                    per_page=per_page, max_pages=max_pages,
+                                    year_from=byod_year_from, year_to=byod_year_to,
+                                    publication_types=byod_pub_types,
+                                    search_scope="title_abstract_exact" if scope_label.startswith("Title") else "broad",
+                                    require_abstract=require_abstract,
+                                )
                             df = openalex_to_df(records)
                         elif "Crossref" in api_choice:
                             df, request_log = query_crossref_live(query_input.strip(), per_page=per_page, include_log=True)

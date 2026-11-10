@@ -234,7 +234,11 @@ class GuidedUITests(unittest.TestCase):
             self.assertEqual(len(app.tabs), 16)
             self.assertEqual(len(app.text_input), 0)
             self.assertEqual(len(app.text_area), 0)
-            self.assertEqual(len(app.selectbox), 4)
+            self.assertEqual(len(app.selectbox), 8)
+            for index in range(1, 5):
+                selector = app.selectbox(key=f"guided_test_case{index}_{index}_provider")
+                self.assertEqual(selector.value, "Crossref")
+                self.assertEqual(selector.options, ["Crossref", "OpenAlex", "Europe PMC", "OpenAIRE"])
             self.assertEqual(len(app.slider), 8)
             self.assertEqual(len(app.get("iframe")), 4)
             self.assertEqual([e.value for e in app.code], [f"query topic{i}" for i in range(1, 5)])

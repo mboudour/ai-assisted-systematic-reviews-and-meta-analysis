@@ -52,9 +52,10 @@ st.markdown("---")
 st.markdown("### How to Navigate")
 st.markdown("""
 Use the **sidebar** to select a day, then choose either **Guided Examples** or **BYOD**.
-These are separate paths. Each guided example contains all stages, uses fixed, read-only
-settings, and shows how its results come from the same saved input records. BYOD is for
-participants who want to select providers, enter searches and criteria, and use their own data.
+These are separate paths. Each guided example offers a choice of provider, contains all stages,
+uses fixed, read-only searches and screening criteria, and shows how its results follow from
+the selected provider's records. BYOD is for participants who want to enter their own searches
+and criteria and use their own data.
 
 | Day | Date | Theme | Main Objective |
 |-----|------|-------|----------------|
@@ -102,10 +103,11 @@ st.markdown("---")
 # ── Four Guided Case Studies ───────────────────────────────────────────────────
 st.markdown("### Four Guided Case Studies")
 st.markdown("""
-Each guided example is self-contained: it shows the saved Crossref search and retrieved records,
-fixed screening criteria and decisions, extraction from the included records, and a descriptive
-synthesis and networks. The same saved records are used across the steps. Queries and criteria are
-read-only; visualization controls let you explore a network without changing the example's inputs.
+Each guided example is self-contained: choose OpenAlex, Crossref, Europe PMC or OpenAIRE at the
+top of the case. The provider's fixed search and records feed the screening criteria and decisions,
+extraction, descriptive synthesis and networks. Crossref offers a recorded sample; other providers
+can be searched live with a fixed query. Queries and criteria are read-only; visualization controls
+let you explore a network without changing the example's inputs.
 The examples are small, bounded search samples and their automatic screening is a teaching heuristic,
 not a validated systematic review or a substitute for human judgment. Descriptive synthesis does
 not create unverified clinical or financial effect sizes.
@@ -142,12 +144,10 @@ metadata and abstracts may be missing, and publication results can include non-p
 The search covers broad metadata, not just titles and abstracts. Verify records and acknowledge
 OpenAIRE as the data source. The app repeats these caveats when OpenAIRE is used.
 
-**OpenAlex credentials:** each participant supplies their own email-verified OpenAlex key and
-email in masked, session-specific inputs. The app sends the key to OpenAlex only as an HTTPS
-`Authorization: Bearer` header; the email is not sent with searches. Credentials are not placed
-in query logs or error metadata, and the app does not promise complete privacy from the operator
-or hosting environment. Participants should use a key they control and consider operator/hosting
-trust before entering it.
+**OpenAlex credentials:** participants can choose a credentials file kept on their own computer.
+The browser reads the file and sends the key directly to OpenAlex over HTTPS; it sends the returned
+records, not the key, to the app. This assumes the app's code and browser are trusted. The optional
+masked manual-entry route sends the key to the app server. Search logs do not contain credentials.
 
 **Day 2 BYOD:** Upload the Day 1 CSV (or another CSV with titles/abstracts), enter inclusion and
 exclusion terms, and run the current deterministic, case-insensitive substring heuristic over

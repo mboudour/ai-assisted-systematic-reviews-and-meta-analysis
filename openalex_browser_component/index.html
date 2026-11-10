@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser-local OpenAlex search</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; font-size: 0.92rem; line-height: 1.45; }
+    main { border: 1px solid #8290a0; border-radius: 0.5rem; padding: 0.8rem 1rem; }
+    p { margin: 0 0 0.7rem; }
+    label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+    input { max-width: 100%; margin-bottom: 0.6rem; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    button { cursor: pointer; border: 1px solid #728196; border-radius: 0.35rem; padding: 0.4rem 0.8rem; font: inherit; }
+    button:disabled { cursor: not-allowed; opacity: 0.55; }
+    #run { background: #1463c5; color: white; border-color: #1463c5; }
+    #status { margin: 0.65rem 0 0; min-height: 1.4em; }
+    #status.error { color: #c43627; }
+  </style>
+  <script defer src="component.js"></script>
+</head>
+<body>
+<main>
+  <p><strong>Browser-local OpenAlex credentials.</strong> Choose a local JSON file containing
+    <code>api_key</code> and <code>email</code>. This component reads the file in your browser;
+    it sends the key only to OpenAlex in an HTTPS authorization header. The email is not sent.
+    The file and credentials are not uploaded to Streamlit or saved by this component.</p>
+  <p>The app host supplies this code and could change it; browser extensions may also have access.
+    Use a host and browser you trust. The Streamlit server <strong>does receive the search results</strong>
+    and non-secret search settings. OpenAlex receives your search query.</p>
+  <p>On your computer, create a plain-text file named <code>openalex_credentials.json</code>
+    containing <code>{"api_key":"YOUR_KEY", "email":"YOUR_VERIFIED_EMAIL"}</code>.
+    Replace both placeholders, save it privately, and never commit or share it.</p>
+  <label for="credentials">Local JSON credentials file</label>
+  <input id="credentials" type="file" accept=".json,application/json" autocomplete="off">
+  <div class="buttons">
+    <button id="run" type="button" disabled>Run Search</button>
+    <button id="clear" type="button">Remove file</button>
+  </div>
+  <p id="status" role="status" aria-live="polite">Choose a file, then select Run Search. No search starts automatically.</p>
+</main>
+</body>
+</html>

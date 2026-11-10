@@ -1,8 +1,8 @@
-"""Self-contained, fixed-data guided review examples.
+"""Self-contained guided review examples with fixed searches and criteria.
 
-The guided path reads its own manifest, captured Crossref CSVs and provenance
-logs. It never uses, mutates, or hands off application session data. Screening
-is a deliberately simple teaching heuristic, not a validated review process.
+Crossref uses verified captures; other providers are searched only on demand.
+Live results are isolated in guided-only session keys, never in BYOD state.
+Screening is a simple teaching heuristic, not a validated review process.
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ import streamlit.components.v1 as components
 
 import day2_networks
 import day2_network_view
+from openaire_notice import OPENAIRE_LIMITATIONS
 
 
 GUIDED_DATA_DIR = Path(__file__).resolve().parent / "data" / "guided_fixed"
@@ -126,6 +127,8 @@ def candidate_finding_excerpt(abstract: Any) -> str:
 def extract_bibliography(included: pd.DataFrame) -> pd.DataFrame:
     """Copy auditable fields for precisely the selected rows; never infer content."""
     fields = ["Title", "Year", "DOI", "Authors", "Abstract", "Abstract_License"]
+    # Preserve these when present without changing the schema of simple fixtures.
+    fields += [field for field in ("ID", "Source", "Abstract Source") if field in included]
     result = pd.DataFrame(index=included.index)
     for field in fields:
         result[field] = included[field].map(_text) if field in included else ""
@@ -310,6 +313,9 @@ def _render_retrieval(case: dict[str, Any], corpus: pd.DataFrame | None,
         st.write(f"Returned: {returned if returned is not None else 'Not recorded'}; provider total matches: {total if total is not None else 'Not recorded'}; truncation indicator: {truncated if truncated is not None else 'Not recorded'}.")
         st.caption("Complete capture log (including any additional parameters and licensing notes):")
         st.json(log, expanded=False)
+        st.download_button("Download capture log (JSON)", json.dumps(log, indent=2, ensure_ascii=False).encode("utf-8"),
+                           file_name=f"{prefix}_crossref_capture_log.json", mime="application/json",
+                           key=f"{prefix}_capture_log_json")
         st.caption("The saved sample retains abstracts only where a CC BY or CC0 license was found in Crossref metadata. Missing abstracts can reflect this reuse check; verify the source and license terms before reuse.")
         if corpus is not None and returned is not None:
             try:
@@ -325,7 +331,8 @@ def _render_retrieval(case: dict[str, Any], corpus: pd.DataFrame | None,
     _download("Download captured records (CSV)", corpus, f"{prefix}_retrieved.csv", f"{prefix}_retrieved_csv")
 
 
-def _render_screening(case: dict[str, Any], screened: pd.DataFrame | None, prefix: str) -> None:
+def _render_screening(case: dict[str, Any], screened: pd.DataFrame | None, prefix: str,
+                      provider: str = "Crossref") -> None:
     st.markdown("#### 2. Fixed teaching screen")
     st.caption(
         "Nonvalidated deterministic heuristic, not an LLM or human review: a case-insensitive, "
@@ -342,8 +349,9 @@ def _render_screening(case: dict[str, Any], screened: pd.DataFrame | None, prefi
         st.error("No teaching-screen decisions are available because the corpus or fixed terms could not be loaded.")
         return
     included = included_records(screened)
-    st.caption(f"Captured records: {len(screened)}; heuristic includes: {len(included)}; heuristic excludes: {len(screened) - len(included)}. These are not validated eligibility decisions.")
-    columns = [name for name in ("ID", "DOI", "Title", "Abstract", SCREEN_DECISION,
+    label = "Captured records" if provider == "Crossref" else f"{provider} retrieved records"
+    st.caption(f"{label}: {len(screened)}; heuristic includes: {len(included)}; heuristic excludes: {len(screened) - len(included)}. These are not validated eligibility decisions.")
+    columns = [name for name in ("Source", "ID", "DOI", "Title", "Abstract", SCREEN_DECISION,
                                    INCLUSION_MATCHES, EXCLUSION_MATCHES) if name in screened]
     st.dataframe(screened[columns], use_container_width=True, hide_index=True)
     st.caption("Each displayed matching term is followed by the field(s) in which it occurs.")
@@ -351,12 +359,13 @@ def _render_screening(case: dict[str, Any], screened: pd.DataFrame | None, prefi
               f"{prefix}_screened.csv", f"{prefix}_screened_csv")
 
 
-def _render_extraction(included: pd.DataFrame | None, prefix: str) -> None:
+def _render_extraction(included: pd.DataFrame | None, prefix: str,
+                       provider: str = "Crossref") -> None:
     st.markdown("#### 3. Direct bibliographic extraction")
     st.caption(
-        "Fields below are copied from the captured records included by the nonvalidated teaching screen. "
+        f"Fields below are copied from the selected {provider} records included by the nonvalidated teaching screen. "
         "This table is not AI-generated: no PICO elements, outcomes, effects, or other absent facts are inferred or invented. "
-        "Blank fields were not recorded in the captured metadata."
+        "Blank fields were not recorded in the source metadata."
     )
     st.caption(
         "Candidate finding excerpt: the first literal sentence in the recorded abstract containing "
@@ -367,7 +376,7 @@ def _render_extraction(included: pd.DataFrame | None, prefix: str) -> None:
         "it is not an AI-generated or validated finding."
     )
     if included is None:
-        st.error("Extraction is unavailable because the captured corpus or fixed teaching-screen terms could not be loaded.")
+        st.error("Extraction is unavailable because the selected corpus or fixed teaching-screen terms could not be loaded.")
         return
     extracted = extract_bibliography(included)
     st.caption(f"Bibliographic rows: {len(extracted)}; exactly the heuristic-included records from stage 2.")
@@ -434,8 +443,12 @@ def load_ai_illustration(case: dict[str, Any], included: pd.DataFrame,
 
 
 def _render_ai_illustration(case: dict[str, Any], included: pd.DataFrame | None,
-                            directory: Path, log: dict[str, Any] | None) -> None:
+                            directory: Path, log: dict[str, Any] | None,
+                            provider: str = "Crossref") -> None:
     st.markdown("##### Fixed AI extraction illustration — one included record")
+    if provider != "Crossref":
+        st.info(f"No saved, provider-matched AI illustration is available for {provider}. The Crossref illustration is not reused.")
+        return
     st.caption(
         "A real AI request was made once when this teaching illustration was prepared. "
         "The exact prompt and response below are saved read-only; no request is made now. "
@@ -528,14 +541,16 @@ def _render_network(included: pd.DataFrame, prefix: str) -> None:
         _download("Download network links (CSV)", edges, f"{prefix}_{kind}_links.csv", f"{prefix}_{kind}_links_csv")
 
 
-def _render_synthesis(screened: pd.DataFrame | None, included: pd.DataFrame | None, prefix: str) -> None:
+def _render_synthesis(screened: pd.DataFrame | None, included: pd.DataFrame | None, prefix: str,
+                      provider: str = "Crossref") -> None:
     st.markdown("#### 4. Descriptive synthesis and networks")
-    st.caption("Descriptive counts of this captured one-page sample and the same nonvalidated teaching-screen includes; not a meta-analysis, PRISMA flow, treatment effect, or claim of comprehensive evidence.")
+    st.caption(f"Descriptive counts of this {provider} one-page sample and the same nonvalidated teaching-screen includes; not a meta-analysis, PRISMA flow, treatment effect, or claim of comprehensive evidence.")
     st.info("The sample does not contain verified, compatible effect sizes and full-text screening counts, so no pooled forest plot or full PRISMA flow is invented for this example.")
     if screened is None or included is None:
-        st.error("Synthesis is unavailable because the captured corpus or fixed teaching-screen terms could not be loaded.")
+        st.error("Synthesis is unavailable because the selected corpus or fixed teaching-screen terms could not be loaded.")
         return
-    st.write(f"Captured records: {len(screened)}; heuristic-included: {len(included)}; heuristic-excluded: {len(screened) - len(included)}.")
+    label = "Captured records" if provider == "Crossref" else f"{provider} retrieved records"
+    st.write(f"{label}: {len(screened)}; heuristic-included: {len(included)}; heuristic-excluded: {len(screened) - len(included)}.")
     years = year_summary(included)
     st.caption("Publication year counts among the heuristic-included records; missing/non-four-digit values are reported separately.")
     if years.empty:
@@ -546,14 +561,194 @@ def _render_synthesis(screened: pd.DataFrame | None, included: pd.DataFrame | No
     _render_network(included, prefix)
 
 
+GUIDED_PROVIDERS = ("Crossref", "OpenAlex", "Europe PMC", "OpenAIRE")
+_ENDPOINTS = {
+    "OpenAlex": "https://api.openalex.org/works",
+    "Europe PMC": "https://www.ebi.ac.uk/europepmc/webservices/rest/search",
+    "OpenAIRE": "https://api.openaire.eu/graph/v3/research-products",
+}
+_LIVE_CAVEATS = {
+    "OpenAlex": "OpenAlex title-and-abstract exact search and provider ranking determine matches. Abstracts are reconstructed from inverted indexes and may be missing; references include only supplied OpenAlex work IDs. No date, type or abstract filter is applied. Check abstract reuse rights.",
+    "Europe PMC": "Europe PMC has life-sciences-oriented coverage and its own Boolean search semantics. Core metadata and abstracts can be incomplete; this retrieval does not supply reference lists. No date, type or abstract filter is applied. Check abstract reuse rights.",
+    "OpenAIRE": "OpenAIRE searches broad research-product metadata, not just titles and abstracts. The first description may not be a formal abstract. Reference lists are not supplied here. No date, specific publication-type or abstract filter is applied; verify reuse rights and acknowledge OpenAIRE.",
+}
+
+
+def _live_plan(case_key: str, provider: str) -> tuple[str, dict[str, Any]]:
+    """Build the exact, non-editable request plan from the backend contract."""
+    import guided_provider_search as search
+
+    query = search.guided_query(case_key, provider)
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("Fixed provider query is unavailable")
+    if provider == "OpenAlex":
+        params = {"search.title_and_abstract.exact": query, "per-page": 50,
+                  "cursor": "*", "select": search.OPENALEX_SELECT}
+    elif provider == "Europe PMC":
+        params = {"query": query, "resultType": "core", "pageSize": search.PAGE_SIZE,
+                  "format": "json", "cursorMark": "*"}
+    elif provider == "OpenAIRE":
+        params = {"search": query, "type": "publication", "pageSize": search.PAGE_SIZE, "cursor": "*"}
+    else:
+        raise ValueError("Unsupported live provider")
+    return query, params
+
+
+def _nonnegative_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value >= 0:
+        return value
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        return int(value)
+    return None
+
+
+def _safe_timestamp(value: Any) -> str:
+    # Do not copy arbitrary provider strings (which could contain secrets) into
+    # a log. Missing/unrecognized timestamps are honestly marked unavailable.
+    if isinstance(value, str) and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?(?:Z|[+-]\d\d:\d\d)", value):
+        return value
+    return "Not recorded"
+
+
+def _live_log(case_key: str, provider: str, query: str, params: dict[str, Any],
+              metadata: Any, corpus: pd.DataFrame) -> dict[str, Any]:
+    """Construct a log from trusted configuration and a small scalar allowlist."""
+    if not isinstance(metadata, dict):
+        raise ValueError("Invalid provider metadata")
+    for name, expected in (("case_key", case_key), ("provider", provider), ("source", provider), ("query", query)):
+        if name in metadata and metadata[name] not in (None, "", expected):
+            raise ValueError("Provider response does not match the fixed search")
+    if "parameters" in metadata and metadata["parameters"] != params:
+        raise ValueError("Provider parameters do not match the fixed search")
+    timestamp = _first(metadata, "timestamp_utc", "fetched_at_utc", "retrieved_at_utc")
+    pages = _nonnegative_int(_first(metadata, "pages_fetched", "pages"))
+    total = _nonnegative_int(_first(metadata, "total_matches", "returned_total", "numFound"))
+    truncated = metadata.get("possibly_truncated")
+    if not isinstance(truncated, bool):
+        truncated = None
+    return {
+        "case_key": case_key, "provider": provider, "source": provider,
+        "endpoint": _ENDPOINTS[provider], "query": query, "parameters": params,
+        "max_pages": 1, "retrieved_at_utc": _safe_timestamp(timestamp),
+        "returned": len(corpus), "total_matches": total,
+        "pages_fetched": pages, "possibly_truncated": truncated,
+        "limitations": _LIVE_CAVEATS[provider],
+        "sample_note": "Bounded live one-page sample, not a comprehensive search or saved reproducible snapshot; results can change.",
+    }
+
+
+def _prepare_live_result(case_key: str, provider: str, query: str,
+                         params: dict[str, Any], corpus: Any, metadata: Any) -> dict[str, Any]:
+    if not isinstance(corpus, pd.DataFrame):
+        raise ValueError("Invalid provider corpus")
+    # No credential-bearing columns are retained, even if supplied unexpectedly.
+    forbidden = re.compile(r"(?:api.?key|authorization|credential|password|secret|token|email)", re.I)
+    columns = [column for column in corpus.columns if not forbidden.search(str(column))]
+    clean = corpus.loc[:, columns].copy(deep=True).reset_index(drop=True)
+    # Provenance is attached by this retrieval, not copied from unrelated state.
+    clean["Source"] = provider
+    log = _live_log(case_key, provider, query, params, metadata, clean)
+    return {"status": "ok", "corpus": clean, "log": log}
+
+
+def _render_live_retrieval(case_key: str, provider: str, prefix: str
+                           ) -> tuple[pd.DataFrame | None, dict[str, Any] | None]:
+    st.markdown("#### 1. Live fixed retrieval")
+    st.warning("This is a bounded, one-page live teaching sample, not an exhaustive systematic search or a saved reproducible snapshot. Results can change over time.")
+    st.caption(_LIVE_CAVEATS[provider])
+    try:
+        query, params = _live_plan(case_key, provider)
+    except (ImportError, AttributeError, ValueError, KeyError):
+        st.error(f"The fixed {provider} search is unavailable for this case; no search was run.")
+        return None, None
+    st.write("Fixed query sent to this provider:")
+    st.code(query, language=None)
+    st.write(f"Endpoint: {_ENDPOINTS[provider]}")
+    st.write("Exact request parameters (one page only; no editable search):")
+    st.json(params, expanded=True)
+    if provider == "OpenAlex":
+        st.caption("The browser reads your local JSON credential file and calls OpenAlex directly. The key is not uploaded to the Streamlit server, session state, or logs. The fixed search uses title_abstract_exact, no year/type filter, and does not require an abstract.")
+    state_key = f"{prefix}_provider_{provider.lower().replace(' ', '_')}_result"
+    active_key = f"{prefix}_openalex_active"
+    attempt_key = f"{prefix}_openalex_attempt"
+    if provider == "OpenAlex":
+        if st.button("Start a new OpenAlex browser search", key=f"{prefix}_openalex_start"):
+            # Clear first: a failed or abandoned retry must never show stale results.
+            st.session_state.pop(state_key, None)
+            st.session_state[attempt_key] = st.session_state.get(attempt_key, 0) + 1
+            st.session_state[active_key] = True
+        if st.session_state.get(active_key, False):
+            try:
+                from browser_openalex import render_browser_openalex
+                from guided_provider_search import openalex_records_to_frame
+                response = render_browser_openalex(
+                    query, key=f"{prefix}_openalex_browser_{st.session_state[attempt_key]}",
+                    per_page=50, max_pages=1, year_from=None, year_to=None,
+                    publication_types=(), search_scope="title_abstract_exact", require_abstract=False,
+                )
+                if response is not None:
+                    records, metadata = response
+                    if not isinstance(records, list) or not isinstance(metadata, dict) or metadata.get("error"):
+                        raise ValueError("Invalid browser search response")
+                    corpus = openalex_records_to_frame(records)
+                    st.session_state[state_key] = _prepare_live_result(case_key, provider, query, params, corpus, metadata)
+                    st.session_state[active_key] = False
+                    # Unmount the component so an old event cannot initiate a retry
+                    # or be mistaken for a later request on the next rerun.
+                    st.rerun()
+            except Exception:
+                st.session_state[active_key] = False
+                st.session_state[state_key] = {"status": "error"}
+    elif st.button(f"Run fixed {provider} search", key=f"{prefix}_{provider.lower().replace(' ', '_')}_run"):
+        st.session_state.pop(state_key, None)
+        try:
+            from guided_provider_search import fetch_guided
+            with st.spinner(f"Searching {provider}…"):
+                corpus, metadata = fetch_guided(case_key, provider)
+            st.session_state[state_key] = _prepare_live_result(case_key, provider, query, params, corpus, metadata)
+        except Exception:
+            # Never echo raw exception text, which can contain request URLs or credentials.
+            st.session_state[state_key] = {"status": "error"}
+    result = st.session_state.get(state_key)
+    if isinstance(result, dict) and result.get("status") == "ok":
+        saved_log = result.get("log")
+        if (not isinstance(saved_log, dict) or saved_log.get("case_key") != case_key
+                or saved_log.get("provider") != provider or saved_log.get("query") != query
+                or saved_log.get("parameters") != params or not isinstance(result.get("corpus"), pd.DataFrame)):
+            st.session_state.pop(state_key, None)
+            result = None
+    if not result:
+        st.info(f"No {provider} search has completed for this case. Run the fixed search to populate all four stages.")
+        return None, None
+    if result.get("status") != "ok":
+        st.error(f"The {provider} search failed or the response was invalid. No previous result is displayed; retry when ready.")
+        return None, None
+    corpus, log = result["corpus"], result["log"]
+    st.write(f"Recorded source: {provider}; retrieval timestamp (UTC): {log['retrieved_at_utc']}; returned: {len(corpus)}; provider total: {log['total_matches'] if log['total_matches'] is not None else 'Not recorded'}; possibly truncated: {log['possibly_truncated'] if log['possibly_truncated'] is not None else 'Unknown'}.")
+    st.caption("Sanitized live retrieval log (fixed request, source, date, cap and limitations):")
+    st.json(log, expanded=False)
+    st.download_button("Download live retrieval log (JSON)", json.dumps(log, indent=2, ensure_ascii=False).encode("utf-8"),
+                       file_name=f"{prefix}_{provider.lower().replace(' ', '_')}_log.json", mime="application/json",
+                       key=f"{prefix}_{provider.lower().replace(' ', '_')}_log_json")
+    if corpus.empty:
+        st.info(f"The {provider} search returned no records. The fixed screen and synthesis therefore contain no records.")
+    else:
+        st.caption(f"{provider} returned {len(corpus)} records; these are not validated eligible studies.")
+    st.dataframe(corpus, use_container_width=True, hide_index=True)
+    _download("Download retrieved records (CSV)", corpus, f"{prefix}_{provider.lower().replace(' ', '_')}_retrieved.csv", f"{prefix}_{provider.lower().replace(' ', '_')}_retrieved_csv")
+    return corpus, log
+
+
 def render_guided_examples(context: str = "day1", *, data_dir: str | Path | None = None) -> None:
     """Render every guided case as four self-contained stages.
 
     ``context`` namespaces all widget keys when used on different pages.
     ``data_dir`` optionally overrides the default ``data/guided_fixed`` directory
-    (useful for tests). Each invocation reads the independent fixed files and
-    computes all later stages from the case's own captured records; it never
-    accesses or mutates application session state. Returns ``None``.
+    (useful for tests). Captured Crossref files or the selected provider's live
+    data feed every later stage. Live results use guided-only session keys; no
+    credentials or BYOD state are read or written. Returns ``None``.
     """
     directory = Path(data_dir) if data_dir is not None else GUIDED_DATA_DIR
     try:
@@ -564,35 +759,48 @@ def render_guided_examples(context: str = "day1", *, data_dir: str | Path | None
     if not cases:
         st.info("No fixed guided cases are available in the manifest.")
         return
-    st.caption("Each guided case is a complete, independent worked example using its own saved retrieval and fixed teaching screen.")
+    st.caption("Each case is independent: choose a provider for its fixed search and fixed teaching screen. Crossref is a saved capture; the other sources are live on demand.")
     for position, case in enumerate(cases):
         case_key = _text(case.get("key")) or f"case_{position + 1}"
         prefix = f"guided_{context}_{case_key}_{position + 1}"
         label = _text(case.get("label")) or case_key
         with st.expander(label):
+            provider = st.selectbox("Provider", GUIDED_PROVIDERS, key=f"{prefix}_provider")
+            if provider == "OpenAIRE":
+                # Above the tabs, so the caveat stays visible during every stage.
+                st.warning(OPENAIRE_LIMITATIONS)
             question = _text(case.get("question"))
             if question:
                 st.write("Fixed research question:", question)
-            corpus, log, errors = load_case_data(case, directory)
-            for error in errors:
-                st.warning(error)
+            retrieval, screening, extraction, synthesis = st.tabs([
+                "1 · Retrieval", "2 · Screening", "3 · Extraction", "4 · Synthesis & networks"
+            ])
+            with retrieval:
+                if provider == "Crossref":
+                    corpus, log, errors = load_case_data(case, directory)
+                    for error in errors:
+                        st.warning(error)
+                    if log is None:
+                        # Without provenance the captured data cannot be verified.
+                        corpus = None
+                    if corpus is not None and "Source" not in corpus:
+                        corpus["Source"] = "Crossref"
+                    _render_retrieval(case, corpus, log, prefix)
+                else:
+                    corpus, log = _render_live_retrieval(case_key, provider, prefix)
             inc, exc = _case_terms(case, "inclusion_terms"), _case_terms(case, "exclusion_terms")
             if inc is None or exc is None:
                 st.warning("The case's fixed screening terms are invalid; no decisions will be inferred.")
             screened = screen_records(corpus, inc, exc) if corpus is not None and inc is not None and exc is not None else None
             included = included_records(screened) if screened is not None else None
-            retrieval, screening, extraction, synthesis = st.tabs([
-                "1 · Retrieval", "2 · Screening", "3 · Extraction", "4 · Synthesis & networks"
-            ])
-            with retrieval:
-                _render_retrieval(case, corpus, log, prefix)
+            stage_prefix = prefix if provider == "Crossref" else f"{prefix}_{provider.lower().replace(' ', '_')}"
             with screening:
-                _render_screening(case, screened, prefix)
+                _render_screening(case, screened, stage_prefix, provider)
             with extraction:
-                _render_extraction(included, prefix)
-                _render_ai_illustration(case, included, directory, log)
+                _render_extraction(included, stage_prefix, provider)
+                _render_ai_illustration(case, included, directory, log, provider)
             with synthesis:
-                _render_synthesis(screened, included, prefix)
+                _render_synthesis(screened, included, stage_prefix, provider)
 
 
 __all__ = ["render_guided_examples", "screen_records", "included_records", "candidate_finding_excerpt", "extract_bibliography",

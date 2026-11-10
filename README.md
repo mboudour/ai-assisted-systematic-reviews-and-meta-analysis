@@ -10,7 +10,7 @@
 
 The workshop is no-code: choose a day from the sidebar, then select one of two **independent** paths.
 
-1. **Guided Examples:** Explore a complete, fixed teaching example, from a recorded search and saved corpus through screening, extraction, descriptive synthesis and networks. Search queries and criteria are displayed read-only; network display settings can be adjusted. Guided examples do not send data or settings to BYOD.
+1. **Guided Examples:** Choose OpenAlex, Crossref, Europe PMC or OpenAIRE at the top of each case. Follow the chosen provider's fixed search and records through screening, extraction, descriptive synthesis and networks. Search queries and criteria are displayed read-only; network display settings can be adjusted. Guided examples do not send data or settings to BYOD.
 2. **BYOD — Bring Your Own Data:** Use your own research question or files and configure the available providers, search settings, screening criteria, extraction options and visualizations. Your Day 1 BYOD corpus can be carried to Day 2 BYOD, and included studies can be carried to Day 3 BYOD.
 
 Both paths require critical appraisal. Automated screening and extraction are aids, not a substitute for independent review.
@@ -26,11 +26,11 @@ Each of the four case studies appears in the guided section of every day. Expand
 | Science / Engineering | Microplastic pollution in aquatic environments |
 | Management / Business | Corporate social responsibility and financial performance |
 
-The examples use small saved Crossref samples with their actual query and retrieval metadata. Crossref's `query` is a relevance search, not guaranteed Boolean search; a bounded first-page sample is not an exhaustive literature search, and a later run may return different records. The displayed fixed screening decisions are a transparent, simplified keyword heuristic, not human-verified eligibility decisions, independent active-learning results or an LLM screening run. Extraction and descriptive synthesis use the included records from the same example; no clinical outcomes, effect sizes, validated recall, or meta-analysis results are invented. The record snapshots and logs are stored under `data/guided_fixed/`; the older historical teaching fixtures remain in the repository but are not the source of these new examples.
+Crossref has a saved sample with its actual query and retrieval metadata. The other providers run their own fixed, bounded searches on request; their result sets are different and may change over time. OpenAlex requires an individual key. Crossref's `query` is a relevance search, not guaranteed Boolean search, and a bounded first-page sample is not an exhaustive literature search. The displayed fixed screening decisions are a transparent, simplified keyword heuristic, not human-verified eligibility decisions, independent active-learning results or an LLM screening run. Extraction and descriptive synthesis use the included records from the selected provider; no clinical outcomes, effect sizes, validated recall, or meta-analysis results are invented. Saved Crossref snapshots and logs are stored under `data/guided_fixed/`.
 
 To reduce redistribution of copyrighted material, the saved samples retain abstracts only where Crossref metadata report a CC BY or CC0 license; other abstracts have been withheld. A missing abstract therefore does **not** necessarily mean the provider lacked one. The original response body is not published; its hash and the later license-check details are logged. Metadata about a license is not conclusive: verify its applicability, attribution requirements and the original source before further reuse.
 
-Each example also shows a **precomputed AI extraction illustration for one included record**: its original source, exact fixed prompt, model and extracted quotations. No new AI call is made when a participant opens it. Exact quotation matching does not establish that a quotation is an appropriate interpretation; check the source and context. The AI illustration is not an extraction of every included record or a full evidence synthesis.
+Each saved Crossref example also shows a **precomputed AI extraction illustration for one included record**: its original source, exact fixed prompt, model and extracted quotations. No new AI call is made when a participant opens it. Other providers' live results use direct bibliographic extraction and do not reuse the Crossref AI illustration as if it were their own. Exact quotation matching does not establish that a quotation is an appropriate interpretation; check the source and context. The AI illustration is not an extraction of every included record or a full evidence synthesis.
 
 Each case can also display co-authorship and bibliographic-coupling networks when its metadata support them. Missing author or reference information is reported rather than fabricated.
 
@@ -40,9 +40,26 @@ Each case can also display co-authorship and bibliographic-coupling networks whe
 
 Choose **OpenAlex, Crossref, Europe PMC, or OpenAIRE**, enter a search and choose the options supported by that provider. Alternatively, upload RIS or a corpus CSV or use Zotero. Provider coverage, query syntax, fields and filters differ. Save the query log and corpus; record caps and missing metadata can make a result incomplete.
 
-- **OpenAlex:** Participants supply their own email-verified API key and email in masked, session-specific fields. The key is sent over HTTPS to OpenAlex in an authorization header. It is not put in query logs; the app/server operator may nevertheless have access to session data, so use a trusted deployment. Searches use bounded pagination.
+- **OpenAlex:** The browser-local-file option reads a participant's dedicated JSON file in the browser and sends the key directly to OpenAlex in an HTTPS authorization header; it sends returned records, not the key or file, to the app. The file is plaintext and should never be committed or shared. The server supplies the component code, so this protection requires trusting the deployment and browser. The optional masked manual-entry method sends the key to the app server. Neither method puts credentials in query logs. Searches use bounded pagination.
 - **Crossref:** No participant key is required. This app retrieves one page using Crossref relevance search; Boolean interpretation and complete abstracts are not guaranteed.
 - **OpenAIRE:** No participant key or email is required. The app uses anonymous, bounded Graph API v3 searches. Anonymous requests can be rate-limited and participants on one hosted app may share the allowance. Its broad metadata search is not restricted to title/abstract, and the app does not apply year, specific publication-type or abstract filters for this source. Coverage varies; records may be non-peer-reviewed, and DOIs, author data and descriptions can be missing. Descriptions are not necessarily formal abstracts, and OpenAIRE subject labels are not OpenAlex concepts. Search expressions use quoted operands, e.g. `("creativity" OR "creative") AND "artificial intelligence"`. Check eligibility, retain the query log, and acknowledge OpenAIRE in accordance with [its terms](https://graph.openaire.eu/docs/apis/terms). OpenAIRE-derived records retain source notices in later stages when identifiable.
+
+### Creating an OpenAlex browser-local credentials file
+
+1. Create an [OpenAlex account](https://openalex.org/signup), verify your email and obtain your own key from [API settings](https://openalex.org/settings/api-key).
+2. In a plain-text editor on your computer, create a file named `openalex_credentials.json` with the following contents. Replace both placeholders with your own values; keep the quotation marks and comma.
+
+   ```json
+   {
+     "api_key": "YOUR_OPENALEX_API_KEY",
+     "email": "YOUR_VERIFIED_EMAIL"
+   }
+   ```
+
+3. Save it as plain UTF-8 text, with the `.json` extension, in a private location. It is not encrypted; do not email it, commit it to GitHub, or place it in a shared folder.
+4. In a guided case, select OpenAlex and start its fixed browser search; in Day 1 BYOD, enter your own query and select **Local JSON file (browser only)**. Choose your file and press **Run Search**. Remove the file from the picker when finished.
+
+The file is read by code in your browser, not uploaded to the Streamlit server. The browser sends the key directly to OpenAlex via HTTPS; email is validated locally and is not sent. The resulting records and search settings are sent to the app for analysis. This relies on trusting the host's supplied code and your browser/extensions; it is not protection against a malicious host. If you instead choose masked manual entry in BYOD, the app server receives that key. Never paste a real key into a support message or query.
 
 ### Day 2: Screen a corpus
 
