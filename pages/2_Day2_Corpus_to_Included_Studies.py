@@ -36,7 +36,7 @@ st.set_page_config(
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
-from network_loader_v1 import build_network, make_network_html, community_partition
+from network_loader_v2 import build_network, make_network_html, community_partition
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
 from guided_loader_v4 import load_guided_workflow
 

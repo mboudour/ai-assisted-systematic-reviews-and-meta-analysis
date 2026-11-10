@@ -14,10 +14,10 @@ from pathlib import Path
 from day2_networks import annotate_communities
 
 
-NETWORK_COMMUNITY_RELEASE = 1
+NETWORK_COMMUNITY_RELEASE = 2
 # Paul Tol's colorblind-friendly bright qualitative palette is the starting
-# point. A dark outline and visible C-number identify communities even when
-# colors are hard to distinguish, particularly for larger numbers of groups.
+# point. A dark outline helps distinguish nodes; their community IDs remain
+# available on hover when colors are hard to distinguish.
 COMMUNITY_COLORS = ("#4477AA", "#EE6677", "#228833", "#CCBB44", "#66CCEE", "#AA3377", "#BBBBBB")
 # vis-network's dot size is a radius in graph units; zoom scales all nodes alike.
 NODE_RADIUS = 15
@@ -60,7 +60,7 @@ def community_colors(count):
     After the first seven curated colors, greedily maximize the minimum Lab
     separation under normal and two simulated color-vision deficiencies. For
     many groups, reliable color discrimination cannot be guaranteed; the
-    renderer additionally prints a unique community number on every node.
+    community number is also available by hovering over each node.
     """
     if count < 0 or count > 0x1000000:
         raise ValueError("community count is outside the available RGB color space")
@@ -83,7 +83,7 @@ def community_colors(count):
         for other in distances:
             distances[other] = min(distances[other], _vision_distance(representations[other], chosen))
     # Very large graphs can exhaust the optimized grid. The RGB-space permutation
-    # still avoids reuse, but the C-number (not color) is the reliable identifier.
+    # still avoids reuse, but the hover community ID is the reliable identifier.
     if len(selected) < count:
         used = set(selected)
         for index in range(0x1000000):
@@ -131,7 +131,7 @@ def make_network_html(network: dict, seed: int = 42) -> str:
         freq = int(item["frequency"])
         community = item["community"]
         color = colors[community - 1]
-        nodes.append({"id": item["id"], "label": f'{item["label"]}\n[C{community}]', "frequency": freq,
+        nodes.append({"id": item["id"], "label": item["label"], "frequency": freq,
                       "full_label": item.get("full_label", item["label"]),
                       "community": community, "size": NODE_RADIUS,
                       "color": {"background": color, "border": "#1f2937",
@@ -152,13 +152,13 @@ def make_network_html(network: dict, seed: int = 42) -> str:
         community_note = "No links: each isolated node is its own community; Louvain was not run."
     else:
         community_note = "No nodes: Louvain was not run."
-    colors_note = (" With many groups, use C numbers when colors look similar."
+    colors_note = (" With many groups, hover to check the community when colors look similar."
                    if annotated["community_detection"]["count"] > len(COMMUNITY_COLORS) else "")
     metrics = {
         "node": "Unique reference IDs for this study: " if coupling else "Records containing this item: ",
         "nodeSuffix": " (recognized)" if coupling else "",
         "edge": "Shared reference IDs: " if coupling else "Records containing both: ",
-        "note": ("Equal node sizes. Colors and C numbers identify communities. " + community_note + colors_note
+        "note": ("Equal node sizes. Colors identify communities; hover for the community ID. " + community_note + colors_note
                  + " Drag nodes or scroll to zoom. Hover to see "
                  + ("full study titles and reference counts." if coupling else "record counts.")),
         "coupling": coupling,

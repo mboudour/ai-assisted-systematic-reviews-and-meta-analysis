@@ -139,6 +139,8 @@ class Day1NetworkAdapterTests(unittest.TestCase):
         self.assertEqual(nodes["alpha"]["frequency"], 3)
         self.assertEqual(nodes["beta"]["frequency"], 2)
         self.assertNotIn("value", nodes["alpha"])
+        self.assertEqual({node["label"] for node in nodes.values()}, set(nodes))
+        self.assertTrue(all(not re.search(r"\[C\d+\]", node["label"]) for node in nodes.values()))
         self.assertEqual(nodes["alpha"]["community"], nodes["beta"]["community"])
         self.assertEqual(nodes["gamma"]["community"], nodes["delta"]["community"])
         self.assertNotEqual(nodes["alpha"]["community"], nodes["gamma"]["community"])

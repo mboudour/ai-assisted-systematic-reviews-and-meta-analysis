@@ -195,7 +195,7 @@ class Day3BibliometricUITests(unittest.TestCase):
         pd.testing.assert_frame_equal(app.session_state["byod_included_df"], original)
 
     def test_renderer_failure_still_offers_link_download(self):
-        with patch("network_loader_v1.make_network_html", side_effect=ValueError("Local library unavailable")), \
+        with patch("network_loader_v2.make_network_html", side_effect=ValueError("Local library unavailable")), \
              patch("streamlit.download_button", wraps=st.download_button) as downloads:
             app = byod_app(handoff_records())
         self.assert_ok(app)

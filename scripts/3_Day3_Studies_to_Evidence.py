@@ -54,7 +54,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
-from network_loader_v1 import build_network, make_network_html, community_partition
+from network_loader_v2 import build_network, make_network_html, community_partition
 from guided_loader_v4 import load_guided_workflow
 
 render_guided_examples = load_guided_workflow().render_guided_examples

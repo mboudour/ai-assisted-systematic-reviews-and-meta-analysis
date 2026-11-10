@@ -157,7 +157,8 @@ class SharedNetworkVisualizationTests(unittest.TestCase):
                 self.assertIn("shared reference counts" if kind == "coupling"
                               else "co-occurring record counts", labels["note"])
                 self.assertEqual({n["id"]: n["community"] for n in nodes}, partition)
-                self.assertTrue(all(f'[C{n["community"]}]' in n["label"] for n in nodes))
+                self.assertEqual({n["id"]: n["label"] for n in nodes},
+                                 {n["id"]: n["label"] for n in graph["nodes"]})
                 self.assertTrue(all(n["color"]["background"] == community_colors(max(partition.values()))[n["community"] - 1]
                                     for n in nodes))
                 self.assertEqual([e["weight"] for e in edges], [e["weight"] for e in graph["edges"]])
@@ -257,10 +258,12 @@ class SharedNetworkVisualizationTests(unittest.TestCase):
         nodes = embedded_data(make_network_html(graph), "nodeData")
         self.assertEqual({n["community"] for n in nodes}, {1, 2, 3})
         self.assertEqual({n["size"] for n in nodes}, {NODE_RADIUS})
+        self.assertEqual({n["id"]: n["label"] for n in nodes},
+                         {n["id"]: n["label"] for n in graph["nodes"]})
         self.assertEqual({n["id"]: n["frequency"] for n in nodes},
                          {n["id"]: n["frequency"] for n in graph["nodes"]})
 
-    def test_many_communities_have_unique_stable_colors_and_text_ids(self):
+    def test_many_communities_have_unique_stable_colors_and_hover_ids(self):
         count = 60
         colors = community_colors(count)
         self.assertEqual(colors[:7], COMMUNITY_COLORS)
@@ -273,7 +276,9 @@ class SharedNetworkVisualizationTests(unittest.TestCase):
         nodes = embedded_data(html, "nodeData")
         self.assertEqual(len({n["color"]["background"] for n in nodes}), count)
         self.assertEqual(len({n["community"] for n in nodes}), count)
-        self.assertIn("use C numbers", embedded_data(html, "metricLabels")["note"])
+        self.assertEqual({n["id"]: n["label"] for n in nodes},
+                         {n["id"]: n["label"] for n in graph["nodes"]})
+        self.assertIn("hover to check the community", embedded_data(html, "metricLabels")["note"])
 
     def test_malicious_labels_are_safe_even_after_annotation(self):
         attack = "</script><script>window.attack=true</script>__EDGES__"

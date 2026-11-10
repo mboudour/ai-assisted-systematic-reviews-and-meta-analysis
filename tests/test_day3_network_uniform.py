@@ -144,6 +144,8 @@ class Day3NetworkTests(unittest.TestCase):
         self.assertIsNone(err)
         nodes = {n["id"]: n for n in html_data(first, "nodeData")}
         other = {n["id"]: n for n in html_data(second, "nodeData")}
+        self.assertEqual({node["label"] for node in nodes.values()}, set(nodes))
+        self.assertTrue(all(not re.search(r"\[C\d+\]", node["label"]) for node in nodes.values()))
         self.assertEqual({k: (v["community"], v["color"]) for k, v in nodes.items()},
                          {k: (v["community"], v["color"]) for k, v in other.items()})
         self.assertEqual(nodes["alpha"]["community"], nodes["beta"]["community"])

@@ -43,7 +43,7 @@ if str(_repo_root) not in sys.path:
 from openalex_client_loader_v2 import OpenAlexError, fetch_works
 from openaire_client import OpenAIREError, fetch_openaire
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
-from network_loader_v1 import build_network, make_network_html, community_partition
+from network_loader_v2 import build_network, make_network_html, community_partition
 from guided_loader_v4 import load_guided_workflow
 
 guided_workflow = load_guided_workflow()

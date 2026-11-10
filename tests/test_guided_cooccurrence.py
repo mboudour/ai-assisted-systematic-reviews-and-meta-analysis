@@ -2,6 +2,7 @@
 import hashlib
 import io
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -102,6 +103,17 @@ class GuidedNetworkLogicTests(unittest.TestCase):
         self.assertNotIn("forbidden", str(graph).lower())
         self.assertNotIn("forbidden", str(result).lower())
         assert_frame_equal(self.included, self.before)
+
+    def test_guided_network_renders_labels_without_community_suffixes(self):
+        graph, _ = guided._build_guided_network(self.included, guided._NETWORK_AUTOMATIC, 25, 1)
+        html = guided.day2_network_view.make_network_html(graph)
+        match = re.search(r"const nodeData = (\[.*?\]);", html)
+        self.assertIsNotNone(match)
+        nodes = json.loads(match.group(1))
+        self.assertEqual({node["id"]: node["label"] for node in nodes},
+                         {node["id"]: node["label"] for node in graph["nodes"]})
+        self.assertTrue(all("community" in node and "color" in node for node in nodes))
+        self.assertIn("Community: C", html)
 
     def test_missing_metadata_falls_back_but_explicit_modes_never_do(self):
         no_metadata = self.included.drop(columns="Concepts")

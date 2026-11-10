@@ -98,6 +98,7 @@ class VosviewerCommunityExportTests(unittest.TestCase):
         partition.assert_called_once_with(graph)
         self.assertEqual(decoded_export(vos), graph)
         items = {item["label"]: item for item in vos["network"]["items"]}
+        self.assertEqual(set(items), {node["label"] for node in graph["nodes"]})
         self.assertEqual({label: item["cluster"] for label, item in items.items()},
                          community_partition(decoded_export(vos)))
         self.assertEqual({label: item["cluster"] for label, item in items.items()}, {
