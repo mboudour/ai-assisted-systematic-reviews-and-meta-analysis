@@ -74,7 +74,7 @@ with already included studies. The menus make those entry points visible without
 
 | Module | Function | What Participants Can Do |
 |--------|----------|--------------------------|
-| **1. Search & Collect** | Retrieve or load metadata | Open a Day 1 guided example, click its suggested practice search, run a bounded OpenAlex BYOD query, use Crossref/Europe PMC where available, or upload RIS |
+| **1. Search & Collect** | Retrieve or load metadata | Open a Day 1 guided example, use a bounded provider search, or upload RIS |
 | **2. Deduplicate** | Clean the corpus | Inspect API results or uploaded records and download a corpus CSV/RIS; provider fields and coverage differ |
 | **3. Screen** | Triage and verify records | Upload a Day 1 CSV, enter inclusion/exclusion terms, run the deterministic heuristic, inspect the full screening log, and verify decisions manually |
 | **4. Extract** | Pull structured fields from study inputs | Upload included studies, choose a schema, and use the available NLP/AI extraction options; extracted values are drafts for verification |
@@ -90,7 +90,7 @@ The app accepts several input types rather than forcing everyone into one narrow
 
 | Input Type | Use Case | App Behaviour |
 |------------|----------|---------------|
-| **Boolean Query** | Starting a review from scratch | Day 1 presents API and filter menus. OpenAlex BYOD accepts a per-user key and bounded retrieval; the query log records search metadata, not credentials |
+| **API Search** | Starting a review from scratch | Day 1 presents provider-specific search menus. OpenAlex accepts a per-user key and bounded retrieval; the query log records search metadata, not credentials |
 | **RIS / CSV File** | Already searched databases or a previous app step | Upload and continue to deduplication, screening, or synthesis |
 | **Zotero Integration** | Uses a reference manager | Use the Day 1 Zotero path or an exported library as an alternative starting corpus |
 | **PDF Documents / Included CSV** | Already completed screening | Continue to Day 3 extraction and synthesis; outputs still require checking |
@@ -129,13 +129,14 @@ Each day includes a BYOD extension so participants can apply the workflow to the
 question. The live handoff is **Day 1 → Day 2 → Day 3**: download a Day 1 corpus, screen it on
 Day 2, then upload the included-studies CSV to Day 3.
 
-**Day 1 BYOD:** Choose a provider from the search menu (OpenAlex, Crossref, or Europe PMC where
-supported), enter a query, choose scope/year/publication-type/abstract filters, and retrieve a
+**Day 1 BYOD:** Choose a provider from the search menu (OpenAlex, Crossref, Europe PMC, or
+best-effort Semantic Scholar), enter a query, select any provider-specific filters, and retrieve a
 bounded corpus. OpenAlex retrieval is capped by the configured page size and maximum pages, so a
 large result set may be truncated; the query log reports retrieval metadata and should be saved.
-Provider syntax, indexing, coverage, and available filters differ. Semantic Scholar is not
-available for live queries in this app because of public API rate limits. You may instead upload
-RIS or use Zotero.
+Provider syntax, indexing, coverage, and available filters differ. Crossref needs no key, while
+Semantic Scholar has an optional masked key and can rate-limit requests. Both retrieve one page
+and use provider-specific relevance search, not guaranteed Boolean logic. Abstracts may be missing.
+You may instead upload RIS or use Zotero.
 
 **OpenAlex credentials:** each participant supplies their own email-verified OpenAlex key and
 email in masked, session-specific inputs. The app sends the key to OpenAlex only as an HTTPS
@@ -149,6 +150,9 @@ exclusion terms, and run the current deterministic, case-insensitive substring h
 Title + Abstract. It is **not an actual LLM** and does not provide validated recall, precision,
 F1, or WSS estimates. Reviewers must inspect the included file and full screening log and make
 human eligibility decisions; the log is an audit aid, not proof of correctness.
+The Day 2 interactive maps offer concept co-occurrence, title/abstract term co-occurrence, and
+co-authorship. Participants can map included studies or all screened records (exploratory only).
+Links count records containing both items; author names are not disambiguated.
 
 **Day 3 BYOD:** Carry forward the Day 2 included-studies CSV, choose the extraction schema, and
 use the available NLP or optional AI extraction route. Generate tables, charts, networks, and

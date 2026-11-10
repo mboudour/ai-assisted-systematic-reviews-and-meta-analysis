@@ -72,13 +72,16 @@ handoff from Day 1 to Day 2 to Day 3.
 
 ### Day 1: Build Your Own Corpus
 
-Use the search menus to choose OpenAlex, Crossref, or Europe PMC where supported, enter a query,
+Use the search menus to choose OpenAlex, Crossref, Europe PMC, or Semantic Scholar, enter a query,
 and set the available scope, year, publication-type, and abstract filters. OpenAlex is retrieved
 with bounded pagination: page size and maximum pages impose a retrieval cap, so a large result set
 may be truncated. The query log records the actual query, filters, provider, retrieval metadata,
 and timestamp; download and retain it for reproducibility. Provider syntax, indexing, coverage,
-metadata, and filters differ. Semantic Scholar is not available for live queries in this app due
-to strict public API rate limits. Alternatively, upload RIS or use the Zotero path.
+metadata, and filters differ. Crossref is a one-page relevance search and needs no account or key.
+Semantic Scholar is a one-page, best-effort plain-text relevance search. Its key is optional,
+but anonymous requests can be rate-limited; even a key does not guarantee availability.
+Neither provider's relevance search guarantees Boolean interpretation or complete abstracts.
+Alternatively, upload RIS or use the Zotero path.
 
 **OpenAlex participant credentials:** each participant uses their own email-verified OpenAlex key.
 The app collects the key and email in masked, session-specific inputs. The key is sent to OpenAlex
@@ -86,6 +89,11 @@ only over HTTPS in an `Authorization: Bearer` header; the email is not sent with
 and email are not written to query logs or error metadata. This is not a promise of complete
 privacy from the operator or hosting environment: participants must assess operator/hosting trust
 and use credentials they are comfortable entering.
+
+**Semantic Scholar optional key:** the masked key is stored in the participant's session and sent
+only in an `x-api-key` HTTPS header, not in URLs, query logs, or downloads. It can be forgotten
+using the on-screen button. As with other session data, the operator or hosting environment may
+have access.
 
 ### Day 2: Screen Your Own Corpus
 
@@ -96,6 +104,13 @@ actual LLM for this BYOD run. The output includes an included-studies CSV and a 
 but the decisions are first-pass triage and need human eligibility verification. Any displayed
 recall, precision, F1, or WSS-style values are descriptive diagnostics, not validated metrics
 without an independently adjudicated reference set.
+
+Day 2 offers concept co-occurrence, title/abstract term co-occurrence, and co-authorship networks.
+Choose included studies or all screened records (the latter is exploratory). Node counts indicate
+records containing an item; link weights indicate records containing both. Terms are lexical, not
+OpenAlex concepts, and author names are not disambiguated. Only the displayed top nodes and links
+are exported. Title/abstract terms are selected with TF-IDF (up to eight per record) and depend on
+the selected record set. No concepts are invented when the source field is empty.
 
 ### Day 3: Synthesize Your Own Evidence
 

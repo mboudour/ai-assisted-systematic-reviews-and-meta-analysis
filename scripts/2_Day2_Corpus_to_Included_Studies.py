@@ -16,6 +16,8 @@ import os
 import io
 import re
 import pathlib
+import sys
+import hashlib
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -24,15 +26,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
-from itertools import combinations
 from sklearn.feature_extraction.text import TfidfVectorizer
-
-# pyvis — optional import with graceful fallback
-try:
-    from pyvis.network import Network as PyvisNetwork
-    PYVIS_AVAILABLE = True
-except ImportError:
-    PYVIS_AVAILABLE = False
 
 st.set_page_config(
     page_title="Day 2 — From Corpus to Included Studies",
@@ -44,6 +38,10 @@ st.set_page_config(
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
 CACHE_DIR = _repo_root / "data" / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from day2_networks import build_network
+from day2_network_view import make_network_html
 
 # ── Guided example definitions ─────────────────────────────────────────────────
 GUIDED_EXAMPLES = [
@@ -150,28 +148,6 @@ GUIDED_EXAMPLES = [
     },
 ]
 
-# ── Stopwords ─────────────────────────────────────────────────────────────────
-_STOPWORDS = {
-    "the","a","an","and","or","of","in","to","for","with","on","at","by","from",
-    "is","are","was","were","be","been","being","have","has","had","do","does",
-    "did","will","would","could","should","may","might","shall","this","that",
-    "these","those","it","its","as","but","not","no","so","if","than","then",
-    "also","which","who","whom","what","when","where","how","all","both","each",
-    "more","most","other","some","such","into","through","during","before",
-    "after","above","below","between","out","about","up","down","over","under",
-    "again","further","once","study","studies","research","results","analysis",
-    "data","paper","article","review","systematic","meta","based","using","used",
-    "associated","among","across","within","between","compared","including",
-    "however","therefore","thus","hence","while","although","despite","whether",
-    "effect","effects","impact","impacts","evidence","approach","methods","method",
-    "findings","conclusion","conclusions","objective","objectives","background",
-    "introduction","discussion","aim","aims","purpose","sample","samples",
-    "number","total","high","low","significant","significantly","p","ci",
-    "95","mean","median","sd","se","n","vs","et","al","doi","journal",
-}
-
-# ── pyvis network helpers ──────────────────────────────────────────────────────
-
 # ── VOSviewer helpers ──────────────────────────────────────────────────────────
 
 def _extract_tfidf_keywords(texts, top_n=8):
@@ -262,8 +238,10 @@ def render_vosviewer_section(df, session_key):
     st.markdown("""
 [VOSviewer](https://www.vosviewer.com) provides a richer, publication-quality map of the
 **included studies** with colour-coded clusters, zoom, and label filtering.
-The pyvis network above shows co-occurrence patterns computed in this app;
-VOSviewer adds citation networks and bibliographic coupling on top of keyword co-occurrence.
+The interactive network above shows co-occurrence patterns computed in this app.
+VOSviewer can support additional network types when its input contains the necessary
+metadata. This RIS export does not include citation-reference lists, so it does not
+by itself support citation networks or bibliographic coupling.
 
 - **VOSviewer Desktop** — where you **create** maps from bibliographic data (free, Windows/Mac/Linux).
 - **VOSviewer Online** (`app.vosviewer.com`) — browser viewer only; load a `.json` map saved from the desktop app.
@@ -311,201 +289,86 @@ VOSviewer adds citation networks and bibliographic coupling on top of keyword co
         st.caption("Contains titles, authors, years, DOIs, abstracts, and keywords for all included studies.")
 
 
-def _build_cooccurrence_network(df, top_n=40, min_cooccurrence=2):
-    all_docs_keywords = []
-    for _, row in df.iterrows():
-        doc_keywords = set()
-        concepts = str(row.get("Concepts", "") or "")
-        if concepts and concepts != "nan":
-            for c in concepts.split(";"):
-                kw = c.strip().lower()
-                if kw and len(kw) > 3 and kw not in _STOPWORDS:
-                    doc_keywords.add(kw)
-        title = str(row.get("Title", "") or "")
-        if title and title != "nan":
-            for w in re.findall(r'\b[a-zA-Z]{4,}\b', title.lower()):
-                if w not in _STOPWORDS:
-                    doc_keywords.add(w)
-        if doc_keywords:
-            all_docs_keywords.append(doc_keywords)
-    freq = Counter()
-    for doc_kws in all_docs_keywords:
-        for kw in doc_kws:
-            freq[kw] += 1
-    top_keywords = {kw for kw, _ in freq.most_common(top_n)}
-    cooc = Counter()
-    for doc_kws in all_docs_keywords:
-        filtered = doc_kws & top_keywords
-        for pair in combinations(sorted(filtered), 2):
-            cooc[pair] += 1
-    edges = [(a, b, cnt) for (a, b), cnt in cooc.items() if cnt >= min_cooccurrence]
-    return freq, edges, top_keywords
+def render_day2_networks(screened_df, included_df, session_key):
+    """Let participants map actual included or all screened records."""
+    st.markdown("#### Interactive networks")
+    st.markdown(
+        "Choose a set of records and a network. A node is a term, concept or author; "
+        "a link means both items occur in the same record. Node size reflects the "
+        "number of records containing the item; link width reflects the number "
+        "containing both. These are descriptive maps, not evidence of causal relationships."
+    )
+    source_labels = ["Included studies", "All screened records (exploratory)"]
+    default_source = 0 if not included_df.empty else 1
+    source = st.radio(
+        "Records to map", source_labels, index=default_source, horizontal=True,
+        key=f"d2_network_source_{session_key}",
+    )
+    selected_df = included_df if source == source_labels[0] else screened_df
+    if source == source_labels[1]:
+        st.caption("Exploratory only: this set includes records screened out or not included; it is not an included-studies map.")
+    if selected_df.empty:
+        st.warning("There are no records in this selection. Choose all screened records or revise the screening terms.")
+        return
 
-
-def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
-    if not PYVIS_AVAILABLE:
-        return None, "pyvis is not installed in this environment."
-    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
-    if not edges:
-        return None, "Not enough co-occurring keywords to build a network. Try lowering the minimum co-occurrence threshold."
-
-    # ── Louvain community detection ───────────────────────────────────────────
-    try:
-        import networkx as nx
-        import community as community_louvain  # python-louvain
-
-        G = nx.Graph()
-        nodes_in_edges = set()
-        for a, b, cnt in edges:
-            nodes_in_edges.add(a)
-            nodes_in_edges.add(b)
-            G.add_edge(a, b, weight=cnt)
-
-        partition = community_louvain.best_partition(G, weight='weight', random_state=42)
-        num_communities = max(partition.values()) + 1 if partition else 1
-
-        PALETTE = [
-            "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
-            "#1abc9c", "#e67e22", "#34495e", "#e91e63", "#00bcd4",
-            "#8bc34a", "#ff5722",
-        ]
-        def community_color(node):
-            cid = partition.get(node, 0)
-            return PALETTE[cid % len(PALETTE)]
-
-        louvain_ok = True
-    except Exception:
-        louvain_ok = False
-        nodes_in_edges = set()
-        for a, b, _ in edges:
-            nodes_in_edges.add(a)
-            nodes_in_edges.add(b)
-        sorted_freqs = sorted([freq[kw] for kw in top_keywords]) if top_keywords else [1]
-        q1 = sorted_freqs[max(0, len(sorted_freqs) // 4)]
-        q2 = sorted_freqs[max(0, len(sorted_freqs) // 2)]
-        q3 = sorted_freqs[max(0, 3 * len(sorted_freqs) // 4)]
-        def community_color(node):
-            f = freq.get(node, 1)
-            if f >= q3: return "#e74c3c"
-            if f >= q2: return "#e67e22"
-            if f >= q1: return "#3498db"
-            return "#95a5a6"
-        num_communities = 4
-
-    # ── Build pyvis network ───────────────────────────────────────────────────
-    net = PyvisNetwork(height="560px", width="100%", bgcolor="#fafafa",
-                       font_color="#222222", notebook=False)
-    net.set_options("""
-    {
-      "physics": {
-        "forceAtlas2Based": {
-          "gravitationalConstant": -120,
-          "centralGravity": 0.015,
-          "springLength": 100,
-          "springConstant": 0.08,
-          "damping": 0.9
-        },
-        "solver": "forceAtlas2Based",
-        "stabilization": {"iterations": 200, "updateInterval": 25}
-      },
-      "nodes": {"font": {"size": 13, "color": "#222222"}, "borderWidth": 2,
-                 "borderWidthSelected": 3},
-      "edges": {"color": {"opacity": 0.4}, "smooth": {"type": "continuous"}},
-      "interaction": {"hover": true, "tooltipDelay": 100}
+    has_concepts = bool("Concepts" in selected_df and selected_df["Concepts"].fillna("").astype(str).str.strip().ne("").any())
+    choices = {
+        "Concept co-occurrence": "concepts",
+        "Title and abstract term co-occurrence": "terms",
+        "Co-authorship": "authors",
     }
-    """)
-
-    for kw in nodes_in_edges:
-        f = freq.get(kw, 1)
-        size = max(10, min(45, 8 + f * 2))
-        cid = partition.get(kw, 0) if louvain_ok else 0
-        color = community_color(kw)
-        if louvain_ok:
-            tooltip = (
-                f"<b>{kw}</b><br/>"
-                f"Frequency: {f}<br/>"
-                f"Community: {cid + 1}"
-            )
-        else:
-            tooltip = f"<b>{kw}</b><br/>Frequency: {f}"
-        net.add_node(kw, label=kw, title=tooltip, size=size,
-                     color={"background": color, "border": "#333333",
-                            "highlight": {"background": color, "border": "#000000"}})
-
-    max_cooc = max(cnt for _, _, cnt in edges) if edges else 1
-    for a, b, cnt in edges:
-        width = max(1, min(8, 1 + (cnt / max_cooc) * 7))
-        same_comm = louvain_ok and partition.get(a, -1) == partition.get(b, -2)
-        opacity = 0.65 if same_comm else 0.3
-        net.add_edge(a, b, value=cnt, title=f"Co-occurrences: {cnt}", width=width,
-                     color={"opacity": opacity})
-
-    legend_note = f" ({num_communities} Louvain communities detected)" if louvain_ok else ""
-    html = net.generate_html()
-    html = html.replace(
-        "</body>",
-        f'<div style="position:absolute;bottom:8px;left:12px;font-size:11px;'
-        f'color:#555;font-family:sans-serif;">'
-        f'Node colour = Louvain community{legend_note}. '
-        f'Node size = keyword frequency.</div></body>'
+    choice = st.selectbox(
+        "Network type", list(choices), index=0 if has_concepts else 1,
+        key=f"d2_network_kind_{session_key}",
     )
-
-    # Fix: vis.js 9.x disabled HTML string parsing in title= (XSS protection)
-    # Post-process the HTML to inject a JS helper that converts title strings
-    # to DOM elements so that HTML content renders correctly on hover.
-    _fix_js = (
-        "\n    (function fixNodeTitles() {"
-        "\n        var rawNodes = nodes.get();"
-        "\n        rawNodes.forEach(function(node) {"
-        "\n            if (node.title && typeof node.title === 'string') {"
-        "\n                var div = document.createElement('div');"
-        "\n                div.innerHTML = node.title;"
-        "\n                div.style.cssText = 'font-size:13px;line-height:1.6;padding:4px 8px;max-width:240px;';"
-        "\n                nodes.update({id: node.id, title: div});"
-        "\n            }"
-        "\n        });"
-        "\n    })();"
-        "\n    (function fixEdgeTitles() {"
-        "\n        var rawEdges = edges.get();"
-        "\n        rawEdges.forEach(function(edge) {"
-        "\n            if (edge.title && typeof edge.title === 'string') {"
-        "\n                var div = document.createElement('div');"
-        "\n                div.innerHTML = edge.title;"
-        "\n                div.style.cssText = 'font-size:12px;padding:3px 6px;';"
-        "\n                edges.update({id: edge.id, title: div});"
-        "\n            }"
-        "\n        });"
-        "\n    })();"
-    )
-    _nodes_ds_pat = re.compile(r'(nodes\s*=\s*new\s+vis\.DataSet\([^;]+;)', re.DOTALL)
-    _m = _nodes_ds_pat.search(html)
-    if _m:
-        html = html[:_m.end()] + _fix_js + html[_m.end():]
-
-    return html, None
-
-
-
-def render_pyvis_network(df, session_key, label="Included Studies"):
-    st.markdown("#### 🕸️ Interactive Keyword Co-occurrence Network — " + label)
-    st.markdown("""
-This network maps the **most frequent keywords** in the included studies and draws a link
-between any two keywords that appear together in the same paper. **Node colour = Louvain community**
-(nodes of the same colour belong to the same thematic cluster). Larger nodes = more frequent;
-thicker edges = more papers share both keywords. **Drag nodes, scroll to zoom, hover for details.**
-    """)
-    col_opts, _ = st.columns([2, 1])
-    with col_opts:
-        top_n = st.slider("Number of top keywords", min_value=10, max_value=60, value=35, step=5,
-                          key=f"pyvis_topn_{session_key}")
-        min_cooc = st.slider("Minimum co-occurrence", min_value=1, max_value=10, value=2, step=1,
-                             key=f"pyvis_mincooc_{session_key}")
-    html, err = generate_pyvis_html(df, top_n=top_n, min_cooccurrence=min_cooc)
-    if err:
-        st.warning(f"⚠️ Network could not be generated: {err}")
+    kind = choices[choice]
+    if kind == "concepts":
+        st.caption("Concepts come from the corpus, separated by semicolons. No concepts are inferred when the field is empty.")
+    elif kind == "terms":
+        st.caption("Terms come from titles and abstracts, or titles alone when abstracts are missing. TF-IDF selects up to eight lowercase single words per record after English and generic research stopwords are removed. These are not OpenAlex concepts; no stemming or phrase extraction is applied, and changing the record set may change the selected terms.")
     else:
-        components.html(html, height=540, scrolling=False)
+        st.caption("Authors must be separated by semicolons. Names are matched by case and whitespace only; variants or different people with the same name are not disambiguated. Some Day 1 providers retain only the first five names, so the map can omit co-authors.")
 
+    c1, c2 = st.columns(2)
+    with c1:
+        top_n = st.slider("Maximum number of nodes", 10, 60, 25, 5, key=f"d2_network_top_{session_key}")
+    with c2:
+        minimum = st.slider("Minimum records per link", 1, 10, 1, 1, key=f"d2_network_min_{session_key}")
+    graph = build_network(selected_df, kind, top_n=top_n, min_cooccurrence=minimum)
+    st.caption(f"Usable {kind} data: {graph['records_with_data']} of {graph['total_records']} selected records. "
+               f"Shown: {len(graph['nodes'])} nodes and {len(graph['edges'])} links at the selected settings.")
+    if not graph["edges"]:
+        if not graph["records_with_data"]:
+            st.info("No usable data for this network type in the selected records. Try title/abstract terms or another network type.")
+        else:
+            st.info("No pairs meet these settings. Lower the minimum records per link, increase the node limit, choose all screened records, or use another network type.")
+        return
+    try:
+        graph_html = make_network_html(graph)
+    except ValueError as exc:
+        st.warning(f"Unable to display the network: {exc}")
+    else:
+        components.html(graph_html, height=590, scrolling=False)
+
+    labels = {node["id"]: node["label"] for node in graph["nodes"]}
+    edge_df = pd.DataFrame([
+        {"Source": labels[e["source"]], "Target": labels[e["target"]], "Co-occurring records": e["weight"]}
+        for e in graph["edges"]
+    ]).sort_values(["Co-occurring records", "Source", "Target"], ascending=[False, True, True])
+    node_df = pd.DataFrame([
+        {"Node": node["label"], "Records containing node": node["frequency"]}
+        for node in graph["nodes"]
+    ])
+    with st.expander("View and download network data"):
+        st.caption("Each record contributes at most once to a node or pair. Files contain the displayed top nodes and links only.")
+        st.dataframe(edge_df, use_container_width=True)
+        left, right = st.columns(2)
+        with left:
+            st.download_button("Download network links (CSV)", edge_df.to_csv(index=False).encode("utf-8"),
+                               f"{session_key}_{kind}_network_links.csv", "text/csv", key=f"d2_edges_{session_key}")
+        with right:
+            st.download_button("Download network nodes (CSV)", node_df.to_csv(index=False).encode("utf-8"),
+                               f"{session_key}_{kind}_network_nodes.csv", "text/csv", key=f"d2_nodes_{session_key}")
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -565,12 +428,12 @@ def render_recall_chart(df, session_key):
 
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.plot(np.linspace(0, 100, len(recall_curve)), recall_curve * 100,
-            color="#4C72B0", linewidth=2, label="Active Learning")
+            color="#4C72B0", linewidth=2, label="Cached include labels")
     ax.plot([0, 100], [0, 100], color="#aaaaaa", linewidth=1.5,
-            linestyle="--", label="Random screening")
+            linestyle="--", label="Diagonal reference")
     ax.set_xlabel("% of corpus screened")
-    ax.set_ylabel("% of relevant papers found (Recall)")
-    ax.set_title("Active Learning — Recall Curve")
+    ax.set_ylabel("% of stored include labels encountered")
+    ax.set_title("Illustrative cumulative included-label curve")
     ax.legend()
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -600,10 +463,11 @@ def display_screening_results(df, session_key, ex):
     pub_types = ex.get("pub_types", [])
     period_str = f"{yr_from}\u2013{yr_to}" if yr_from and yr_to else "All years"
     types_str = ", ".join(pub_types) if pub_types else "All types"
-    st.markdown(
-        f"**Illustrative teaching criteria (not verified search filters):** {period_str} "
-        f"\u00a0|\u00a0 **Publication types:** {types_str}"
-    )
+    if session_key != "byod":
+        st.markdown(
+            f"**Illustrative teaching criteria (not verified search filters):** {period_str} "
+            f"\u00a0|\u00a0 **Publication types:** {types_str}"
+        )
     # ── PICO / SPIDER criteria ─────────────────────────────────────────────────
     st.markdown("#### Screening Framework — " + ex["framework"])
     framework_data = {
@@ -625,62 +489,60 @@ def display_screening_results(df, session_key, ex):
     col3.metric("❌ Exclude", int(n_exclude))
     col4.metric("⚠️ Uncertain", int(n_uncertain))
 
-    # Recall-oriented metrics
-    st.markdown("#### Recall-Oriented Evaluation Metrics")
-    st.caption(
-        "These values are descriptive diagnostics computed from the cached labels or the "
-        "current BYOD heuristic output; they are not validated recall, precision, F1, or "
-        "WSS estimates without an independently adjudicated reference set."
-    )
-    precision = n_include / max(n_include + n_exclude, 1)
-    recall_est = min(1.0, n_include / max(n_include + n_uncertain, 1))
-    f1 = 2 * precision * recall_est / max(precision + recall_est, 1e-9)
-    wss = (n_exclude / len(df)) - (1 - recall_est)
+    if session_key != "byod":
+        # Recall-oriented metrics
+        st.markdown("#### Illustrative Diagnostics — Not Validated Performance")
+        st.caption(
+            "These values are descriptive diagnostics computed from the cached labels or the "
+            "current BYOD heuristic output; they are not validated recall, precision, F1, or "
+            "WSS estimates without an independently adjudicated reference set."
+        )
+        precision = n_include / max(n_include + n_exclude, 1)
+        recall_est = min(1.0, n_include / max(n_include + n_uncertain, 1))
+        f1 = 2 * precision * recall_est / max(precision + recall_est, 1e-9)
+        wss = (n_exclude / len(df)) - (1 - recall_est)
 
-    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    m_col1.metric("Precision", f"{precision:.3f}")
-    m_col2.metric("Estimated Recall", f"{recall_est:.3f}")
-    m_col3.metric("F1 Score", f"{f1:.3f}")
-    m_col4.metric("WSS@95", f"{max(wss, 0):.3f}", help="Work Saved over Sampling at 95% recall")
+        m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+        m_col1.metric("Precision", f"{precision:.3f}")
+        m_col2.metric("Estimated Recall", f"{recall_est:.3f}")
+        m_col3.metric("F1 Score", f"{f1:.3f}")
+        m_col4.metric("WSS@95", f"{max(wss, 0):.3f}", help="Work Saved over Sampling at 95% recall")
 
-    st.info("""
-**WSS@95** (Work Saved over Sampling at 95% recall) measures how much screening effort
-is saved by Active Learning compared to random ordering, while retaining 95% of relevant
-papers. A value of 0.30 means 30% fewer abstracts need to be read to find 95% of
-relevant studies.
-    """)
+        st.info("WSS@95 normally requires an independently verified reference set. "
+                "The numbers shown here are illustrative ratios from cached teaching labels, "
+                "not empirical estimates of recall or screening efficiency.")
 
-    # ── Recall Curve ──────────────────────────────────────────────────────────
-    st.markdown("#### Active Learning — Recall Curve")
-    render_recall_chart(df, session_key)
+        # ── Recall Curve ──────────────────────────────────────────────────────────
+        st.markdown("#### Illustrative Cumulative Included-Label Curve")
+        render_recall_chart(df, session_key)
+
+    else:
+        st.caption("No validated precision, recall, F1, WSS, or Active Learning curve is computed for this heuristic. An independent reference set would be needed.")
 
     # ── Results table ─────────────────────────────────────────────────────────
-    st.markdown("#### Active Learning — Relevance-Ranked Results (top 30)")
+    st.markdown("#### Screening Results, Ranked by Score (top 30)")
     display_cols = ["Title", "Year", "Relevance_Score", "AL_Decision", "LLM_Decision", "LLM_Justification"]
     available = [c for c in display_cols if c in df.columns]
     st.dataframe(df[available].head(30), use_container_width=True)
 
     # ── Transparency Log ──────────────────────────────────────────────────────
-    st.markdown("#### Transparency Log — LLM Decisions (Audit Trail)")
-    st.markdown("""
-The Transparency Log records every AI decision alongside its one-sentence justification.
-This log forms part of the **audit trail** required by PRISMA 2020 and supports
-inter-rater reliability checks between the AI and a human reviewer.
-    """)
+    st.markdown("#### Screening Log — Decisions and Justifications")
+    if session_key == "byod":
+        st.caption("Both decision columns repeat the same keyword heuristic. They are not independent AI or human reviews.")
+    else:
+        st.caption("These are previously saved teaching labels; their model provenance is not verified.")
     log_cols = ["Title", "LLM_Decision", "LLM_Justification"]
     available_log = [c for c in log_cols if c in df.columns]
     st.dataframe(df[available_log].head(30), use_container_width=True)
 
     # ── Inter-rater reliability note ──────────────────────────────────────────
     agreement = (df["AL_Decision"] == df["LLM_Decision"]).mean() if "LLM_Decision" in df.columns else None
-    if agreement is not None:
+    if agreement is not None and session_key != "byod":
         st.markdown(f"""
-#### Inter-Rater Reliability
-**AL ↔ LLM agreement rate:** {agreement:.1%}
+#### Agreement Between Cached Teaching Labels
+**Label agreement:** {agreement:.1%}
 
-In a real review, this figure would be computed between two human reviewers (or between
-the AI and a human reviewer). A Cohen's κ ≥ 0.61 is generally considered substantial
-agreement. Disagreements are resolved by a third reviewer or by consensus.
+This is a descriptive overlap between stored columns, not independent inter-rater reliability.
         """)
 
     # ── Downloads ─────────────────────────────────────────────────────────────
@@ -705,11 +567,9 @@ agreement. Disagreements are resolved by a third reviewer or by consensus.
             key=f"dl_full_{session_key}",
         )
 
-    # ── pyvis network of included studies ────────────────────────────────────
-    if len(included_df) >= 5:
-        render_pyvis_network(included_df, session_key, label="Included Studies")
-    else:
-        st.info("ℹ️ Too few included studies to build a keyword co-occurrence network.")
+    # Unlike the old five-record gate, a network can be shown whenever real
+    # co-occurring pairs exist. Participants can also explore all screened rows.
+    render_day2_networks(df, included_df, session_key)
 
     # ── VOSviewer section ─────────────────────────────────────────────────────
     if len(included_df) >= 3:
@@ -734,15 +594,16 @@ section = st.sidebar.radio(
 if section == "Overview":
     st.title("🔍 Day 2 — From Corpus to Included Studies")
     st.markdown("""
-**Theme:** Show how Active Learning and LLM-based zero-shot screening can drastically
-reduce the time spent screening titles and abstracts — all in a **no-code** environment.
+**Theme:** Learn about screening methods and explore a no-code, first-pass screening
+workflow. The current BYOD implementation is a deterministic keyword heuristic, not
+a live Active Learning or LLM model.
 
 ### What You Will Do Today
 
 The second day focuses on the most time-consuming phase of a systematic review: screening
 thousands of titles and abstracts against pre-specified inclusion and exclusion criteria.
-You will be introduced to two complementary AI-assisted approaches and will see them
-applied to all four guided case studies.
+You will learn about AI-assisted approaches, inspect cached teaching labels for the four
+case studies, and explore networks built from the available study metadata.
 
 ### Where Day 2 Fits in the Pipeline
 
@@ -767,47 +628,28 @@ framework. The two most widely used are:
 
 Both frameworks are used in this seminar. Examples 1 and 4 use PICO; Example 2 uses SPIDER.
 
-### The Two Screening Approaches
+### Two Screening Approaches — Background
 
-**Active Learning** is a human-in-the-loop machine learning technique. A TF-IDF
-vectoriser converts each abstract into a numerical representation, and a Logistic
-Regression classifier is trained on a small set of seed labels derived from your
-inclusion and exclusion terms. The model then reorders the entire corpus to surface
-the most relevant papers first — dramatically reducing the number of abstracts that
-need to be read to achieve high recall.
+**Active Learning** is a human-in-the-loop machine learning technique that can prioritize
+records for review after learning from labelled examples. Its performance must be evaluated
+against independent reference labels; this app's current BYOD path does not train such a model.
 
-**LLM zero-shot screening** uses a Large Language Model prompted with your inclusion
-and exclusion criteria to automatically classify each abstract and provide a one-sentence
-justification. This is a powerful first-pass filter, not a replacement for human judgment.
-Every decision is recorded in the **Transparency Log** to support the audit trail required
-by PRISMA 2020.
+**LLM zero-shot screening** prompts a language model with eligibility criteria. The current
+BYOD path does not call an LLM: it matches inclusion and exclusion substrings. The two
+decision columns in its log repeat the same heuristic and do not constitute independent
+reviewers. Human verification remains essential.
 
 ### Comparison with Dedicated Screening Tools
 
-The approach used in this seminar is complementary to dedicated systematic review
-screening platforms. The table below situates the app in relation to the two most
-widely used tools:
-
-| Feature | This App | Rayyan | Covidence |
-|---------|----------|--------|-----------|
-| Active Learning | ✅ | ✅ | ❌ |
-| LLM screening | ✅ | ❌ | ❌ |
-| Transparency Log | ✅ | ✅ | ✅ |
-| No-code | ✅ | ✅ | ✅ |
-| Free | ✅ | Freemium | Paid |
-| Integrates with this pipeline | ✅ | ❌ | ❌ |
-
-**Rayyan** and **Covidence** are excellent tools for collaborative human screening.
-This app is designed for the AI-assisted, single-reviewer or small-team context and
-integrates directly with the Day 1 corpus and the Day 3 extraction pipeline.
+Dedicated platforms such as **Rayyan** and **Covidence** support collaborative screening.
+This teaching app connects its Day 1 corpus to Day 3 but does not replace independent reviewers
+or a validated screening workflow.
 
 ### Recall-Oriented Evaluation Metrics
 
-Standard classification metrics (accuracy, F1) are not appropriate for systematic
-review screening because the cost of a false negative (missing a relevant paper) is
-far higher than the cost of a false positive (including an irrelevant paper). The
-key metric is **WSS@95** (Work Saved over Sampling at 95% recall), which measures
-how much screening effort is saved while retaining 95% of relevant studies.
+Recall matters because a false negative can omit an eligible paper. Metrics such as
+precision, recall and **WSS@95** require independently adjudicated reference labels.
+The teaching snapshot diagnostics are not validated estimates of screening performance.
 
 ### Inter-Rater Reliability
 
@@ -823,16 +665,14 @@ both columns are produced by the deterministic heuristic described above.
 | Hour | Content |
 |------|---------|
 | **Hour 1** | Present the bottleneck of abstract screening. Introduce PICO and SPIDER frameworks. Explain Active Learning and LLM zero-shot screening. Introduce recall-oriented metrics and inter-rater reliability. |
-| **Hour 2** | Demonstrate the Active Learning module across the four case studies. Examine recall curves and WSS@95 values. |
-| **Hour 3** | Introduce LLM-based screening. Participants verify the model's one-sentence justifications. The Transparency Log records every AI decision. Compare with Rayyan and Covidence. |
+| **Hour 2** | Inspect the four cached screening examples and their descriptive diagnostics. |
+| **Hour 3** | Discuss LLM screening, check the screening log, and explore the networks; verify eligibility manually. |
 
 ### Learning Outcome
 
 By the end of Day 2, you should understand how to formalise a review question using
-PICO or SPIDER, how Active Learning and LLMs can accelerate abstract screening,
-how recall-oriented metrics assess screening quality, how to interpret the Transparency
-Log as an audit trail, and how this approach relates to dedicated tools such as Rayyan
-and Covidence.
+PICO or SPIDER, distinguish screening methods from the current heuristic, inspect a
+screening log, and interpret exploratory co-occurrence and co-authorship networks.
 
 Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Screen Your Own Corpus**.
     """)
@@ -880,6 +720,7 @@ independent Active Learning model). The
 resulting **included studies CSV** and **full screening log CSV** appear after screening;
 download the included file and upload it in Day 3 → **BYOD — Your Own Synthesis**. No coding required.
     """)
+    st.caption("Uploaded records and screening results are held by the app in your session, not published by the network visualization. The server operator may have access to session data; use a trusted deployment.")
 
     uploaded = st.file_uploader("Upload your Day 1 corpus CSV", type=["csv"])
 
@@ -903,11 +744,26 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
         df = None
 
     if df is not None:
+        df = df.copy()
+        if df.empty:
+            st.warning("The selected corpus has no records to screen.")
+            df = None
+        elif "Title" not in df.columns and "Abstract" not in df.columns:
+            st.error("The CSV needs a Title or Abstract column for screening. Check the column names and upload it again.")
+            df = None
+        else:
+            for column in ("Title", "Abstract"):
+                if column not in df.columns:
+                    df[column] = ""
+                    st.info(f"No {column} column was supplied; screening will use the available text.")
+
+    if df is not None:
         st.success(f"✅ {len(df)} records loaded.")
         st.dataframe(df.head(10), use_container_width=True)
 
         st.markdown("---")
         st.markdown("#### Define Your Screening Criteria")
+        st.caption("PICO/SPIDER fields are descriptive context. Only the inclusion and exclusion term lists below affect this heuristic screening run.")
         framework = st.selectbox("Screening framework", ["PICO", "SPIDER"])
 
         if framework == "PICO":
@@ -947,7 +803,7 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
             include_terms = [t.strip() for t in include_input.splitlines() if t.strip()]
             exclude_terms = [t.strip() for t in exclude_input.splitlines() if t.strip()]
 
-            texts = (df["Title"].fillna("") + " " + df["Abstract"].fillna("")).tolist()
+            texts = (df["Title"].fillna("").astype(str) + " " + df["Abstract"].fillna("").astype(str)).tolist()
             scores, al_decisions, llm_decisions, llm_justifications = [], [], [], []
 
             for text in texts:
@@ -960,7 +816,7 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
                 if len(tl.strip()) < 30:
                     al_decisions.append("Exclude")
                     llm_decisions.append("Exclude")
-                    llm_justifications.append("Abstract too short or missing.")
+                    llm_justifications.append("Combined title and abstract text is too short.")
                 elif exc_hits > 0 and inc_hits == 0:
                     al_decisions.append("Exclude")
                     llm_decisions.append("Exclude")
@@ -991,5 +847,22 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
                 "include_terms": include_terms,
                 "exclude_terms": exclude_terms,
             }
-            display_screening_results(result_df, "byod", byod_ex)
+            digest = hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values.tobytes()).hexdigest()
+            st.session_state["byod_screening_run"] = {"digest": digest, "results": result_df, "criteria": byod_ex}
             st.session_state["byod_included_df"] = result_df[result_df["AL_Decision"] == "Include"].copy()
+
+        run = st.session_state.get("byod_screening_run")
+        if run is not None:
+            current_digest = hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values.tobytes()).hexdigest()
+            if current_digest != run["digest"]:
+                st.warning("The corpus has changed since the last screening. Run screening again to update the results and networks.")
+                st.session_state.pop("byod_included_df", None)
+            else:
+                if (run["criteria"]["inclusion_criteria"] != include_input or
+                        run["criteria"]["exclude_terms"] != [t.strip() for t in exclude_input.splitlines() if t.strip()] or
+                        run["criteria"]["framework"] != framework or
+                        any(run["criteria"][k] != v for k, v in (("population", population), ("intervention", intervention), ("comparison", comparison), ("outcome", outcome)))):
+                    st.info("Showing the last completed screening run. Changes to the criteria are not applied until you run screening again.")
+                if not (run["results"]["AL_Decision"] == "Include").any():
+                    st.warning("No records were included by these terms. Review the criteria and rerun, or explore all screened records in the network below; the latter is not an included-studies network.")
+                display_screening_results(run["results"], "byod", run["criteria"])

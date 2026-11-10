@@ -5,9 +5,8 @@ Guided examples load exclusively from pre-cached CSVs — no live API calls requ
 All outputs render immediately when the expander is opened — no button click needed.
 No coding required.
 
-APIs covered: OpenAlex, Crossref, Europe PMC
-(Semantic Scholar removed due to strict public API rate limits; OpenAlex recommended for STEM/CS)
-BYOD inputs: Boolean query (3 APIs), RIS file upload, Zotero connection
+APIs covered: OpenAlex, Crossref, Europe PMC, and best-effort Semantic Scholar
+BYOD inputs: Boolean query (4 APIs), RIS file upload, Zotero connection
 Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network link,
          pyvis interactive keyword co-occurrence network
 """
@@ -20,6 +19,7 @@ import time
 import pathlib
 import sys
 import hashlib
+import html
 import requests
 import pandas as pd
 import streamlit as st
@@ -189,6 +189,8 @@ def load_practice_search(example):
 
 def send_snapshot_to_day2(df, example):
     """Carry the exact cached file forward without inventing its provenance."""
+    st.session_state.pop("byod_screening_run", None)
+    st.session_state.pop("byod_included_df", None)
     st.session_state["byod_df"] = df.copy()
     st.session_state["byod_api"] = "Cached teaching snapshot (historical retrieval not documented)"
     st.session_state["byod_query"] = "Historical search not recorded"
@@ -208,6 +210,11 @@ def forget_openalex_credentials():
     """Clear only this browser session's masked credential widgets."""
     st.session_state.pop("openalex_email_widget", None)
     st.session_state.pop("openalex_key_widget", None)
+
+
+def forget_semantic_scholar_credentials():
+    """Clear only this browser session's optional Semantic Scholar key."""
+    st.session_state.pop("semantic_scholar_key_widget", None)
 
 # ── Stopwords for keyword extraction ──────────────────────────────────────────
 _STOPWORDS = {
@@ -903,16 +910,29 @@ def display_corpus(df, source_label, session_key):
 
 # ── Live API helpers (BYOD only) ───────────────────────────────────────────────
 
-def query_crossref_live(search_query, per_page=50):
+class CrossrefError(Exception):
+    """Safe participant-facing Crossref retrieval error."""
+
+
+def query_crossref_live(search_query, per_page=50, include_log=False):
     base = "https://api.crossref.org/works"
     params = {
         "query": search_query,
         "rows": per_page,
         "select": "DOI,title,author,published,container-title,abstract",
     }
-    r = requests.get(base, params=params, timeout=30)
-    r.raise_for_status()
-    items = r.json().get("message", {}).get("items", [])
+    try:
+        r = requests.get(base, params=params, timeout=30)
+        r.raise_for_status()
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else None
+        if status == 429:
+            raise CrossrefError("Crossref rate-limited this request (HTTP 429). Wait a moment and try again.") from None
+        raise CrossrefError("Crossref could not complete this search. Please retry or use another provider.") from None
+    except requests.RequestException:
+        raise CrossrefError("Crossref could not be reached. Please retry or use another provider.") from None
+    message = r.json().get("message", {})
+    items = message.get("items", [])
     rows = []
     for item in items:
         title = item.get("title", [""])[0] if item.get("title") else ""
@@ -926,6 +946,8 @@ def query_crossref_live(search_query, per_page=50):
         year = str(parts[0]) if parts else ""
         venue = item.get("container-title", [""])[0] if item.get("container-title") else ""
         abstract = item.get("abstract", "") or ""
+        # Crossref abstracts often contain JATS/XML markup rather than plain text.
+        abstract = " ".join(html.unescape(re.sub(r"</?[A-Za-z][^>]*>", " ", abstract)).split())
         rows.append({
             "ID": item.get("DOI", ""),
             "DOI": item.get("DOI", "") or "",
@@ -937,31 +959,85 @@ def query_crossref_live(search_query, per_page=50):
             "Citations": "",
             "Concepts": "",
         })
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    total = message.get("total-results")
+    total = total if isinstance(total, int) else None
+    log = {
+        "endpoint": base, "pages_fetched": 1, "scope": "provider-specific relevance search",
+        "filters": [], "pagination": "one page only", "total_matches": total,
+        "returned": len(rows),
+        "possibly_truncated": (total > len(rows)) if total is not None else (len(rows) >= per_page),
+    }
+    return (df, log) if include_log else df
 
 
-def query_semantic_scholar_live(search_query, per_page=50):
+class SemanticScholarError(Exception):
+    """Safe, participant-facing Semantic Scholar retrieval error."""
+
+
+def query_semantic_scholar_live(search_query, per_page=50, api_key="", include_log=False):
+    """Search Semantic Scholar once, optionally returning a retrieval log.
+
+    This intentionally retrieves one relevance-search page. The public endpoint
+    needs no key by default, but may return HTTP 429; an optional key is sent
+    only as an ``x-api-key`` header and is never returned in the log. The
+    default DataFrame return preserves the original helper interface.
+    """
     base = "https://api.semanticscholar.org/graph/v1/paper/search"
     params = {
         "query": search_query,
         "limit": per_page,
         "fields": "paperId,externalIds,title,year,authors,venue,abstract,citationCount",
     }
-    # Retry with exponential backoff to handle 429 rate-limit responses
-    for attempt in range(4):
-        r = requests.get(base, params=params, timeout=30)
-        if r.status_code == 429:
-            time.sleep(2 ** attempt)
-            continue
-        r.raise_for_status()
-        break
-    else:
-        raise Exception("Semantic Scholar rate limit exceeded after 4 retries. Please wait a moment and try again.")
-    items = r.json().get("data", [])
+    headers = {"x-api-key": api_key.strip()} if api_key and api_key.strip() else {}
+    response = None
+    for attempt in range(3):
+        try:
+            response = requests.get(base, headers=headers, params=params, timeout=20)
+        except requests.RequestException:
+            raise SemanticScholarError(
+                "Semantic Scholar could not be reached. Try again shortly or use Crossref/OpenAlex."
+            )
+        if response.status_code != 429:
+            break
+        if attempt < 2:
+            time.sleep(0.5 * (attempt + 1))
+    if response is None:
+        raise SemanticScholarError("Semantic Scholar returned no response. Try Crossref or OpenAlex instead.")
+    if response.status_code == 429:
+        raise SemanticScholarError(
+            "Semantic Scholar rate-limited this request (HTTP 429), even if a valid key was provided. "
+            "Request a key at https://www.semanticscholar.org/product/api and retry, or use Crossref/OpenAlex."
+        )
+    if not 200 <= response.status_code < 300:
+        raise SemanticScholarError(
+            f"Semantic Scholar returned HTTP {response.status_code}. Check the query or key, then retry; "
+            "you can also use Crossref/OpenAlex."
+        )
+    try:
+        payload = response.json()
+    except (ValueError, TypeError):
+        raise SemanticScholarError("Semantic Scholar returned an invalid response. Try Crossref or OpenAlex.")
+    items = payload.get("data", []) if isinstance(payload, dict) else []
+    if not isinstance(items, list):
+        items = []
+    total_matches = payload.get("total", None) if isinstance(payload, dict) else None
+    offset = payload.get("offset", 0) if isinstance(payload, dict) else 0
+    try:
+        total_matches = int(total_matches) if total_matches is not None else None
+    except (TypeError, ValueError):
+        total_matches = None
+    try:
+        offset = int(offset or 0)
+    except (TypeError, ValueError):
+        offset = 0
     rows = []
     for item in items:
-        authors = "; ".join(a.get("name", "") for a in item.get("authors", [])[:5])
-        doi = (item.get("externalIds") or {}).get("DOI", "") or ""
+        if not isinstance(item, dict):
+            continue
+        authors = "; ".join(a.get("name") for a in (item.get("authors") or [])[:5] if isinstance(a, dict) and isinstance(a.get("name"), str) and a.get("name"))
+        external_ids = item.get("externalIds") or {}
+        doi = external_ids.get("DOI", "") if isinstance(external_ids, dict) else ""
         rows.append({
             "ID": item.get("paperId", ""),
             "DOI": doi,
@@ -973,7 +1049,17 @@ def query_semantic_scholar_live(search_query, per_page=50):
             "Citations": item.get("citationCount", 0),
             "Concepts": "",
         })
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    request_log = {
+        "endpoint": base,
+        "pages_fetched": 1,
+        "scope": "Semantic Scholar relevance search (plain text; provider-specific syntax)",
+        "total_matches": total_matches,
+        "returned": len(rows),
+        "possibly_truncated": bool(total_matches is not None and offset + len(items) < total_matches),
+        "pagination": "one page only",
+    }
+    return (df, request_log) if include_log else df
 
 
 def query_europepmc_live(search_query, per_page=50):
@@ -1116,8 +1202,8 @@ The first day introduces the logic of programmatic literature collection. The se
 begins with the formulation of search strategies — such as the **PICO framework** for
 health sciences or **SPIDER** for social sciences — and the identification of suitable
 open APIs, including **OpenAlex**, **Crossref**, and **Europe PMC**.
-(Semantic Scholar is not available for live queries due to strict public API rate limits;
-OpenAlex is recommended for STEM and CS topics.)
+Semantic Scholar is available as a best-effort relevance-search option; it may rate-limit
+anonymous requests, so OpenAlex or Crossref may be preferable for reproducible retrieval.
 
 Participants are shown how API-based retrieval differs from manual database searching
 and how it facilitates reproducibility. Because APIs evolve and results may change over
@@ -1131,13 +1217,14 @@ supports automatically.
 | **OpenAlex** | All disciplines | 250M+ works, fully open, rich metadata including concepts and citations |
 | **Crossref** | All disciplines | DOI-centric, strong for journal articles and conference papers |
 | **Europe PMC** | Life sciences, health | Full-text access for many articles, strong for biomedical reviews |
+| **Semantic Scholar** | All disciplines, especially discovery | Best-effort relevance search; abstracts may be missing and rate limits can apply |
 
 ### Session Structure
 
 | Hour | Content |
 |------|---------|
 | **Hour 1** | Introduce the logic of programmatic literature collection. Clarify the difference between manual database searches and open API retrieval. Present discipline-spanning examples and explain how query timestamps are logged for reproducibility. |
-| **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into Boolean queries and retrieve metadata from OpenAlex, Crossref, and Europe PMC. (Semantic Scholar is not available due to rate limits; OpenAlex covers the same STEM/CS literature.) |
+| **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into provider-specific searches and retrieve metadata from OpenAlex, Crossref, Europe PMC, and best-effort Semantic Scholar. |
 | **Hour 3** | Use the Streamlit app to run automated deduplication. Participants inspect the output, compare field completeness, explore the corpus using the **interactive keyword co-occurrence network** (pyvis), export a clean CSV or RIS file, and create a **VOSviewer** bibliometric map. |
 
 ### Input Flexibility: Multiple Entry Points
@@ -1235,15 +1322,15 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
     input_method = st.radio(
         "How would you like to provide your literature?",
         [
-            "🔍 Boolean Query (search open APIs live)",
+            "🔍 Search open APIs live",
             "📄 Upload RIS file",
             "🗂️ Zotero Integration",
         ],
         horizontal=True,
     )
 
-    # ── Option 1: Boolean Query ────────────────────────────────────────────────
-    if input_method == "🔍 Boolean Query (search open APIs live)":
+    # ── Option 1: API search ──────────────────────────────────────────────────
+    if input_method == "🔍 Search open APIs live":
         st.markdown("#### Search Open APIs")
         api_choice = st.selectbox(
             "Select API",
@@ -1251,10 +1338,12 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                 "OpenAlex (recommended for most disciplines)",
                 "Crossref (DOI-centric, all disciplines)",
                 "Europe PMC (Life sciences, health)",
+                "Semantic Scholar (best-effort relevance search; optional key)",
             ],
             key="byod_api_widget",
         )
         is_openalex = api_choice.startswith("OpenAlex")
+        is_semantic_scholar = api_choice.startswith("Semantic Scholar")
         st.caption("Each provider has its own search syntax and usage limits. OpenAlex supports uppercase AND, OR and NOT, parentheses and quoted phrases.")
         query_input = st.text_input(
             "Search query",
@@ -1296,7 +1385,19 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                 run_query = st.form_submit_button("▶ Run My Query")
             st.button("Forget my OpenAlex credentials", on_click=forget_openalex_credentials, key="forget_openalex")
         else:
-            st.info("This provider currently retrieves one page. Year and publication-type filters are not available here. Query interpretation is provider-specific; Boolean syntax is not guaranteed.")
+            if "Crossref" in api_choice:
+                st.info("Crossref needs no account, API key, or email. It retrieves one page; year and publication-type filters are not available in this app. Relevance search may not obey Boolean syntax, and abstracts are often missing.")
+            elif is_semantic_scholar:
+                st.info("Semantic Scholar is a best-effort public option: no key is required by default, but anonymous requests may be rate-limited. This is plain-text relevance search on one page, without year or publication-type filters in this app; Boolean syntax is not supported and abstracts are often missing. An optional key may help, but does not guarantee availability.")
+                semantic_scholar_key = st.text_input(
+                    "Optional Semantic Scholar API key (masked)",
+                    type="password", key="semantic_scholar_key_widget",
+                    help="Sent only as an x-api-key header; kept only in this browser session and never logged or downloaded.",
+                )
+                st.button("Forget my Semantic Scholar key", on_click=forget_semantic_scholar_credentials, key="forget_semantic_scholar")
+            else:
+                semantic_scholar_key = ""
+                st.info("This provider currently retrieves one page. Year and publication-type filters are not available here. Query interpretation is provider-specific; Boolean syntax is not guaranteed.")
             max_pages = 1
             byod_year_from, byod_year_to = None, None
             byod_pub_types = []
@@ -1309,7 +1410,7 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                 st.warning("Enter your OpenAlex API key and a valid account email. OpenAlex must have verified the email associated with the key.")
             else:
                 # Avoid presenting an earlier successful corpus as the result of a failed new query.
-                for state_key in ("byod_df", "byod_log", "byod_query", "byod_api", "byod_year_from", "byod_year_to", "byod_pub_types"):
+                for state_key in ("byod_df", "byod_log", "byod_query", "byod_api", "byod_year_from", "byod_year_to", "byod_pub_types", "byod_screening_run", "byod_included_df"):
                     st.session_state.pop(state_key, None)
                 with st.spinner(f"Querying {api_choice.split('(')[0].strip()}…"):
                     try:
@@ -1325,8 +1426,9 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                             )
                             df = openalex_to_df(records)
                         elif "Crossref" in api_choice:
-                            df = query_crossref_live(query_input.strip(), per_page=per_page)
-                            request_log = {"endpoint": "https://api.crossref.org/works", "pages_fetched": 1, "scope": "provider-specific keyword search", "filters": []}
+                            df, request_log = query_crossref_live(query_input.strip(), per_page=per_page, include_log=True)
+                        elif is_semantic_scholar:
+                            df, request_log = query_semantic_scholar_live(query_input.strip(), per_page=per_page, api_key=semantic_scholar_key, include_log=True)
                         elif "Europe PMC" in api_choice:
                             df = query_europepmc_live(query_input.strip(), per_page=per_page)
                             request_log = {"endpoint": "https://www.ebi.ac.uk/europepmc/webservices/rest/search", "pages_fetched": 1, "scope": "provider-specific search", "filters": []}
@@ -1365,6 +1467,10 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                             st.warning("More records may be available. The selected maximum number of pages was reached; the saved corpus is not the complete result set.")
                     except OpenAlexError as exc:
                         st.error(f"{exc}. For authentication errors, check the key and verify its account email. For rate limits, wait before retrying.")
+                    except SemanticScholarError as exc:
+                        st.error(str(exc))
+                    except CrossrefError as exc:
+                        st.error(str(exc))
                     except Exception:
                         st.error("Unable to retrieve or process the results. Check the selected provider and query, then try again. No credentials are included in this message.")
 
