@@ -1,9 +1,15 @@
-"""Build weighted undirected networks from Day 2 tabular records.
+"""Build weighted undirected networks from bibliographic records.
 
 The public :func:`build_network` function accepts a pandas-like DataFrame and
 returns JSON-friendly dictionaries.  Rows are the unit of co-occurrence: a
 node is counted at most once per row, and an edge is counted at most once per
 row even when a source field repeats a value.
+
+For ``kind='coupling'``, nodes are distinct rows (studies); each undirected edge
+is weighted by the number of distinct reference identifiers shared by two rows.
+DOIs, OpenAlex work IDs and explicitly prefixed PMIDs are distinct namespaces;
+no unverified crosswalk between them is inferred. Only the records with the
+largest reference lists are retained when the requested node limit is reached.
 
 Term policy
 -----------
@@ -23,12 +29,15 @@ limitation for the UI to explain.
 from __future__ import annotations
 
 from collections import Counter
+import json
+import re
 from typing import Any
+from urllib.parse import unquote, urlsplit
 import pandas as pd
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS, TfidfVectorizer
 
 
-SUPPORTED_KINDS = {"terms", "authors", "concepts"}
+SUPPORTED_KINDS = {"terms", "authors", "concepts", "coupling"}
 _TERM_LIMIT = 8
 
 # Deliberately modest and stable: this is not intended to be a full NLP model.
@@ -77,6 +86,94 @@ def _split_semicolon(value: Any) -> set[str]:
     }
 
 
+def canonical_reference(value: Any) -> str:
+    """Canonicalize recognized DOI, OpenAlex work or explicitly prefixed PMID.
+
+    The result never assumes that identifiers in different namespaces are equal.
+    Unrecognized raw citation text is excluded rather than guessed to be an ID.
+    """
+    raw = _text(value).strip()
+    raw = re.sub(r"^(doi|pmid|openalex):\s*", r"\1:", raw, flags=re.I)
+    if any(not char.isprintable() or char.isspace() for char in raw):
+        return ""
+    if re.match(r"^https?://", raw, flags=re.I):
+        try:
+            parsed = urlsplit(raw)
+            if parsed.query or parsed.fragment or re.search(r"%(?![0-9a-fA-F]{2})", parsed.path):
+                return ""
+            host = parsed.netloc.casefold()
+            path = unquote(parsed.path, encoding="utf-8", errors="strict")
+            if host in {"doi.org", "dx.doi.org"}:
+                raw = path.lstrip("/")
+            elif host in {"openalex.org", "www.openalex.org"}:
+                raw = path.lstrip("/")
+            elif host == "api.openalex.org" and path.lower().startswith("/works/"):
+                raw = path[len("/works/"):]
+            else:
+                return ""
+        except (UnicodeDecodeError, ValueError):
+            return ""
+    raw = re.sub(r"^doi:", "", raw, flags=re.I).casefold()
+    if re.fullmatch(r"10\.\d+/\S+", raw):
+        return "doi:" + raw
+    match = re.fullmatch(r"(?:openalex:)?(w\d+)/?", raw)
+    if match:
+        return "openalex:" + match.group(1)
+    match = re.fullmatch(r"pmid:(\d+)", raw)
+    return "pmid:" + match.group(1) if match else ""
+
+
+def _reference_set(value: Any) -> set[str]:
+    if _is_missing(value):
+        return set()
+    if isinstance(value, (list, tuple)):
+        values = value
+    else:
+        text = _text(value).strip()
+        if text.startswith("["):
+            try:
+                values = json.loads(text)
+            except (ValueError, TypeError):
+                return set()  # Never invent identifiers from malformed JSON.
+            if not isinstance(values, list):
+                return set()
+        else:
+            values = text.split(";")
+    return {ref for raw in values if isinstance(raw, str) and (ref := canonical_reference(raw))}
+
+
+def _coupling_network(records: list[Any], top_n: int, minimum: int) -> dict[str, Any]:
+    candidates = []
+    for index, row in enumerate(records):
+        references = _reference_set(_cell(row, "References"))
+        if not references:
+            continue
+        title = " ".join(_text(_cell(row, "Title")).split())
+        record_id = " ".join(_text(_cell(row, "ID")).split())
+        doi = " ".join(_text(_cell(row, "DOI")).split())
+        label = title or record_id or doi or f"Untitled study {index + 1}"
+        candidates.append((index, references, label, record_id, doi))
+
+    # A cap is necessary for responsive rendering; the selection is explicit,
+    # deterministic and does not pretend to represent the whole corpus.
+    chosen = sorted(candidates, key=lambda item: (-len(item[1]), item[0]))[:top_n]
+    nodes = []
+    for index, references, label, record_id, doi in chosen:
+        display = label if len(label) <= 28 else label[:25] + "..."
+        nodes.append({"id": f"study:{index}", "label": f"{index + 1}. {display}",
+                      "full_label": f"{index + 1}. {label}", "frequency": len(references),
+                      "record_id": record_id, "doi": doi, "title": label})
+    edges = []
+    for i, (left_index, left_refs, *_rest) in enumerate(chosen):
+        for right_index, right_refs, *_ in chosen[i + 1:]:
+            weight = len(left_refs & right_refs)
+            if weight and weight >= minimum:
+                edges.append({"source": f"study:{left_index}", "target": f"study:{right_index}", "weight": weight})
+    return {"nodes": nodes, "edges": edges, "records_with_data": len(candidates),
+            "total_records": len(records), "kind": "coupling",
+            "records_omitted_by_node_limit": max(0, len(candidates) - len(chosen))}
+
+
 def _term_sets(records: list[Any]) -> list[set[str]]:
     texts = [(_text(_cell(row, "Title")) + " " + _text(_cell(row, "Abstract"))).casefold()
              for row in records]
@@ -117,7 +214,7 @@ def _rows(df: Any) -> list[Any]:
 
 
 def build_network(df: Any, kind: str, top_n: int = 40, min_cooccurrence: int = 1) -> dict[str, Any]:
-    """Return a weighted undirected network for ``terms``, ``authors``, or ``concepts``.
+    """Return a weighted undirected term, author, concept or coupling network.
 
     ``top_n`` retains the most frequent nodes, with deterministic alphabetical
     tie-breaking. Edges count pairs of retained nodes, after frequencies have
@@ -131,6 +228,8 @@ def build_network(df: Any, kind: str, top_n: int = 40, min_cooccurrence: int = 1
         raise ValueError("min_cooccurrence must be a non-negative integer")
 
     records = _rows(df)
+    if kind == "coupling":
+        return _coupling_network(records, top_n, min_cooccurrence)
     frequencies: Counter[str] = Counter()
     item_sets: list[set[str]] = []
     labels: dict[str, str] = {}
@@ -178,4 +277,4 @@ def build_network(df: Any, kind: str, top_n: int = 40, min_cooccurrence: int = 1
     }
 
 
-__all__ = ["build_network"]
+__all__ = ["build_network", "canonical_reference"]

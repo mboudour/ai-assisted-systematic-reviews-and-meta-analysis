@@ -53,7 +53,9 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from openalex_client import OpenAlexError, fetch_works
 from openaire_client import OpenAIREError, fetch_openaire
-from openaire_notice import OPENAIRE_LIMITATIONS
+from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
+from day2_networks import build_network
+from day2_network_view import make_network_html
 
 # ── Guided example definitions ─────────────────────────────────────────────────
 GUIDED_EXAMPLES = [
@@ -806,7 +808,10 @@ def render_vosviewer_section(df, session_key):
     st.markdown("""
 [VOSviewer](https://www.vosviewer.com) is the standard free tool for creating
 **keyword co-occurrence networks**, **citation networks**, and **bibliographic coupling maps**
-from a corpus of literature. It is free and available in two versions:
+when the input contains suitable data. This app's RIS export does not supply a cited-reference
+network to VOSviewer; it cannot by itself produce citation, bibliographic-coupling or co-citation
+maps. Use the in-app coupling network when the corpus contains reference IDs. VOSviewer is
+available in two versions:
 - **VOSviewer Online** (`app.vosviewer.com`) — browser-based, no installation needed.
 - **VOSviewer Desktop** — full application (Windows / Mac / Linux), for larger corpora and offline use.
     """)
@@ -863,6 +868,74 @@ from a corpus of literature. It is free and available in two versions:
         )
 
 
+def render_bibliometric_networks(df, session_key):
+    """Display author or study coupling networks using only the supplied metadata."""
+    st.markdown("#### Co-authorship and bibliographic coupling")
+    choice = st.selectbox(
+        "Choose a bibliometric network",
+        ["Select a network", "Co-authorship", "Bibliographic coupling (shared references)"],
+        key=f"d1_bib_kind_{session_key}",
+    )
+    if choice == "Select a network":
+        st.caption("Choose a network to explore this corpus. Coupling requires reference lists; none are inferred when they are absent.")
+        return
+    kind = "authors" if choice == "Co-authorship" else "coupling"
+    if kind == "authors":
+        st.caption("Nodes are authors; a link counts records they co-authored. Names are matched by case and whitespace, not disambiguated. Names must be semicolon-separated. Providers and older datasets may omit or truncate authors; a comma-separated list is treated as one name.")
+    else:
+        st.caption("Nodes are studies; a link counts their distinct shared reference IDs. Hover over a node for its full title. References can be a JSON array of DOI, OpenAlex work IDs or prefixed PMIDs, or a semicolon-separated list when no ID itself contains a semicolon. Incomplete reference lists yield incomplete networks; DOI and OpenAlex IDs are not matched across namespaces. When the node limit is reached, studies with the most reference IDs are shown first, which can bias the map.")
+    left, right = st.columns(2)
+    with left:
+        top_n = st.slider("Maximum network nodes", 10, 60, 25, 5, key=f"d1_bib_nodes_{session_key}")
+    with right:
+        label = "Minimum shared references per link" if kind == "coupling" else "Minimum co-authored records per link"
+        minimum = st.slider(label, 1, 10, 1, 1, key=f"d1_bib_min_{session_key}")
+    graph = build_network(df, kind, top_n=top_n, min_cooccurrence=minimum)
+    if kind == "coupling":
+        st.caption(f"Records with usable reference IDs: {graph['records_with_data']} of {graph['total_records']}. Shown: {len(graph['nodes'])} studies and {len(graph['edges'])} links; {graph['records_omitted_by_node_limit']} reference-bearing studies omitted by the node cap.")
+    else:
+        st.caption(f"Usable authors: {graph['records_with_data']} of {graph['total_records']} records. Shown: {len(graph['nodes'])} authors and {len(graph['edges'])} links.")
+    if not graph["edges"]:
+        if kind == "coupling" and not graph["records_with_data"]:
+            st.info("No usable reference identifiers are available in these records, so bibliographic coupling cannot be calculated. The existing teaching snapshots may not contain reference lists. Search OpenAlex or Crossref using this updated app, or upload a CSV with a References column; references are never invented.")
+        elif kind == "coupling":
+            st.info(f"No study pair shares at least {minimum} recognized reference ID(s) among the shown studies. Missing references, incompatible identifier namespaces, or the node cap may hide matches; lower the threshold or increase the node limit where possible.")
+        else:
+            st.info("No co-author pairs are available at these settings. Check the Authors field, lower the threshold, or increase the node limit.")
+        return
+    try:
+        graph_html = make_network_html(graph)
+    except ValueError as exc:
+        st.warning(f"Unable to display the network: {exc}")
+    else:
+        components.html(graph_html, height=590, scrolling=False)
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    metric = "Shared references" if kind == "coupling" else "Co-authored records"
+    edges = pd.DataFrame([
+        {"Source": nodes[e["source"]].get("full_label", nodes[e["source"]]["label"]),
+         "Target": nodes[e["target"]].get("full_label", nodes[e["target"]]["label"]),
+         metric: e["weight"],
+         **({"Source DOI": nodes[e["source"]].get("doi", ""), "Target DOI": nodes[e["target"]].get("doi", "")} if kind == "coupling" else {})}
+        for e in graph["edges"]
+    ]).sort_values([metric, "Source", "Target"], ascending=[False, True, True])
+    node_rows = pd.DataFrame([
+        {"Node": node.get("full_label", node["label"]),
+         ("Available unique reference IDs" if kind == "coupling" else "Records containing author"): node["frequency"],
+         **({"Record ID": node.get("record_id", ""), "DOI": node.get("doi", "")} if kind == "coupling" else {})}
+        for node in graph["nodes"]
+    ])
+    with st.expander("View and download bibliometric network data"):
+        st.caption("Files contain the displayed nodes and links only. Duplicate reference IDs within a study count once.")
+        st.dataframe(edges, use_container_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button("Download network links (CSV)", edges.to_csv(index=False).encode("utf-8"),
+                               f"{session_key}_{kind}_links.csv", "text/csv", key=f"d1_bib_edges_{session_key}")
+        with col2:
+            st.download_button("Download network nodes (CSV)", node_rows.to_csv(index=False).encode("utf-8"),
+                               f"{session_key}_{kind}_nodes.csv", "text/csv", key=f"d1_bib_nodefile_{session_key}")
+
+
 def display_corpus(df, source_label, session_key):
     """Show stats, preview, year chart, pyvis network, VOSviewer section, and download buttons."""
     st.success(f"✅ Corpus loaded: **{len(df)} records** from {source_label}.")
@@ -892,6 +965,9 @@ def display_corpus(df, source_label, session_key):
 
     # ── pyvis interactive keyword co-occurrence network ────────────────────────
     render_pyvis_network(df, session_key)
+
+    # ── Study coupling / co-authorship, using supplied metadata only ───────────
+    render_bibliometric_networks(df, session_key)
 
     # ── VOSviewer bibliometric network section ─────────────────────────────────
     render_vosviewer_section(df, session_key)
@@ -927,12 +1003,110 @@ class CrossrefError(Exception):
     """Safe participant-facing Crossref retrieval error."""
 
 
+def _provider_list(value):
+    return value if isinstance(value, list) else []
+
+
+def _provider_mapping(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _provider_text(value):
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _first_provider_text(value):
+    if isinstance(value, str):
+        return _provider_text(value)
+    return next((text for entry in _provider_list(value) if (text := _provider_text(entry))), "")
+
+
+def _openalex_reference_id(value):
+    """Normalize an explicitly supplied OpenAlex Work ID, not a DOI or a guess."""
+    if not isinstance(value, str):
+        return ""
+    match = re.fullmatch(
+        r"(?:(?:https?://openalex\.org/)|(?:https?://api\.openalex\.org/works/)|openalex:)?W([0-9]+)/?",
+        value.strip(), flags=re.IGNORECASE,
+    )
+    return f"openalex:W{match.group(1)}" if match else ""
+
+
+def _crossref_reference_doi(value):
+    """Normalize a DOI while preserving its complete suffix and namespace.
+
+    Resolver URLs are percent-decoded once; bare DOI values are treated as
+    literal DOI names. Semicolons and percent signs remain part of the DOI;
+    JSON array serialization keeps semicolons distinct from separators.
+    """
+    from urllib.parse import unquote, urlsplit
+
+    if not isinstance(value, str):
+        return ""
+    doi = re.sub(r"^doi:\s*", "", value.strip(), flags=re.IGNORECASE)
+    # urlsplit removes some embedded control characters; reject them instead of
+    # silently turning malformed input into a different DOI.
+    if any(not char.isprintable() or char.isspace() for char in doi):
+        return ""
+    if re.match(r"^https?://", doi, flags=re.IGNORECASE):
+        try:
+            parsed = urlsplit(doi)
+            if (parsed.netloc.casefold() not in {"doi.org", "dx.doi.org"}
+                    or parsed.query or parsed.fragment or not parsed.path.startswith("/")
+                    or re.search(r"%(?![0-9a-fA-F]{2})", parsed.path)):
+                return ""
+            doi = unquote(parsed.path[1:], encoding="utf-8", errors="strict")
+        except (UnicodeDecodeError, ValueError):
+            return ""
+    # This is a syntax check, not proof that a DOI exists. Do not strip suffix
+    # punctuation, which can be part of a legitimate DOI.
+    if (not re.fullmatch(r"10\.[0-9]+/.+", doi, flags=re.IGNORECASE)
+            or any(not char.isprintable() or char.isspace() for char in doi)):
+        return ""
+    return f"doi:{doi.lower()}"
+
+
+def _reference_string(values):
+    """Serialize unique identifiers, in provider order, as a JSON array string.
+
+    OpenAlex Work IDs and DOIs are separate namespaces and cannot be matched
+    across providers without a verified mapping. An empty result means no
+    usable identifiers were supplied, not necessarily that a work cites none.
+    """
+    seen = set()
+    identifiers = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            identifiers.append(value)
+    return json.dumps(identifiers, ensure_ascii=False) if identifiers else ""
+
+
+def _openalex_references(record):
+    return _reference_string(
+        _openalex_reference_id(value)
+        for value in _provider_list(record.get("referenced_works"))
+    )
+
+
+def _crossref_references(record):
+    # Only DOI fields on explicit reference entries count; unstructured
+    # citations and the citing paper's own DOI are not inferred references.
+    identifiers = []
+    for reference in _provider_list(record.get("reference")):
+        reference = _provider_mapping(reference)
+        identifier = (_crossref_reference_doi(reference.get("DOI"))
+                      or _crossref_reference_doi(reference.get("doi")))
+        identifiers.append(identifier)
+    return _reference_string(identifiers)
+
+
 def query_crossref_live(search_query, per_page=50, include_log=False):
     base = "https://api.crossref.org/works"
     params = {
         "query": search_query,
         "rows": per_page,
-        "select": "DOI,title,author,published,container-title,abstract",
+        "select": "DOI,title,author,published,container-title,abstract,reference",
     }
     try:
         r = requests.get(base, params=params, timeout=30)
@@ -944,35 +1118,51 @@ def query_crossref_live(search_query, per_page=50, include_log=False):
         raise CrossrefError("Crossref could not complete this search. Please retry or use another provider.") from None
     except requests.RequestException:
         raise CrossrefError("Crossref could not be reached. Please retry or use another provider.") from None
-    message = r.json().get("message", {})
+    try:
+        payload = r.json()
+    except ValueError:
+        raise CrossrefError("Crossref returned an invalid response. Please retry or use another provider.") from None
+    if not isinstance(payload, dict) or not isinstance(payload.get("message"), dict):
+        raise CrossrefError("Crossref returned an invalid response. Please retry or use another provider.")
+    message = payload["message"]
     items = message.get("items", [])
+    if not isinstance(items, list):
+        raise CrossrefError("Crossref returned an invalid response. Please retry or use another provider.")
     rows = []
     for item in items:
-        title = item.get("title", [""])[0] if item.get("title") else ""
-        authors_list = item.get("author", [])
+        if not isinstance(item, dict):
+            continue
+        title = _first_provider_text(item.get("title"))
+        authors_list = _provider_list(item.get("author"))
         authors = "; ".join(
-            f"{a.get('family', '')} {a.get('given', '')}".strip()
-            for a in authors_list[:5]
+            name for a in authors_list
+            if (name := " ".join(filter(None, (
+                _provider_text(_provider_mapping(a).get("family")),
+                _provider_text(_provider_mapping(a).get("given")),
+            ))))
         )
-        pub = item.get("published", {})
-        parts = pub.get("date-parts", [[""]])[0]
-        year = str(parts[0]) if parts else ""
-        venue = item.get("container-title", [""])[0] if item.get("container-title") else ""
-        abstract = item.get("abstract", "") or ""
+        date_parts = _provider_list(_provider_mapping(item.get("published")).get("date-parts"))
+        parts = _provider_list(date_parts[0]) if date_parts else []
+        year_value = parts[0] if parts else ""
+        year = str(year_value) if isinstance(year_value, (str, int)) and not isinstance(year_value, bool) else ""
+        venue = _first_provider_text(item.get("container-title"))
+        abstract = _provider_text(item.get("abstract"))
         # Crossref abstracts often contain JATS/XML markup rather than plain text.
         abstract = " ".join(html.unescape(re.sub(r"</?[A-Za-z][^>]*>", " ", abstract)).split())
         rows.append({
-            "ID": item.get("DOI", ""),
-            "DOI": item.get("DOI", "") or "",
-            "Title": title.strip(),
+            "ID": _provider_text(item.get("DOI")),
+            "DOI": _provider_text(item.get("DOI")),
+            "Title": title,
             "Year": year,
             "Authors": authors,
             "Venue": venue,
             "Abstract": abstract,
             "Citations": "",
             "Concepts": "",
+            "References": _crossref_references(item),
         })
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(rows, columns=["ID", "DOI", "Title", "Year", "Authors", "Venue",
+                                      "Abstract", "Citations", "Concepts", "References"])
     total = message.get("total-results")
     total = total if isinstance(total, int) else None
     log = {
@@ -997,7 +1187,13 @@ def query_europepmc_live(search_query, per_page=50):
     items = r.json().get("resultList", {}).get("result", [])
     rows = []
     for item in items:
-        authors = item.get("authorString", "") or ""
+        author_list = _provider_list(_provider_mapping(item.get("authorList")).get("author"))
+        names = [_provider_text(_provider_mapping(author).get("fullName")) for author in author_list]
+        authors = "; ".join(name for name in names if name)
+        # A free-form authorString may use commas in ambiguous ways. Keep it as
+        # one label rather than guessing how to split individual names.
+        if not authors:
+            authors = _provider_text(item.get("authorString"))
         rows.append({
             "ID": item.get("id", ""),
             "DOI": item.get("doi", "") or "",
@@ -1014,42 +1210,47 @@ def query_europepmc_live(search_query, per_page=50):
 
 def openalex_to_df(records):
     rows = []
-    for r in records:
-        raw_aii = r.get("abstract_inverted_index") or {}
-        positions_all = [pos for positions in raw_aii.values() for pos in positions if isinstance(pos, int) and pos >= 0]
-        if positions_all:
-            max_pos = max(positions_all)
-            words = [""] * (max_pos + 1)
-            for word, positions in raw_aii.items():
-                for pos in positions:
-                    if isinstance(pos, int) and 0 <= pos <= max_pos:
-                        words[pos] = word
-            abstract = " ".join(words)
-        else:
-            abstract = ""
+    for r in records or []:
+        if not isinstance(r, dict):
+            continue
+        raw_aii = _provider_mapping(r.get("abstract_inverted_index"))
+        words = {}
+        for word, positions in raw_aii.items():
+            if not isinstance(word, str):
+                continue
+            for pos in _provider_list(positions):
+                if isinstance(pos, int) and not isinstance(pos, bool) and pos >= 0:
+                    words[pos] = word
+        # Sparse or malformed positions cannot cause an enormous allocation.
+        abstract = " ".join(words[pos] for pos in sorted(words))
         authors = "; ".join(
-            a.get("author", {}).get("display_name", "") or ""
-            for a in (r.get("authorships") or [])[:5]
+            name for a in _provider_list(r.get("authorships"))
+            if (name := _provider_text(_provider_mapping(
+                _provider_mapping(a).get("author")).get("display_name")))
         )
-        loc = r.get("primary_location") or {}
-        source = loc.get("source") or {}
-        venue = source.get("display_name", "") or ""
+        loc = _provider_mapping(r.get("primary_location"))
+        source = _provider_mapping(loc.get("source"))
+        venue = _provider_text(source.get("display_name"))
         concepts = "; ".join(
-            c.get("display_name", "") for c in (r.get("concepts") or [])[:5]
+            name for c in _provider_list(r.get("concepts"))[:5]
+            if (name := _provider_text(_provider_mapping(c).get("display_name")))
         )
         rows.append({
-            "ID": r.get("id", ""),
-            "DOI": r.get("doi", "") or "",
-            "Title": (r.get("title", "") or "").strip(),
+            "ID": _provider_text(r.get("id")),
+            "DOI": _provider_text(r.get("doi")),
+            "Title": _provider_text(r.get("title")),
             "Year": r.get("publication_year", ""),
             "Authors": authors,
             "Venue": venue,
             "Abstract": abstract,
             "Citations": r.get("cited_by_count", 0),
             "Concepts": concepts,
+            "References": _openalex_references(r),
             "Publication Type": r.get("type", ""),
         })
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["ID", "DOI", "Title", "Year", "Authors", "Venue",
+                                        "Abstract", "Citations", "Concepts", "References",
+                                        "Publication Type"])
 
 
 def deduplicate_df(df):
@@ -1157,20 +1358,20 @@ Participants do not need to start from a Boolean query. The BYOD section accepts
 |------------|-------------|
 | **Boolean Query** | Starting a review from scratch |
 | **RIS File** | Already searched traditional databases (PubMed, Scopus, Web of Science) |
+| **Corpus CSV** | A saved corpus, including optional reference IDs for coupling |
 | **Zotero Integration** | Already using a reference manager — connect your cloud or self-hosted library |
 
-### Two Visualisation Tools for Every Corpus
+### Visualisation Options
 
-Every corpus produced by this app — whether from a guided example or your own BYOD query —
-is visualised in **two complementary ways**:
+The available maps depend on the fields supplied for a guided example or your own corpus:
 
 1. **Interactive keyword co-occurrence network (pyvis)** — built directly in this app.
    Drag nodes, scroll to zoom, hover for details. Instantly shows which topics cluster together.
 
-2. **VOSviewer bibliometric map** — export the corpus as a RIS file and open it in
-   [VOSviewer Online](https://app.vosviewer.com) (free, browser-based). Provides
-   publication-quality maps with colour-coded clusters, citation networks, and bibliographic
-   coupling — the standard tool in systematic review methodology.
+2. **Co-authorship and bibliographic coupling** — use the in-app selector below a corpus.
+   Coupling needs reference lists and may be unavailable when a source does not supply them.
+   VOSviewer can also create certain maps from suitable input, but this app's RIS export
+   cannot supply cited-reference links for citation, coupling, or co-citation analyses.
 
 ### Learning Outcome
 
@@ -1242,7 +1443,7 @@ elif section == "🔎 BYOD — Your Own Query":
 Use this section to build a corpus from **your own research question**.
 Choose your preferred input method below. No coding required.
 
-All three input methods produce the same outputs: a deduplicated corpus table,
+These input methods produce a deduplicated corpus table,
 a publication year chart, an **interactive keyword co-occurrence network** (pyvis),
 a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric network analysis.
     """)
@@ -1252,6 +1453,7 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         [
             "🔍 Search open APIs live",
             "📄 Upload RIS file",
+            "📊 Upload corpus CSV",
             "🗂️ Zotero Integration",
         ],
         horizontal=True,
@@ -1466,7 +1668,51 @@ VOSviewer bibliometric network export, and download options as the guided exampl
                 st.info(f"Parsed {before} records. Deduplication removed {before - after} duplicates ({before} → {after}).")
                 display_corpus(df, f"Uploaded file: {uploaded_file.name}", "byod_ris")
 
-    # ── Option 3: Zotero ──────────────────────────────────────────────────────
+    # ── Option 3: Corpus CSV with optional reference lists ──────────────────────
+    elif input_method == "📊 Upload corpus CSV":
+        st.markdown("#### Upload a Corpus CSV")
+        st.caption('Use a CSV with a Title column. Optional Authors values should be separated by semicolons. For bibliographic coupling add a References column containing JSON arrays of DOI, OpenAlex work IDs or prefixed PMIDs (for example ["doi:10.1234/a", "openalex:W123"]). A semicolon-separated list is also supported if the identifiers themselves contain no semicolons. Save the original source and query log separately.')
+        uploaded_csv = st.file_uploader("Upload your corpus CSV", type=["csv"], key="corpus_csv_upload")
+        if uploaded_csv is not None:
+            try:
+                raw_csv = uploaded_csv.getvalue()
+                df = pd.read_csv(io.BytesIO(raw_csv))
+                if "Title" not in df.columns:
+                    st.error("The CSV needs a Title column. Column names are case-sensitive.")
+                elif df.empty:
+                    st.warning("The uploaded CSV has no records.")
+                else:
+                    for col in ("ID", "DOI", "Title", "Authors", "Venue", "Abstract", "Concepts", "References"):
+                        if col not in df.columns:
+                            df[col] = ""
+                        df[col] = df[col].fillna("").astype(str)
+                    if "Year" not in df.columns:
+                        df["Year"] = ""
+                    if "Citations" not in df.columns:
+                        df["Citations"] = ""
+                    if source_column_mentions_openaire(df):
+                        st.warning(OPENAIRE_LIMITATIONS)
+                    before = len(df)
+                    df = deduplicate_df(df)
+                    st.info(f"Loaded {before} records; retained {len(df)} after deduplication.")
+                    if st.button("Use this CSV in Day 2 BYOD", key="send_csv_to_day2"):
+                        st.session_state.pop("byod_screening_run", None)
+                        st.session_state.pop("byod_included_df", None)
+                        st.session_state["byod_df"] = df.copy()
+                        st.session_state["byod_api"] = "User-supplied CSV"
+                        st.session_state["byod_query"] = "Not recorded in the CSV"
+                        st.session_state["byod_year_from"] = None
+                        st.session_state["byod_year_to"] = None
+                        st.session_state["byod_pub_types"] = []
+                        st.session_state["byod_log"] = {"source": "user-supplied CSV", "filename": uploaded_csv.name,
+                                                        "file_sha256": hashlib.sha256(raw_csv).hexdigest(),
+                                                        "records_after_dedup": len(df)}
+                        st.success("CSV copied to this session. Open Day 2 → BYOD to screen it.")
+                    display_corpus(df, f"Uploaded file: {uploaded_csv.name}", "byod_csv")
+            except (pd.errors.ParserError, UnicodeDecodeError, ValueError):
+                st.error("Could not read this CSV. Check that it is a UTF-8 comma-separated file with a Title column.")
+
+    # ── Option 4: Zotero ──────────────────────────────────────────────────────
     elif input_method == "🗂️ Zotero Integration":
         st.markdown("""
 #### Connect Your Zotero Library

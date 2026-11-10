@@ -308,10 +308,9 @@ def render_day2_networks(screened_df, included_df, session_key):
     """Let participants map actual included or all screened records."""
     st.markdown("#### Interactive networks")
     st.markdown(
-        "Choose a set of records and a network. A node is a term, concept or author; "
-        "a link means both items occur in the same record. Node size reflects the "
-        "number of records containing the item; link width reflects the number "
-        "containing both. These are descriptive maps, not evidence of causal relationships."
+        "Choose a set of records and a network. Co-occurrence and co-authorship links count "
+        "records containing both items. Bibliographic-coupling nodes are studies and links "
+        "count their shared references. These maps are descriptive, not causal."
     )
     source_labels = ["Included studies", "All screened records (exploratory)"]
     default_source = 0 if not included_df.empty else 1
@@ -331,6 +330,7 @@ def render_day2_networks(screened_df, included_df, session_key):
         "Concept co-occurrence": "concepts",
         "Title and abstract term co-occurrence": "terms",
         "Co-authorship": "authors",
+        "Bibliographic coupling (shared references)": "coupling",
     }
     choice = st.selectbox(
         "Network type", list(choices), index=0 if has_concepts else 1,
@@ -341,22 +341,34 @@ def render_day2_networks(screened_df, included_df, session_key):
         st.caption("Concepts come from the corpus, separated by semicolons. No concepts are inferred when the field is empty.")
     elif kind == "terms":
         st.caption("Terms come from titles and abstracts, or titles alone when abstracts are missing. TF-IDF selects up to eight lowercase single words per record after English and generic research stopwords are removed. These are not OpenAlex concepts; no stemming or phrase extraction is applied, and changing the record set may change the selected terms.")
+    elif kind == "authors":
+        st.caption("Authors must be separated by semicolons. Names are matched by case and whitespace only; variants or different people with the same name are not disambiguated. Providers and older datasets may omit or truncate authors, and comma-separated names are treated as one label.")
     else:
-        st.caption("Authors must be separated by semicolons. Names are matched by case and whitespace only; variants or different people with the same name are not disambiguated. Some Day 1 providers retain only the first five names, so the map can omit co-authors.")
+        st.caption("Each node is a study; a link counts its distinct shared reference IDs with another study. Hover over a node for its full title. References may be JSON arrays of DOI, OpenAlex work IDs or prefixed PMIDs, or semicolon-separated IDs if no identifier itself contains a semicolon. Incomplete reference lists yield incomplete networks; DOI and OpenAlex identifiers are not matched across namespaces. With a node cap, studies with the most available references are shown first, which can bias the map.")
 
     c1, c2 = st.columns(2)
     with c1:
         top_n = st.slider("Maximum number of nodes", 10, 60, 25, 5, key=f"d2_network_top_{session_key}")
     with c2:
-        minimum = st.slider("Minimum records per link", 1, 10, 1, 1, key=f"d2_network_min_{session_key}")
+        threshold_label = "Minimum shared references per link" if kind == "coupling" else "Minimum records per link"
+        minimum = st.slider(threshold_label, 1, 10, 1, 1, key=f"d2_network_min_{session_key}")
     graph = build_network(selected_df, kind, top_n=top_n, min_cooccurrence=minimum)
-    st.caption(f"Usable {kind} data: {graph['records_with_data']} of {graph['total_records']} selected records. "
-               f"Shown: {len(graph['nodes'])} nodes and {len(graph['edges'])} links at the selected settings.")
+    if kind == "coupling":
+        st.caption(f"Records with usable reference identifiers: {graph['records_with_data']} of {graph['total_records']}. "
+                   f"Shown: {len(graph['nodes'])} studies and {len(graph['edges'])} links; {graph['records_omitted_by_node_limit']} reference-bearing studies omitted by the node cap.")
+    else:
+        st.caption(f"Usable {kind} data: {graph['records_with_data']} of {graph['total_records']} selected records. "
+                   f"Shown: {len(graph['nodes'])} nodes and {len(graph['edges'])} links at the selected settings.")
     if not graph["edges"]:
         if not graph["records_with_data"]:
-            st.info("No usable data for this network type in the selected records. Try title/abstract terms or another network type.")
+            if kind == "coupling":
+                st.info("No usable reference identifiers are available in these records, so coupling cannot be calculated. Search OpenAlex or Crossref with the updated Day 1 app or upload a CSV containing a References column. Existing teaching snapshots may not have reference lists; no references are invented.")
+            else:
+                st.info("No usable data for this network type in the selected records. Try title/abstract terms or another network type.")
+        elif kind == "coupling":
+            st.info(f"No study pair shares at least {minimum} recognized reference ID(s) among the shown studies. Missing references, incompatible identifier namespaces, or the node cap may hide matches; lower the threshold or increase the node limit where possible.")
         else:
-            st.info("No pairs meet these settings. Lower the minimum records per link, increase the node limit, choose all screened records, or use another network type.")
+            st.info("No pairs meet these settings. Lower the link threshold, increase the node limit, choose all screened records, or use another network type. A lack of links can also reflect missing or incompatible reference identifiers.")
         return
     try:
         graph_html = make_network_html(graph)
@@ -365,17 +377,24 @@ def render_day2_networks(screened_df, included_df, session_key):
     else:
         components.html(graph_html, height=590, scrolling=False)
 
-    labels = {node["id"]: node["label"] for node in graph["nodes"]}
+    node_lookup = {node["id"]: node for node in graph["nodes"]}
+    metric = "Shared references" if kind == "coupling" else "Co-occurring records"
     edge_df = pd.DataFrame([
-        {"Source": labels[e["source"]], "Target": labels[e["target"]], "Co-occurring records": e["weight"]}
+        {"Source": node_lookup[e["source"]].get("full_label", node_lookup[e["source"]]["label"]),
+         "Target": node_lookup[e["target"]].get("full_label", node_lookup[e["target"]]["label"]),
+         metric: e["weight"],
+         **({"Source DOI": node_lookup[e["source"]].get("doi", ""),
+             "Target DOI": node_lookup[e["target"]].get("doi", "")} if kind == "coupling" else {})}
         for e in graph["edges"]
-    ]).sort_values(["Co-occurring records", "Source", "Target"], ascending=[False, True, True])
+    ]).sort_values([metric, "Source", "Target"], ascending=[False, True, True])
     node_df = pd.DataFrame([
-        {"Node": node["label"], "Records containing node": node["frequency"]}
+        {"Node": node.get("full_label", node["label"]),
+         ("Available unique reference IDs" if kind == "coupling" else "Records containing node"): node["frequency"],
+         **({"Record ID": node.get("record_id", ""), "DOI": node.get("doi", "")} if kind == "coupling" else {})}
         for node in graph["nodes"]
     ])
     with st.expander("View and download network data"):
-        st.caption("Each record contributes at most once to a node or pair. Files contain the displayed top nodes and links only.")
+        st.caption("Each reference ID contributes at most once to a study pair. Files contain displayed nodes and links only." if kind == "coupling" else "Each record contributes at most once to a node or pair. Files contain the displayed top nodes and links only.")
         st.dataframe(edge_df, use_container_width=True)
         left, right = st.columns(2)
         with left:

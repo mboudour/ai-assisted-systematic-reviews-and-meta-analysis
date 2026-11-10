@@ -74,7 +74,7 @@ with already included studies. The menus make those entry points visible without
 
 | Module | Function | What Participants Can Do |
 |--------|----------|--------------------------|
-| **1. Search & Collect** | Retrieve or load metadata | Open a Day 1 guided example, use a bounded provider search, or upload RIS |
+| **1. Search & Collect** | Retrieve or load metadata | Open a Day 1 guided example, use a bounded provider search, or upload RIS or CSV |
 | **2. Deduplicate** | Clean the corpus | Inspect API results or uploaded records and download a corpus CSV/RIS; provider fields and coverage differ |
 | **3. Screen** | Triage and verify records | Upload a Day 1 CSV, enter inclusion/exclusion terms, run the deterministic heuristic, inspect the full screening log, and verify decisions manually |
 | **4. Extract** | Pull structured fields from study inputs | Upload included studies, choose a schema, and use the available NLP/AI extraction options; extracted values are drafts for verification |
@@ -135,7 +135,7 @@ bounded corpus. OpenAlex retrieval is capped by the configured page size and max
 large result set may be truncated; the query log reports retrieval metadata and should be saved.
 Provider syntax, indexing, coverage, and available filters differ. Crossref needs no key and
 retrieves one page with provider-specific relevance search; Boolean logic is not guaranteed.
-You may instead upload RIS or use Zotero.
+You may instead upload RIS, upload a corpus CSV, or use Zotero.
 
 **OpenAIRE limitations:** No participant key or email is needed, but anonymous requests are limited
 to up to 60 per hour; users of one hosted app may share that limit. The app retrieves a bounded
@@ -156,15 +156,23 @@ exclusion terms, and run the current deterministic, case-insensitive substring h
 Title + Abstract. It is **not an actual LLM** and does not provide validated recall, precision,
 F1, or WSS estimates. Reviewers must inspect the included file and full screening log and make
 human eligibility decisions; the log is an audit aid, not proof of correctness.
-The Day 2 interactive maps offer concept co-occurrence, title/abstract term co-occurrence, and
-co-authorship. Participants can map included studies or all screened records (exploratory only).
-Links count records containing both items; author names are not disambiguated.
+The Day 2 interactive maps offer concept co-occurrence, title/abstract term co-occurrence,
+co-authorship, and bibliographic coupling. Participants can map included studies or all screened
+records (exploratory only). Co-occurrence links count records containing both items; author names
+are not disambiguated.
 
 **Day 3 BYOD:** Carry forward the Day 2 included-studies CSV, choose the extraction schema, and
 use the available NLP or optional AI extraction route. Generate tables, charts, networks, and
 PRISMA-style outputs as appropriate. These are analysis aids: confirm extracted fields, effect
 sizes, denominators, and flow counts against the source studies. The guided Day 3 route is
 illustrative/synthetic; only the BYOD route represents a participant-supplied pipeline.
+
+**Co-authorship and bibliographic coupling on all days:** Co-authorship uses the supplied author
+names. Bibliographic coupling connects studies by the number of reference identifiers they share.
+New OpenAlex and Crossref searches retain reference IDs when available. The saved teaching
+snapshots and some other inputs lack reference lists, and missing metadata can leave links absent;
+the app explains this rather than drawing an empty coupling network. Identifier namespaces are
+not automatically mapped, and the network node cap can bias which studies are displayed.
 """)
 
 st.markdown("---")

@@ -78,8 +78,8 @@ with bounded pagination: page size and maximum pages impose a retrieval cap, so 
 may be truncated. The query log records the actual query, filters, provider, retrieval metadata,
 and timestamp; download and retain it for reproducibility. Provider syntax, indexing, coverage,
 metadata, and filters differ. Crossref is a one-page relevance search and needs no account or key;
-it does not guarantee Boolean interpretation or complete abstracts. Alternatively, upload RIS or
-use the Zotero path.
+it does not guarantee Boolean interpretation or complete abstracts. Alternatively, upload RIS,
+a corpus CSV, or use the Zotero path. A Day 1 CSV can be sent to Day 2 in the same session.
 
 **OpenAlex participant credentials:** each participant uses their own email-verified OpenAlex key.
 The app collects the key and email in masked, session-specific inputs. The key is sent to OpenAlex
@@ -113,12 +113,12 @@ but the decisions are first-pass triage and need human eligibility verification.
 recall, precision, F1, or WSS-style values are descriptive diagnostics, not validated metrics
 without an independently adjudicated reference set.
 
-Day 2 offers concept co-occurrence, title/abstract term co-occurrence, and co-authorship networks.
-Choose included studies or all screened records (the latter is exploratory). Node counts indicate
-records containing an item; link weights indicate records containing both. Terms are lexical, not
-OpenAlex concepts, and author names are not disambiguated. Only the displayed top nodes and links
-are exported. Title/abstract terms are selected with TF-IDF (up to eight per record) and depend on
-the selected record set. No concepts are invented when the source field is empty.
+Day 2 offers concept co-occurrence, title/abstract term co-occurrence, co-authorship and
+bibliographic coupling. Choose included studies or all screened records (the latter is exploratory).
+For terms, concepts and authors, link weights count records containing both items. Terms are
+lexical, not OpenAlex concepts, and author names are not disambiguated. Only displayed top nodes
+and links are exported. Title/abstract terms are selected with TF-IDF (up to eight per record) and
+depend on the selected record set. No concepts are invented when the source field is empty.
 
 ### Day 3: Synthesize Your Own Evidence
 
@@ -128,6 +128,29 @@ tables, temporal/network views, and narrative or quantitative charts when the da
 Check extracted values, effect sizes, denominators, and flow counts against the source studies.
 The guided Day 3 route is illustrative/synthetic; the BYOD route is the route for participant-
 supplied inputs and outputs.
+
+### Co-authorship and bibliographic coupling across the three days
+
+All three days offer co-authorship and bibliographic-coupling controls. Co-authorship requires an
+`Authors` column with semicolon-separated names; names are not disambiguated and providers or
+older snapshots may omit or truncate author lists. Coupling nodes are studies, and an edge is the number of distinct
+reference identifiers that both studies cite. It is not a direct citation or a co-citation network.
+
+New OpenAlex searches retain `referenced_works` OpenAlex work IDs; new Crossref searches retain
+DOIs from explicit reference entries when supplied. Coverage can be incomplete. OpenAIRE,
+Europe PMC, RIS/Zotero imports, and the checked-in teaching snapshots do not currently supply
+reference lists through this app. The `Citations` total does not contain cited references. When
+reference lists are missing or no links meet the selected settings, the app explains this instead
+of displaying an empty coupling graph. It never fabricates references.
+
+The CSV `References` column stores a JSON array, e.g. `["doi:10.1234/example", "openalex:W123"]`.
+Legacy semicolon-separated IDs are also accepted when no ID contains a semicolon; use JSON for
+IDs with semicolons. Prefixed PMIDs are accepted. Identifier namespaces are not mapped to one
+another, so DOI and OpenAlex IDs for the same work are not automatically recognized as equal.
+On large corpora the node cap retains the studies with the most reference IDs and can bias the map.
+The app's RIS export does not provide VOSviewer with cited-reference links. Day 3 guided maps can
+use the separate Day 2 include-labelled teaching snapshot; it is not the source of the illustrative
+Day 3 extraction fixture. BYOD maps use the original uploaded or handed-off included records.
 
 ---
 

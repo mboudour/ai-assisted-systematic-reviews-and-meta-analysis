@@ -54,6 +54,8 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
+from day2_networks import build_network
+from day2_network_view import make_network_html
 
 # ── Stopwords ─────────────────────────────────────────────────────────────────
 _STOPWORDS = {
@@ -424,7 +426,9 @@ def render_vosviewer_section(df, session_key):
 [VOSviewer](https://www.vosviewer.com) provides a richer, publication-quality map of the
 **included studies** with colour-coded clusters, zoom, and label filtering.
 The pyvis network above shows co-occurrence patterns computed in this app;
-VOSviewer adds citation networks and bibliographic coupling on top of keyword co-occurrence.
+VOSviewer supports other analyses when suitable bibliographic data are available.
+The RIS export below does **not** include cited-reference lists and is not sufficient
+on its own for bibliographic coupling or a citation network.
 
 - **VOSviewer Desktop** \u2014 where you **create** maps from bibliographic data (free, Windows/Mac/Linux).
 - **VOSviewer Online** (`app.vosviewer.com`) \u2014 browser viewer only; load a `.json` map saved from the desktop app.
@@ -469,7 +473,7 @@ VOSviewer adds citation networks and bibliographic coupling on top of keyword co
             "application/x-research-info-systems",
             key=f"dl_ris_vos_{session_key}",
         )
-        st.caption("Contains titles, authors, years, DOIs, abstracts, and keywords for all included studies.")
+        st.caption("Exports available titles, authors, years, DOIs, abstracts, and keywords; missing authors are represented as 'Unknown Author'. Cited references are not exported.")
 
 # ── pyvis network helpers ──────────────────────────────────────────────────────
 
@@ -805,6 +809,173 @@ thicker edges = more papers share both keywords. **Drag, zoom, hover for communi
         st.warning(f"⚠️ Network could not be generated: {err}")
     else:
         components.html(html, height=500, scrolling=False)
+
+
+def render_bibliometric_network(df, session_key):
+    """Map bibliographic metadata from the selected records, not extracted text."""
+    st.markdown("#### Interactive co-authorship and bibliographic coupling")
+    st.caption(
+        "Descriptive maps of the selected records, not proof of influence, causal "
+        "relationships, research quality, or lineage. They reflect only supplied metadata. "
+        "Drag nodes, zoom, and hover for details; the map runs locally."
+    )
+    kind_label = st.selectbox(
+        "Bibliometric network type", ["Co-authorship", "Bibliographic coupling"],
+        key=f"d3_biblio_kind_{session_key}",
+    )
+    kind = "authors" if kind_label == "Co-authorship" else "coupling"
+    if kind == "authors":
+        st.caption(
+            "Nodes are authors; a link counts studies listing both. Larger nodes mean "
+            "more studies and thicker links mean more shared studies. Authors must be "
+            "semicolon-separated in the Authors column. Matching ignores case and "
+            "extra whitespace but does not disambiguate names or aliases; some providers "
+            "truncate author lists. Names are treated literally; remove placeholders such "
+            "as N/A before mapping. The cap retains the most frequent authors."
+        )
+    else:
+        st.caption(
+            "Nodes are study records; links count distinct shared references, not direct "
+            "citations. Node size reflects the number of distinct references in a study; "
+            "thicker links mean more shared references. Supply a References column as a JSON "
+            "array of reference IDs (preferred), e.g. `[\"10.1234/example;part\", \"W123456\"]`, "
+            "or a semicolon-separated ID list, e.g. `10.1234/example; W123456; PMID:12345`. "
+            "Use a JSON array if an identifier itself contains a semicolon. Recognized "
+            "DOIs, OpenAlex work IDs and explicitly prefixed PMIDs are normalized within "
+            "their namespaces, but different namespaces are not cross-linked and citation "
+            "text or unrecognized IDs are ignored. Each reference counts once per study. "
+            "Numbered nodes indicate the 1-based row in the selected records. Lists may be incomplete or inconsistent, "
+            "and duplicate study records are not disambiguated. Citation totals, titles, "
+            "and concepts are not reference lists; missing references are not retrieved or inferred. "
+            "The cap retains studies with the longest "
+            "reference lists, which can bias the map toward better-covered records."
+        )
+
+    if "Source" in df.columns:
+        sources = df["Source"].fillna("").astype(str).str.strip().replace("", "(not recorded)")
+        counts = sources.value_counts().rename_axis("Source").reset_index(name="Records")
+        with st.expander("Record source counts"):
+            st.caption("Counts cover all selected records, including those without usable network data.")
+            st.dataframe(counts, use_container_width=True, hide_index=True)
+    else:
+        st.caption("Record source counts: Source column not supplied; provenance is not recorded in these rows.")
+
+    left, right = st.columns(2)
+    with left:
+        top_n = st.slider(
+            "Maximum number of nodes", 1, 100, 25, 1,
+            key=f"d3_biblio_top_{session_key}_{kind}",
+        )
+    with right:
+        minimum = st.slider(
+            "Minimum shared studies per link" if kind == "authors" else "Minimum shared references per link",
+            1, 20, 1, 1, key=f"d3_biblio_min_{session_key}_{kind}",
+        )
+
+    graph = build_network(df, kind=kind, top_n=top_n, min_cooccurrence=minimum)
+    st.caption(
+        f"Usable {'author' if kind == 'authors' else 'reference'} data: "
+        f"{graph['records_with_data']} of {graph['total_records']} selected records. "
+        f"Displayed: {len(graph['nodes'])} nodes and {len(graph['edges'])} links "
+        f"(node cap {top_n}; minimum link weight {minimum})."
+    )
+    if not graph["total_records"]:
+        st.info("There are no selected records to map. Load a non-empty included-studies file or handoff.")
+        return
+    if not graph["records_with_data"]:
+        if kind == "authors":
+            st.info("No usable Authors data. Add semicolon-separated author names to the selected records.")
+        else:
+            st.info(
+                "No usable References data. Bibliographic coupling cannot be computed without "
+                "reference lists: add JSON arrays or semicolon-separated lists of supported "
+                "reference identifiers for each study."
+            )
+        return
+    if not graph["edges"]:
+        if kind == "authors":
+            st.info(
+                "No co-author links meet these settings. Studies need at least two retained authors; "
+                "try a lower threshold or a higher node cap."
+            )
+        else:
+            st.info(
+                "No shared reference identifiers among shown studies at the current threshold. "
+                "At least two retained studies must share identifiers; incomplete lists, different "
+                "identifier namespaces, or the node cap can hide matches. Check the input, lower "
+                "the threshold, or increase the node cap."
+            )
+        return
+
+    if graph["nodes"]:
+        try:
+            graph_html = make_network_html(graph)
+        except ValueError as exc:
+            st.warning(f"Unable to display the network: {exc}")
+        else:
+            components.html(graph_html, height=590, scrolling=False)
+
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    weight_name = "Shared studies" if kind == "authors" else "Shared references"
+    edge_rows = []
+    for edge in graph["edges"]:
+        source, target = nodes[edge["source"]], nodes[edge["target"]]
+        row = {
+            "Source node ID": edge["source"], "Source label": source.get("full_label", source["label"]),
+            "Target node ID": edge["target"], "Target label": target.get("full_label", target["label"]),
+            weight_name: edge["weight"],
+        }
+        if kind == "coupling":
+            row.update({"Source record ID": source.get("record_id", ""), "Source DOI": source.get("doi", ""),
+                        "Target record ID": target.get("record_id", ""), "Target DOI": target.get("doi", "")})
+        edge_rows.append(row)
+    edge_df = pd.DataFrame(edge_rows)
+    if not edge_df.empty:
+        edge_df = edge_df.sort_values([weight_name, "Source label", "Target label"], ascending=[False, True, True])
+    with st.expander("View and download bibliometric network data"):
+        st.caption("The table contains only displayed links after the node cap and minimum threshold; IDs distinguish nodes with the same label.")
+        if kind == "coupling":
+            st.caption("Study node IDs are row keys, not bibliographic identifiers. Record IDs and DOIs are included when supplied.")
+        st.dataframe(edge_df, use_container_width=True, hide_index=True)
+        if not edge_df.empty:
+            st.download_button(
+                "Download bibliometric links (CSV)", edge_df.to_csv(index=False).encode("utf-8"),
+                f"day3_{session_key}_{kind}_links.csv", "text/csv", key=f"d3_biblio_edges_{session_key}",
+            )
+
+
+def render_guided_bibliometric_network(ex, fixture):
+    """Keep the separate cached screening snapshot distinct from the Day 3 fixture."""
+    snapshot_file = CACHE_DIR / f"day2_{ex['session_key']}_screened.csv"
+    snapshot = None
+    if snapshot_file.is_file():
+        try:
+            loaded = pd.read_csv(snapshot_file)
+            if "AL_Decision" in loaded.columns:
+                snapshot = loaded.loc[loaded["AL_Decision"] == "Include"].copy()
+        except (OSError, UnicodeError, pd.errors.ParserError, pd.errors.EmptyDataError):
+            pass
+    if snapshot is not None:
+        source = st.radio(
+            "Data for bibliometric networks",
+            ["Day 2 cached include-labelled snapshot (separate teaching data)", "Day 3 extraction fixture"],
+            key=f"d3_biblio_source_{ex['session_key']}",
+        )
+        if source.startswith("Day 2"):
+            st.caption(
+                f"Using stored AL_Decision = Include rows from `{snapshot_file.name}`. "
+                "This is a separate cached teaching snapshot, not the source of the Day 3 "
+                "extraction fixture; neither its search provenance nor the screening labels "
+                "are verified. No lineage to the fixture is inferred."
+            )
+            selected = snapshot
+        else:
+            st.caption("Using the illustrative Day 3 extraction fixture, not the separate Day 2 snapshot.")
+            selected = fixture
+    else:
+        st.caption("Using the illustrative Day 3 extraction fixture; the separate Day 2 include-labelled snapshot is unavailable.")
+        selected = fixture
+    render_bibliometric_network(selected, ex["session_key"])
 
 
 
@@ -1395,6 +1566,10 @@ Record flow: **{n_id}** identified → **{n_dedup}** after deduplication →
     st.subheader("Step 5 — Concept Network of Included Studies")
     render_pyvis_network(df, sk)
 
+    st.markdown("---")
+    st.subheader("Step 6 — Bibliometric Networks")
+    render_guided_bibliometric_network(ex, df)
+
     # ── VOSviewer section ───────────────────────────────────────────────
     if len(df) >= 3:
         render_vosviewer_section(df, sk)
@@ -1917,6 +2092,13 @@ You can then review, correct, and download the result.
         # ── Keyword Co-occurrence Network ─────────────────────────────────────
         st.markdown("---")
         render_pyvis_network(extracted_df, "byod")
+
+        # Use the input records, not the extraction schema, which can omit or
+        # hallucinate bibliographic fields. This also preserves Day 2 handoffs.
+        st.markdown("---")
+        st.subheader("Bibliometric Networks")
+        st.caption("These networks use the original uploaded or Day 2 handed-off records, not the extracted-data table above.")
+        render_bibliometric_network(df, "byod")
 
         # ── Forest Plot ───────────────────────────────────────────────────────
         st.markdown("---")

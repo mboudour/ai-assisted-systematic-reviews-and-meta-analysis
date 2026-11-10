@@ -118,7 +118,7 @@ def fetch_works(
             search_param: query,
             "per-page": min(per_page, OpenAlexClient.MAX_PAGE_SIZE),
             "cursor": cursor,
-            "select": "id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count,concepts,type",
+            "select": "id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count,concepts,type,referenced_works",
         }
         if filters:
             params["filter"] = ",".join(filters)
