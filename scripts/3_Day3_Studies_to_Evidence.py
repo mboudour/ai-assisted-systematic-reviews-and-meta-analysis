@@ -19,6 +19,7 @@ Additional sections:
 import io
 import re
 import pathlib
+import sys
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
@@ -50,6 +51,9 @@ st.set_page_config(
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
 CACHE_DIR = _repo_root / "data" / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
 
 # ── Stopwords ─────────────────────────────────────────────────────────────────
 _STOPWORDS = {
@@ -1663,6 +1667,9 @@ columns) and define your extraction schema below. No coding required.
         df = None
 
     if df is not None:
+        if source_column_mentions_openaire(df):
+            st.caption("The included-studies file identifies OpenAIRE as a source; retain the Day 1 query log to verify its provenance.")
+            st.warning(OPENAIRE_LIMITATIONS)
         st.success(f"✅ {len(df)} included studies loaded.")
         st.dataframe(df.head(10), use_container_width=True)
 

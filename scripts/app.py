@@ -130,13 +130,19 @@ question. The live handoff is **Day 1 → Day 2 → Day 3**: download a Day 1 co
 Day 2, then upload the included-studies CSV to Day 3.
 
 **Day 1 BYOD:** Choose a provider from the search menu (OpenAlex, Crossref, Europe PMC, or
-best-effort Semantic Scholar), enter a query, select any provider-specific filters, and retrieve a
+OpenAIRE), enter a query, select any provider-specific filters, and retrieve a
 bounded corpus. OpenAlex retrieval is capped by the configured page size and maximum pages, so a
 large result set may be truncated; the query log reports retrieval metadata and should be saved.
-Provider syntax, indexing, coverage, and available filters differ. Crossref needs no key, while
-Semantic Scholar has an optional masked key and can rate-limit requests. Both retrieve one page
-and use provider-specific relevance search, not guaranteed Boolean logic. Abstracts may be missing.
+Provider syntax, indexing, coverage, and available filters differ. Crossref needs no key and
+retrieves one page with provider-specific relevance search; Boolean logic is not guaranteed.
 You may instead upload RIS or use Zotero.
+
+**OpenAIRE limitations:** No participant key or email is needed, but anonymous requests are limited
+to up to 60 per hour; users of one hosted app may share that limit. The app retrieves a bounded
+number of pages and applies no year, specific publication-type or abstract filters. Coverage varies,
+metadata and abstracts may be missing, and publication results can include non-peer-reviewed work.
+The search covers broad metadata, not just titles and abstracts. Verify records and acknowledge
+OpenAIRE as the data source. Each Day 1 OpenAIRE practice search and BYOD search repeats these caveats.
 
 **OpenAlex credentials:** each participant supplies their own email-verified OpenAlex key and
 email in masked, session-specific inputs. The app sends the key to OpenAlex only as an HTTPS

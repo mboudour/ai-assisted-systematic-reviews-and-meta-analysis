@@ -42,6 +42,7 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from day2_networks import build_network
 from day2_network_view import make_network_html
+from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
 
 # ── Guided example definitions ─────────────────────────────────────────────────
 GUIDED_EXAMPLES = [
@@ -196,7 +197,10 @@ def df_to_ris(df):
     tfidf_kws = _extract_tfidf_keywords(abstracts, top_n=8)
     lines = []
     for i, (_, row) in enumerate(df.iterrows()):
-        lines.append("TY  - JOUR")
+        is_openaire_record = str(row.get("Source", "")).strip().casefold() == "openaire"
+        lines.append("TY  - GEN" if is_openaire_record else "TY  - JOUR")
+        if is_openaire_record:
+            lines.append("DB  - OpenAIRE")
         title = str(row.get("Title", "")).strip()
         if title:
             lines.append(f"TI  - {title}")
@@ -732,7 +736,7 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
         _ptypes = st.session_state.get("byod_pub_types", [])
         _snapshot = st.session_state.get("byod_log", {}).get("source") == "cached teaching snapshot"
         _period = "Not recorded" if _snapshot else (f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years")))
-        _types_disp = "Not recorded" if _snapshot else (", ".join(_ptypes) if _ptypes else "All types")
+        _types_disp = "Not recorded" if _snapshot else ("OpenAIRE publications (all subtypes)" if st.session_state.get("byod_api") == "OpenAIRE" else (", ".join(_ptypes) if _ptypes else "All types"))
         st.markdown(
             f"**Query:** `{st.session_state.get('byod_query', '')}` &nbsp;|&nbsp; "
             f"**API:** {st.session_state.get('byod_api', '')}  \n"
@@ -745,6 +749,9 @@ download the included file and upload it in Day 3 → **BYOD — Your Own Synthe
 
     if df is not None:
         df = df.copy()
+        if source_column_mentions_openaire(df):
+            st.caption("The corpus identifies OpenAIRE as a source; retain the Day 1 query log to verify its provenance.")
+            st.warning(OPENAIRE_LIMITATIONS)
         if df.empty:
             st.warning("The selected corpus has no records to screen.")
             df = None

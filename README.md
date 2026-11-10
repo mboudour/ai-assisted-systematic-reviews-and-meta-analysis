@@ -72,16 +72,14 @@ handoff from Day 1 to Day 2 to Day 3.
 
 ### Day 1: Build Your Own Corpus
 
-Use the search menus to choose OpenAlex, Crossref, Europe PMC, or Semantic Scholar, enter a query,
+Use the search menus to choose OpenAlex, Crossref, Europe PMC, or OpenAIRE, enter a query,
 and set the available scope, year, publication-type, and abstract filters. OpenAlex is retrieved
 with bounded pagination: page size and maximum pages impose a retrieval cap, so a large result set
 may be truncated. The query log records the actual query, filters, provider, retrieval metadata,
 and timestamp; download and retain it for reproducibility. Provider syntax, indexing, coverage,
-metadata, and filters differ. Crossref is a one-page relevance search and needs no account or key.
-Semantic Scholar is a one-page, best-effort plain-text relevance search. Its key is optional,
-but anonymous requests can be rate-limited; even a key does not guarantee availability.
-Neither provider's relevance search guarantees Boolean interpretation or complete abstracts.
-Alternatively, upload RIS or use the Zotero path.
+metadata, and filters differ. Crossref is a one-page relevance search and needs no account or key;
+it does not guarantee Boolean interpretation or complete abstracts. Alternatively, upload RIS or
+use the Zotero path.
 
 **OpenAlex participant credentials:** each participant uses their own email-verified OpenAlex key.
 The app collects the key and email in masked, session-specific inputs. The key is sent to OpenAlex
@@ -90,10 +88,20 @@ and email are not written to query logs or error metadata. This is not a promise
 privacy from the operator or hosting environment: participants must assess operator/hosting trust
 and use credentials they are comfortable entering.
 
-**Semantic Scholar optional key:** the masked key is stored in the participant's session and sent
-only in an `x-api-key` HTTPS header, not in URLs, query logs, or downloads. It can be forgotten
-using the on-screen button. As with other session data, the operator or hosting environment may
-have access.
+**OpenAIRE:** participants need no key or email. The app uses anonymous Graph API v3 search with
+bounded paging (default one page; at most three), not authenticated service access. OpenAIRE's
+published anonymous limit is up to 60 requests/hour and participants on one hosted app may share
+that allowance; rate limiting can occur. A page is an API request. OpenAIRE aggregates metadata
+across disciplines but has uneven coverage; its publication results can include non-peer-reviewed
+outputs. Abstract-like descriptions, DOIs and other fields may be missing, and descriptions are not
+necessarily formal abstracts. The Concepts column contains OpenAIRE subject labels, not OpenAlex
+concepts. Search is across broad metadata; the app applies no OpenAIRE year,
+specific publication-type or abstract filters. Boolean search values must be double-quoted, e.g.
+`("creativity" OR "creative") AND "artificial intelligence"`. Live results may be truncated.
+Check eligibility, save the query log, and acknowledge OpenAIRE as the data source in accordance
+with [its terms](https://graph.openaire.eu/docs/apis/terms). RIS exports label OpenAIRE records
+as generic rather than verified journal articles and record OpenAIRE in the database field. The guided examples' OpenAIRE practice
+queries are new suggestions, not the verified searches behind the saved teaching snapshots.
 
 ### Day 2: Screen Your Own Corpus
 

@@ -5,8 +5,8 @@ Guided examples load exclusively from pre-cached CSVs — no live API calls requ
 All outputs render immediately when the expander is opened — no button click needed.
 No coding required.
 
-APIs covered: OpenAlex, Crossref, Europe PMC, and best-effort Semantic Scholar
-BYOD inputs: Boolean query (4 APIs), RIS file upload, Zotero connection
+APIs covered: OpenAlex, Crossref, Europe PMC, and OpenAIRE
+BYOD inputs: provider-specific API search, RIS file upload, Zotero connection
 Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network link,
          pyvis interactive keyword co-occurrence network
 """
@@ -52,6 +52,8 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from openalex_client import OpenAlexError, fetch_works
+from openaire_client import OpenAIREError, fetch_openaire
+from openaire_notice import OPENAIRE_LIMITATIONS
 
 # ── Guided example definitions ─────────────────────────────────────────────────
 GUIDED_EXAMPLES = [
@@ -173,9 +175,21 @@ PRACTICE_SEARCHES = {
     "ex4_csr": '("corporate social responsibility" OR CSR) AND ("financial performance" OR profitability)',
 }
 
-def load_practice_search(example):
+OPENAIRE_PRACTICE_SEARCHES = {
+    "ex1_health": '("health inequality" OR "health inequalities" OR "socioeconomic") AND ("diabetes" OR "chronic disease")',
+    "ex2_ubi": '("universal basic income" OR "basic income") AND ("employment" OR "poverty" OR "wellbeing")',
+    "ex3_microplastics": '("microplastic" OR "microplastics") AND ("aquatic" OR "marine")',
+    "ex4_csr": '("corporate social responsibility" OR "CSR") AND ("financial performance" OR "profitability")',
+}
+OPENAIRE_CHOICE = "OpenAIRE (multidisciplinary; no participant key)"
+
+def load_practice_search(example, provider="OpenAlex"):
     """Put the example's suggested settings into the actual BYOD widgets."""
     st.session_state["day1_section"] = "🔎 BYOD — Your Own Query"
+    if provider == "OpenAIRE":
+        st.session_state["byod_api_widget"] = OPENAIRE_CHOICE
+        st.session_state["byod_query_widget"] = OPENAIRE_PRACTICE_SEARCHES[example["session_key"]]
+        return
     st.session_state["byod_api_widget"] = "OpenAlex (recommended for most disciplines)"
     st.session_state["byod_query_widget"] = PRACTICE_SEARCHES[example["session_key"]]
     st.session_state["byod_scope_widget"] = "Title and abstract (no stemming)"
@@ -211,10 +225,6 @@ def forget_openalex_credentials():
     st.session_state.pop("openalex_email_widget", None)
     st.session_state.pop("openalex_key_widget", None)
 
-
-def forget_semantic_scholar_credentials():
-    """Clear only this browser session's optional Semantic Scholar key."""
-    st.session_state.pop("semantic_scholar_key_widget", None)
 
 # ── Stopwords for keyword extraction ──────────────────────────────────────────
 _STOPWORDS = {
@@ -661,7 +671,10 @@ def df_to_ris(df):
 
     lines = []
     for i, (_, row) in enumerate(df.iterrows()):
-        lines.append("TY  - JOUR")
+        is_openaire_record = str(row.get("Source", "")).strip().casefold() == "openaire"
+        lines.append("TY  - GEN" if is_openaire_record else "TY  - JOUR")
+        if is_openaire_record:
+            lines.append("DB  - OpenAIRE")
         title = str(row.get("Title", "")).strip()
         if title:
             lines.append(f"TI  - {title}")
@@ -971,97 +984,6 @@ def query_crossref_live(search_query, per_page=50, include_log=False):
     return (df, log) if include_log else df
 
 
-class SemanticScholarError(Exception):
-    """Safe, participant-facing Semantic Scholar retrieval error."""
-
-
-def query_semantic_scholar_live(search_query, per_page=50, api_key="", include_log=False):
-    """Search Semantic Scholar once, optionally returning a retrieval log.
-
-    This intentionally retrieves one relevance-search page. The public endpoint
-    needs no key by default, but may return HTTP 429; an optional key is sent
-    only as an ``x-api-key`` header and is never returned in the log. The
-    default DataFrame return preserves the original helper interface.
-    """
-    base = "https://api.semanticscholar.org/graph/v1/paper/search"
-    params = {
-        "query": search_query,
-        "limit": per_page,
-        "fields": "paperId,externalIds,title,year,authors,venue,abstract,citationCount",
-    }
-    headers = {"x-api-key": api_key.strip()} if api_key and api_key.strip() else {}
-    response = None
-    for attempt in range(3):
-        try:
-            response = requests.get(base, headers=headers, params=params, timeout=20)
-        except requests.RequestException:
-            raise SemanticScholarError(
-                "Semantic Scholar could not be reached. Try again shortly or use Crossref/OpenAlex."
-            )
-        if response.status_code != 429:
-            break
-        if attempt < 2:
-            time.sleep(0.5 * (attempt + 1))
-    if response is None:
-        raise SemanticScholarError("Semantic Scholar returned no response. Try Crossref or OpenAlex instead.")
-    if response.status_code == 429:
-        raise SemanticScholarError(
-            "Semantic Scholar rate-limited this request (HTTP 429), even if a valid key was provided. "
-            "Request a key at https://www.semanticscholar.org/product/api and retry, or use Crossref/OpenAlex."
-        )
-    if not 200 <= response.status_code < 300:
-        raise SemanticScholarError(
-            f"Semantic Scholar returned HTTP {response.status_code}. Check the query or key, then retry; "
-            "you can also use Crossref/OpenAlex."
-        )
-    try:
-        payload = response.json()
-    except (ValueError, TypeError):
-        raise SemanticScholarError("Semantic Scholar returned an invalid response. Try Crossref or OpenAlex.")
-    items = payload.get("data", []) if isinstance(payload, dict) else []
-    if not isinstance(items, list):
-        items = []
-    total_matches = payload.get("total", None) if isinstance(payload, dict) else None
-    offset = payload.get("offset", 0) if isinstance(payload, dict) else 0
-    try:
-        total_matches = int(total_matches) if total_matches is not None else None
-    except (TypeError, ValueError):
-        total_matches = None
-    try:
-        offset = int(offset or 0)
-    except (TypeError, ValueError):
-        offset = 0
-    rows = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        authors = "; ".join(a.get("name") for a in (item.get("authors") or [])[:5] if isinstance(a, dict) and isinstance(a.get("name"), str) and a.get("name"))
-        external_ids = item.get("externalIds") or {}
-        doi = external_ids.get("DOI", "") if isinstance(external_ids, dict) else ""
-        rows.append({
-            "ID": item.get("paperId", ""),
-            "DOI": doi,
-            "Title": (item.get("title", "") or "").strip(),
-            "Year": item.get("year", ""),
-            "Authors": authors,
-            "Venue": item.get("venue", "") or "",
-            "Abstract": item.get("abstract", "") or "",
-            "Citations": item.get("citationCount", 0),
-            "Concepts": "",
-        })
-    df = pd.DataFrame(rows)
-    request_log = {
-        "endpoint": base,
-        "pages_fetched": 1,
-        "scope": "Semantic Scholar relevance search (plain text; provider-specific syntax)",
-        "total_matches": total_matches,
-        "returned": len(rows),
-        "possibly_truncated": bool(total_matches is not None and offset + len(items) < total_matches),
-        "pagination": "one page only",
-    }
-    return (df, request_log) if include_log else df
-
-
 def query_europepmc_live(search_query, per_page=50):
     base = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     params = {
@@ -1201,9 +1123,9 @@ how to automatically deduplicate records — all in a **no-code** environment.
 The first day introduces the logic of programmatic literature collection. The session
 begins with the formulation of search strategies — such as the **PICO framework** for
 health sciences or **SPIDER** for social sciences — and the identification of suitable
-open APIs, including **OpenAlex**, **Crossref**, and **Europe PMC**.
-Semantic Scholar is available as a best-effort relevance-search option; it may rate-limit
-anonymous requests, so OpenAlex or Crossref may be preferable for reproducible retrieval.
+open APIs, including **OpenAlex**, **Crossref**, **Europe PMC**, and **OpenAIRE**.
+OpenAIRE supports multidisciplinary discovery without a participant key; rate limits and
+incomplete metadata can affect results, as explained in each OpenAIRE search.
 
 Participants are shown how API-based retrieval differs from manual database searching
 and how it facilitates reproducibility. Because APIs evolve and results may change over
@@ -1217,14 +1139,14 @@ supports automatically.
 | **OpenAlex** | All disciplines | 250M+ works, fully open, rich metadata including concepts and citations |
 | **Crossref** | All disciplines | DOI-centric, strong for journal articles and conference papers |
 | **Europe PMC** | Life sciences, health | Full-text access for many articles, strong for biomedical reviews |
-| **Semantic Scholar** | All disciplines, especially discovery | Best-effort relevance search; abstracts may be missing and rate limits can apply |
+| **OpenAIRE** | Multidisciplinary research | No participant key; combines scholarly metadata, with coverage and rate-limit caveats |
 
 ### Session Structure
 
 | Hour | Content |
 |------|---------|
 | **Hour 1** | Introduce the logic of programmatic literature collection. Clarify the difference between manual database searches and open API retrieval. Present discipline-spanning examples and explain how query timestamps are logged for reproducibility. |
-| **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into provider-specific searches and retrieve metadata from OpenAlex, Crossref, Europe PMC, and best-effort Semantic Scholar. |
+| **Hour 2** | Demonstrate query building and API access. Show how to translate research questions into provider-specific searches and retrieve metadata from OpenAlex, Crossref, Europe PMC, and OpenAIRE. |
 | **Hour 3** | Use the Streamlit app to run automated deduplication. Participants inspect the output, compare field completeness, explore the corpus using the **interactive keyword co-occurrence network** (pyvis), export a clean CSV or RIS file, and create a **VOSviewer** bibliometric map. |
 
 ### Input Flexibility: Multiple Entry Points
@@ -1291,7 +1213,13 @@ about how the existing snapshots were created.""")
                 )
                 st.button("Use this practice search in BYOD", key=f"practice_{ex['session_key']}",
                           on_click=load_practice_search, args=(ex,))
-                st.caption("The button fills the same BYOD search menus used for your own research; run it with your key. Live results may differ from this snapshot.")
+                st.caption("This OpenAlex button fills the BYOD search menus; run it with your OpenAlex key. Live results may differ from this snapshot.")
+                st.markdown("**Alternative OpenAIRE practice search** (new suggestion, not the historical snapshot search):")
+                st.code(OPENAIRE_PRACTICE_SEARCHES[ex["session_key"]])
+                st.warning(OPENAIRE_LIMITATIONS)
+                st.caption("The OpenAIRE practice search uses the same topic, but its broad search and lack of year/type/abstract filters differ from the OpenAlex settings above.")
+                st.button("Use OpenAIRE practice search in BYOD", key=f"openaire_practice_{ex['session_key']}",
+                          on_click=load_practice_search, args=(ex, "OpenAIRE"))
             else:
                 st.info("This is a Zotero-style illustrative fixture, not a verified export from a named user's live library. There is no OpenAlex search for it.")
 
@@ -1332,22 +1260,26 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
     # ── Option 1: API search ──────────────────────────────────────────────────
     if input_method == "🔍 Search open APIs live":
         st.markdown("#### Search Open APIs")
+        # Drop any obsolete Semantic Scholar widget state from earlier deployments.
+        st.session_state.pop("semantic_scholar_key_widget", None)
+        if str(st.session_state.get("byod_api_widget", "")).startswith("Semantic Scholar"):
+            st.session_state["byod_api_widget"] = OPENAIRE_CHOICE
         api_choice = st.selectbox(
             "Select API",
             [
                 "OpenAlex (recommended for most disciplines)",
                 "Crossref (DOI-centric, all disciplines)",
                 "Europe PMC (Life sciences, health)",
-                "Semantic Scholar (best-effort relevance search; optional key)",
+                OPENAIRE_CHOICE,
             ],
             key="byod_api_widget",
         )
         is_openalex = api_choice.startswith("OpenAlex")
-        is_semantic_scholar = api_choice.startswith("Semantic Scholar")
-        st.caption("Each provider has its own search syntax and usage limits. OpenAlex supports uppercase AND, OR and NOT, parentheses and quoted phrases.")
+        is_openaire = api_choice.startswith("OpenAIRE")
+        st.caption("Each provider has its own search syntax and usage limits. OpenAlex and OpenAIRE support uppercase AND, OR and NOT, parentheses and quoted phrases, but search different fields.")
         query_input = st.text_input(
             "Search query",
-            placeholder='e.g. (creativity OR creative) AND "artificial intelligence"',
+            placeholder='e.g. ("creativity" OR "creative") AND "artificial intelligence"',
             key="byod_query_widget",
         )
         per_page = st.slider("Records per page", min_value=10, max_value=100, value=50, step=10)
@@ -1387,18 +1319,16 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         else:
             if "Crossref" in api_choice:
                 st.info("Crossref needs no account, API key, or email. It retrieves one page; year and publication-type filters are not available in this app. Relevance search may not obey Boolean syntax, and abstracts are often missing.")
-            elif is_semantic_scholar:
-                st.info("Semantic Scholar is a best-effort public option: no key is required by default, but anonymous requests may be rate-limited. This is plain-text relevance search on one page, without year or publication-type filters in this app; Boolean syntax is not supported and abstracts are often missing. An optional key may help, but does not guarantee availability.")
-                semantic_scholar_key = st.text_input(
-                    "Optional Semantic Scholar API key (masked)",
-                    type="password", key="semantic_scholar_key_widget",
-                    help="Sent only as an x-api-key header; kept only in this browser session and never logged or downloaded.",
-                )
-                st.button("Forget my Semantic Scholar key", on_click=forget_semantic_scholar_credentials, key="forget_semantic_scholar")
+            elif is_openaire:
+                st.warning(OPENAIRE_LIMITATIONS)
+                st.caption('For Boolean operators, wrap every search value in double quotes, e.g. ("creativity" OR "creative") AND "artificial intelligence". Use uppercase operators. The query is sent to OpenAIRE as entered; review the returned records and save the query log.')
             else:
-                semantic_scholar_key = ""
                 st.info("This provider currently retrieves one page. Year and publication-type filters are not available here. Query interpretation is provider-specific; Boolean syntax is not guaranteed.")
-            max_pages = 1
+            if is_openaire:
+                max_pages = st.slider("Maximum number of OpenAIRE pages", min_value=1, max_value=3, value=1, key="openaire_max_pages")
+                st.caption("At most records per page × maximum pages are retrieved; each page is another request against the rate limit.")
+            else:
+                max_pages = 1
             byod_year_from, byod_year_to = None, None
             byod_pub_types = []
             run_query = st.button("▶ Run My Query", key="run_byod_other")
@@ -1427,8 +1357,9 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                             df = openalex_to_df(records)
                         elif "Crossref" in api_choice:
                             df, request_log = query_crossref_live(query_input.strip(), per_page=per_page, include_log=True)
-                        elif is_semantic_scholar:
-                            df, request_log = query_semantic_scholar_live(query_input.strip(), per_page=per_page, api_key=semantic_scholar_key, include_log=True)
+                        elif is_openaire:
+                            df, request_log = fetch_openaire(query_input.strip(), per_page=per_page, max_pages=max_pages)
+                            df["Source"] = "OpenAIRE"
                         elif "Europe PMC" in api_choice:
                             df = query_europepmc_live(query_input.strip(), per_page=per_page)
                             request_log = {"endpoint": "https://www.ebi.ac.uk/europepmc/webservices/rest/search", "pages_fetched": 1, "scope": "provider-specific search", "filters": []}
@@ -1462,12 +1393,14 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                             "corpus_csv_sha256": hashlib.sha256(df.to_csv(index=False).encode("utf-8")).hexdigest(),
                             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
                         }
+                        if is_openaire:
+                            log["provider_limitations"] = OPENAIRE_LIMITATIONS
                         st.session_state["byod_log"] = log
                         if request_log.get("possibly_truncated"):
-                            st.warning("More records may be available. The selected maximum number of pages was reached; the saved corpus is not the complete result set.")
+                            st.warning("More records may be available; this saved corpus may not be the complete result set. See the query log for how retrieval ended.")
                     except OpenAlexError as exc:
                         st.error(f"{exc}. For authentication errors, check the key and verify its account email. For rate limits, wait before retrying.")
-                    except SemanticScholarError as exc:
+                    except OpenAIREError as exc:
                         st.error(str(exc))
                     except CrossrefError as exc:
                         st.error(str(exc))
@@ -1481,13 +1414,15 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
             _ptypes = st.session_state.get("byod_pub_types", [])
             _snapshot = st.session_state.get("byod_log", {}).get("source") == "cached teaching snapshot"
             _period = "Not recorded" if _snapshot else (f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years")))
-            _types_disp = "Not recorded" if _snapshot else (", ".join(_ptypes) if _ptypes else "All types")
+            _types_disp = "Not recorded" if _snapshot else ("OpenAIRE publications (all subtypes)" if st.session_state.get("byod_api") == "OpenAIRE" else (", ".join(_ptypes) if _ptypes else "All types"))
             st.markdown(
                 f"**API source:** {st.session_state.get('byod_api', '')} &nbsp;|&nbsp; "
                 f"**Query:** `{st.session_state.get('byod_query', '')}`  \n"
                 f"**Time period:** {_period} &nbsp;|&nbsp; **Publication types:** {_types_disp}"
             )
             st.caption("Results below are from the last successfully completed search or selected snapshot, not from unsubmitted changes to the menus.")
+            if st.session_state.get("byod_api") == "OpenAIRE":
+                st.warning(OPENAIRE_LIMITATIONS)
             if df.empty:
                 st.warning("The search returned no records with these settings. Consider a broader query, different search scope, or removing a filter.")
             else:
