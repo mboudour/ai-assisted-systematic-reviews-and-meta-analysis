@@ -185,7 +185,8 @@ class Day3BibliometricUITests(unittest.TestCase):
         names = ("ex1_health", "ex2_ubi", "ex3_microplastics", "ex4_csr")
         for number, name in enumerate(names, 1):
             widget = app.selectbox(key=f"guided_day3_{name}_{number}_network_kind")
-            self.assertEqual(widget.value, "Co-authorship")
+            self.assertEqual(widget.value, "Keyword / concept co-occurrence (automatic)")
+            self.assertIn("Co-authorship", widget.options)
             self.assertIn("Bibliographic coupling", widget.options)
         pd.testing.assert_frame_equal(app.session_state["byod_included_df"], original)
         app.selectbox(key="guided_day3_ex1_health_1_network_kind").set_value("Bibliographic coupling").run()
@@ -194,7 +195,7 @@ class Day3BibliometricUITests(unittest.TestCase):
         pd.testing.assert_frame_equal(app.session_state["byod_included_df"], original)
 
     def test_renderer_failure_still_offers_link_download(self):
-        with patch("day2_network_view.make_network_html", side_effect=ValueError("Local library unavailable")), \
+        with patch("network_loader_v1.make_network_html", side_effect=ValueError("Local library unavailable")), \
              patch("streamlit.download_button", wraps=st.download_button) as downloads:
             app = byod_app(handoff_records())
         self.assert_ok(app)

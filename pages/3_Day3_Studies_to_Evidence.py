@@ -54,9 +54,8 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
-from day2_networks import build_network
-from day2_network_view import make_network_html
-from guided_loader_v3 import load_guided_workflow
+from network_loader_v1 import build_network, make_network_html, community_partition
+from guided_loader_v4 import load_guided_workflow
 
 render_guided_examples = load_guided_workflow().render_guided_examples
 
@@ -428,7 +427,7 @@ def render_vosviewer_section(df, session_key):
     st.markdown("""
 [VOSviewer](https://www.vosviewer.com) provides a richer, publication-quality map of the
 **included studies** with colour-coded clusters, zoom, and label filtering.
-The pyvis network above shows co-occurrence patterns computed in this app;
+The term co-occurrence network above shows patterns computed in this app;
 VOSviewer supports other analyses when suitable bibliographic data are available.
 The RIS export below does **not** include cited-reference lists and is not sufficient
 on its own for bibliographic coupling or a citation network.
@@ -503,7 +502,8 @@ def _build_cooccurrence_network(df, col="Title", top_n=30, min_cooccurrence=2):
     for doc_kws in all_docs_keywords:
         for kw in doc_kws:
             freq[kw] += 1
-    top_keywords = {kw for kw, _ in freq.most_common(top_n)}
+    # Resolve equal-frequency ties deterministically across Python processes.
+    top_keywords = {kw for kw, _ in sorted(freq.items(), key=lambda item: (-item[1], item[0]))[:top_n]}
     cooc = Counter()
     for doc_kws in all_docs_keywords:
         filtered = doc_kws & top_keywords
@@ -514,292 +514,50 @@ def _build_cooccurrence_network(df, col="Title", top_n=30, min_cooccurrence=2):
 
 
 def generate_pyvis_html(df, top_n=30, min_cooccurrence=2):
-    """Return (html_string, error_message). error_message is None on success.
-
-    Builds a fully self-contained HTML string with vis-network inlined from the
-    local pyvis package — no CDN calls, no external resources.  This is required
-    because Streamlit Community Cloud's Content Security Policy blocks external
-    script/style loads inside components.html iframes.
-    """
-    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
-
+    """Return (html_string, error_message) for the existing term network."""
+    freq, edges, _ = _build_cooccurrence_network(
+        df, top_n=top_n, min_cooccurrence=min_cooccurrence
+    )
     if not edges:
         return None, (
             "Not enough co-occurring keywords to build a network with the current settings. "
             "Try lowering the minimum co-occurrence threshold or using a larger corpus."
         )
 
-    # ── Louvain community detection (via networkx built-in — no extra package) ──
+    # The previous view drew only terms attached to a retained edge. Preserve
+    # those frequencies and weights, and let the shared renderer handle all
+    # visual styling, local assets, and safe HTML/JavaScript embedding.
+    nodes_in_edges = sorted({term for a, b, _ in edges for term in (a, b)})
+    graph = {
+        "kind": "keywords",
+        "nodes": [
+            {"id": term, "label": term, "frequency": freq[term]}
+            for term in nodes_in_edges
+        ],
+        "edges": [
+            {"source": a, "target": b, "weight": weight}
+            for a, b, weight in sorted(edges)
+        ],
+    }
     try:
-        import networkx as nx
-
-        G = nx.Graph()
-        nodes_in_edges = set()
-        for a, b, cnt in edges:
-            nodes_in_edges.add(a)
-            nodes_in_edges.add(b)
-            G.add_edge(a, b, weight=cnt)
-
-        # nx.community.louvain_communities is available in networkx >= 3.0
-        communities = nx.community.louvain_communities(G, weight='weight', seed=42)
-        # Sort communities by size descending so the largest gets colour 0
-        communities = sorted(communities, key=len, reverse=True)
-        partition = {}
-        for i, comm in enumerate(communities):
-            for node in comm:
-                partition[node] = i
-        num_communities = len(communities)
-        PALETTE = [
-            "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
-            "#1abc9c", "#e67e22", "#34495e", "#e91e63", "#00bcd4",
-            "#8bc34a", "#ff5722",
-        ]
-        def community_color(node):
-            return PALETTE[partition.get(node, 0) % len(PALETTE)]
-        louvain_ok = True
-    except Exception:
-        louvain_ok = False
-        nodes_in_edges = set()
-        for a, b, _ in edges:
-            nodes_in_edges.add(a)
-            nodes_in_edges.add(b)
-        # Use only the actually-drawn nodes (nodes_in_edges) for quartile thresholds
-        # so that community colours respond correctly to slider changes.
-        drawn_freqs = sorted([freq[kw] for kw in nodes_in_edges]) if nodes_in_edges else [1]
-        q1 = drawn_freqs[max(0, len(drawn_freqs) // 4)]
-        q2 = drawn_freqs[max(0, len(drawn_freqs) // 2)]
-        q3 = drawn_freqs[max(0, 3 * len(drawn_freqs) // 4)]
-        def _freq_group(node):
-            f = freq.get(node, 1)
-            if f >= q3: return 3
-            if f >= q2: return 2
-            if f >= q1: return 1
-            return 0
-        partition = {n: _freq_group(n) for n in nodes_in_edges}
-        def community_color(node):
-            g = partition.get(node, 0)
-            return ["#95a5a6", "#3498db", "#e67e22", "#e74c3c"][g]
-        num_communities = 4
-
-    # ── Build node / edge data as JSON ────────────────────────────────────────
-    import json as _json
-
-    # Pre-compute degree (number of distinct neighbours) for each node
-    _degree: dict = {}
-    for a, b, _ in edges:
-        _degree[a] = _degree.get(a, 0) + 1
-        _degree[b] = _degree.get(b, 0) + 1
-
-    nodes_data = []
-    for kw in nodes_in_edges:
-        f = freq.get(kw, 1)
-        deg = _degree.get(kw, 0)
-        size = max(10, min(45, 8 + f * 2))
-        cid = partition.get(kw, 0)
-        color = community_color(kw)
-        # Always include Community — use Louvain id when available,
-        # otherwise use the frequency-quartile group (1-4) as a proxy.
-        if louvain_ok:
-            community_label = cid + 1
-        else:
-            # frequency-quartile group already encoded in color choice (1-4)
-            community_label = cid + 1  # cid set below via partition fallback
-        tooltip = (
-            f"<b>{kw}</b><br/>"
-            f"Frequency: {f}<br/>"
-            f"Degree: {deg}<br/>"
-            f"Community: {community_label}"
-        )
-        nodes_data.append({
-            "id": kw, "label": kw, "title": tooltip,
-            "size": size,
-            "color": {"background": color, "border": "#333333",
-                      "highlight": {"background": color, "border": "#000000"}},
-            "font": {"size": 13, "color": "#222222"},
-            "shape": "dot", "borderWidth": 2,
-        })
-
-    max_cooc = max(cnt for _, _, cnt in edges) if edges else 1
-    edges_data = []
-    for idx, (a, b, cnt) in enumerate(edges):
-        width = max(1, min(8, 1 + (cnt / max_cooc) * 7))
-        same_comm = louvain_ok and partition.get(a, -1) == partition.get(b, -2)
-        opacity = 0.65 if same_comm else 0.3
-        edges_data.append({
-            "id": idx, "from": a, "to": b, "value": cnt,
-            "title": f"Co-occurrences: {cnt}",
-            "width": width,
-            "color": {"opacity": opacity},
-        })
-
-    nodes_json = _json.dumps(nodes_data)
-    edges_json = _json.dumps(edges_data)
-    legend_note = f" ({num_communities} Louvain communities detected)" if louvain_ok else ""
-
-    # ── Load vis-network JS from the local pyvis package (no CDN) ─────────────
-    import pathlib as _pl
-    import pyvis as _pyvis_mod
-    _vis_js_path = (
-        _pl.Path(_pyvis_mod.__file__).parent
-        / "templates" / "lib" / "vis-9.1.2" / "vis-network.min.js"
-    )
-    if _vis_js_path.exists():
-        _vis_js = _vis_js_path.read_text(encoding="utf-8")
-    else:
-        # Absolute fallback: use CDN (will fail under strict CSP but better than nothing)
-        _vis_js = None
-
-    if _vis_js:
-        vis_script_tag = f'<script type="text/javascript">\n{_vis_js}\n</script>'
-    else:
-        vis_script_tag = (
-            '<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/'
-            'dist/vis-network.min.js" crossorigin="anonymous"></script>'
-        )
-
-    # ── Build fully self-contained HTML ───────────────────────────────────────
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  html, body {{ margin: 0; padding: 0; background: #fafafa; }}
-  #mynetwork {{
-    width: 100%;
-    height: 560px;
-    background-color: #fafafa;
-    border: 1px solid #e0e0e0;
-    position: relative;
-  }}
-</style>
-{vis_script_tag}
-</head>
-<body>
-<div id="mynetwork"></div>
-<div style="position:absolute;bottom:8px;left:12px;font-size:11px;
-     color:#555;font-family:sans-serif;">
-  Node colour = Louvain community{legend_note}. Node size = keyword frequency.
-</div>
-<script type="text/javascript">
-(function() {{
-  // Script runs synchronously at end of <body> — DOM is already ready.
-  // Store tooltip HTML strings in a lookup; leave node.title undefined so
-  // vis.js does NOT attempt its own (broken) tooltip rendering.
-  var nodesRaw = {nodes_json};
-  var edgesRaw = {edges_json};
-
-  var nodeTooltip = {{}};
-  nodesRaw.forEach(function(n) {{
-    if (n.title) {{ nodeTooltip[n.id] = n.title; n.title = undefined; }}
-  }});
-  var edgeTooltip = {{}};
-  edgesRaw.forEach(function(e) {{
-    if (e.title) {{ edgeTooltip[e.id] = e.title; e.title = undefined; }}
-  }});
-
-  var nodes = new vis.DataSet(nodesRaw);
-  var edges = new vis.DataSet(edgesRaw);
-  var container = document.getElementById('mynetwork');
-
-  var options = {{
-    physics: {{
-      forceAtlas2Based: {{
-        gravitationalConstant: -120,
-        centralGravity: 0.015,
-        springLength: 100,
-        springConstant: 0.08,
-        damping: 0.9
-      }},
-      solver: 'forceAtlas2Based',
-      stabilization: {{ iterations: 200, updateInterval: 25 }}
-    }},
-    nodes: {{ font: {{ size: 13, color: '#222222' }}, borderWidth: 2, borderWidthSelected: 3 }},
-    edges: {{ color: {{ opacity: 0.4 }}, smooth: {{ type: 'continuous' }} }},
-    interaction: {{ hover: true, tooltipDelay: 150 }}
-  }};
-
-  var network = new vis.Network(container, {{ nodes: nodes, edges: edges }}, options);
-
-  // Create tooltip div AFTER vis.Network() — vis.js clears container innerHTML on init,
-  // so any div appended before this point would be destroyed.
-  var tip = document.createElement('div');
-  tip.style.cssText = [
-    'position:absolute', 'display:none', 'pointer-events:none',
-    'background:#fff', 'border:1px solid #bbb', 'border-radius:5px',
-    'padding:6px 10px', 'font-size:13px', 'line-height:1.6',
-    'max-width:260px', 'box-shadow:2px 2px 6px rgba(0,0,0,.15)',
-    'z-index:9999', 'font-family:sans-serif'
-  ].join(';');
-  container.appendChild(tip);
-
-  // Use canvas mousemove + getNodeAt/getEdgeAt for reliable tooltip detection.
-  // vis.js hoverNode/blurNode events require pointer events to propagate through
-  // the Streamlit iframe stack; canvas-level mousemove is more reliable.
-  var canvas = container.querySelector('canvas');
-  var lastNodeId = null;
-  var lastEdgeId = null;
-
-  function positionTip(x, y) {{
-    var cx = x + 14;
-    var cy = y - 14;
-    if (cx + 270 > container.offsetWidth) cx = x - 270;
-    if (cy < 0) cy = 4;
-    tip.style.left = cx + 'px';
-    tip.style.top  = cy + 'px';
-  }}
-
-  // Wait for canvas to be ready (network may still be stabilizing)
-  function attachMouseHandlers() {{
-    var c = container.querySelector('canvas');
-    if (!c) {{ setTimeout(attachMouseHandlers, 100); return; }}
-    c.addEventListener('mousemove', function(e) {{
-      var rect = c.getBoundingClientRect();
-      var domPos = {{ x: e.clientX - rect.left, y: e.clientY - rect.top }};
-      var nodeId = network.getNodeAt(domPos);
-      var edgeId = nodeId ? null : network.getEdgeAt(domPos);
-      if (nodeId !== undefined && nodeId !== null) {{
-        var html = nodeTooltip[nodeId];
-        if (html) {{
-          tip.innerHTML = html;
-          tip.style.display = 'block';
-          positionTip(domPos.x, domPos.y);
-        }} else {{
-          tip.style.display = 'none';
-        }}
-        lastNodeId = nodeId; lastEdgeId = null;
-      }} else if (edgeId !== undefined && edgeId !== null) {{
-        var html = edgeTooltip[edgeId];
-        if (html) {{
-          tip.innerHTML = html;
-          tip.style.display = 'block';
-          positionTip(domPos.x, domPos.y);
-        }} else {{
-          tip.style.display = 'none';
-        }}
-        lastEdgeId = edgeId; lastNodeId = null;
-      }} else {{
-        tip.style.display = 'none';
-        lastNodeId = null; lastEdgeId = null;
-      }}
-    }});
-    c.addEventListener('mouseleave', function() {{ tip.style.display = 'none'; }});
-  }}
-  attachMouseHandlers();
-}})();
-</script>
-</body>
-</html>"""
-
-    return html, None
+        return make_network_html(graph), None
+    except ValueError as exc:
+        return None, str(exc)
 
 
 def render_pyvis_network(df, session_key):
-    st.markdown("#### 🕸️ Interactive Concept Network — Included Studies")
+    st.markdown("#### 🕸️ Interactive Term Co-occurrence Network — Included Studies")
     st.markdown("""
-This network maps the **key concepts and terms** extracted from the included studies.
-**Node colour = Louvain community** (nodes of the same colour belong to the same thematic cluster,
-detected automatically by the Louvain algorithm). Larger nodes = more frequent;
-thicker edges = more papers share both keywords. **Drag, zoom, hover for community and frequency details.**
+This network counts terms from each study's title and the available **Country, Population,
+Intervention, and Outcome** fields in the extraction table (which may be prefilled or extracted).
+It does **not** use abstracts or the source-tagged **Concepts** column. Terms are lowercase
+English-letter words of at least four letters, excluding common stopwords, and each is counted
+at most once per study. Only terms on links meeting the threshold are shown.
+
+Circles are equal in size; **hover** to see the number of studies containing a term.
+Thicker links mean more studies contain both terms. Node colour indicates a Louvain
+community in the co-occurrence network, not proof that terms have the same meaning.
+**Drag, zoom, and hover for details.**
     """)
     col_opts, _ = st.columns([2, 1])
     with col_opts:
@@ -811,7 +569,7 @@ thicker edges = more papers share both keywords. **Drag, zoom, hover for communi
     if err:
         st.warning(f"⚠️ Network could not be generated: {err}")
     else:
-        components.html(html, height=500, scrolling=False)
+        components.html(html, height=590, scrolling=False)
 
 
 def render_bibliometric_network(df, session_key):
@@ -829,8 +587,8 @@ def render_bibliometric_network(df, session_key):
     kind = "authors" if kind_label == "Co-authorship" else "coupling"
     if kind == "authors":
         st.caption(
-            "Nodes are authors; a link counts studies listing both. Larger nodes mean "
-            "more studies and thicker links mean more shared studies. Authors must be "
+            "Nodes are authors; a link counts studies listing both. Circles have equal size; "
+            "hover for each author’s study count. Thicker links mean more shared studies. Authors must be "
             "semicolon-separated in the Authors column. Matching ignores case and "
             "extra whitespace but does not disambiguate names or aliases; some providers "
             "truncate author lists. Names are treated literally; remove placeholders such "
@@ -839,8 +597,8 @@ def render_bibliometric_network(df, session_key):
     else:
         st.caption(
             "Nodes are study records; links count distinct shared references, not direct "
-            "citations. Node size reflects the number of distinct references in a study; "
-            "thicker links mean more shared references. Supply a References column as a JSON "
+            "citations. Circles have equal size; hover for the number of distinct references "
+            "in a study. Thicker links mean more shared references. Supply a References column as a JSON "
             "array of reference IDs (preferred), e.g. `[\"10.1234/example;part\", \"W123456\"]`, "
             "or a semicolon-separated ID list, e.g. `10.1234/example; W123456; PMID:12345`. "
             "Use a JSON array if an identifier itself contains a semicolon. Recognized "
@@ -2047,7 +1805,7 @@ Review and download the result; correct it in your spreadsheet or other review t
 
                         out_row = {"Title": title, "Year": row.get("Year", "")}
                         out_row.update(extracted)
-                        # Carry over Abstract and Concepts for keyword network
+                        # Carry over Abstract and Concepts for the extraction table and export
                         out_row["Abstract"] = abstract
                         out_row["Concepts"] = _byod_text(row.get("Concepts", ""))
                         rows_out.append(out_row)
@@ -2100,7 +1858,7 @@ Review and download the result; correct it in your spreadsheet or other review t
                 # Only include fields that are in the schema
                 for _f in extract_fields_nlp:
                     out_row_nlp[_f] = extracted_nlp.get(_f, "N/A")
-                # Carry over Abstract and Concepts for keyword network
+                # Carry over Abstract and Concepts for the extraction table and export
                 out_row_nlp["Abstract"] = abstract_nlp
                 out_row_nlp["Concepts"] = _byod_text(row_nlp.get("Concepts", ""))
                 rows_out_nlp.append(out_row_nlp)

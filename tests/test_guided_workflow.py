@@ -253,6 +253,12 @@ class GuidedUITests(unittest.TestCase):
             year_tables = [e.value for e in app.dataframe if list(e.value.columns) == ["Year", "Included records"]]
             self.assertEqual(len(year_tables), 4)
             self.assertTrue(all(table["Included records"].sum() == 2 for table in year_tables))
+            for index in range(1, 5):
+                widget = app.selectbox(key=f"guided_test_case{index}_{index}_network_kind")
+                self.assertEqual(widget.value, guided._NETWORK_AUTOMATIC)
+                widget.set_value("Co-authorship")
+            app.run()
+            self.assert_app_ok(app)
             links = [e.value for e in app.dataframe if "Shared studies" in e.value.columns]
             self.assertEqual(len(links), 4)
             for i, table in enumerate(links, 1):
@@ -323,7 +329,7 @@ class GuidedUITests(unittest.TestCase):
             self.assert_app_ok(app)
             for context in ("day1", "day3"):
                 for index in range(1, 5):
-                    self.assertEqual(app.selectbox(key=f"guided_{context}_case{index}_{index}_network_kind").value, "Co-authorship")
+                    self.assertEqual(app.selectbox(key=f"guided_{context}_case{index}_{index}_network_kind").value, guided._NETWORK_AUTOMATIC)
 
 
 if __name__ == "__main__":

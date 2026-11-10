@@ -30,13 +30,6 @@ from collections import Counter
 from itertools import combinations
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-# pyvis — optional import with graceful fallback
-try:
-    from pyvis.network import Network as PyvisNetwork
-    PYVIS_AVAILABLE = True
-except ImportError:
-    PYVIS_AVAILABLE = False
-
 st.set_page_config(
     page_title="Day 1 — From Query to Corpus",
     page_icon="📥",
@@ -50,9 +43,8 @@ if str(_repo_root) not in sys.path:
 from openalex_client_loader_v2 import OpenAlexError, fetch_works
 from openaire_client import OpenAIREError, fetch_openaire
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
-from day2_networks import build_network
-from day2_network_view import make_network_html
-from guided_loader_v3 import load_guided_workflow
+from network_loader_v1 import build_network, make_network_html, community_partition
+from guided_loader_v4 import load_guided_workflow
 
 guided_workflow = load_guided_workflow()
 
@@ -111,7 +103,8 @@ def _build_cooccurrence_network(df, top_n=40, min_cooccurrence=2):
         for kw in doc_kws:
             freq[kw] += 1
 
-    top_keywords = {kw for kw, _ in freq.most_common(top_n)}
+    # Resolve equal-frequency ties deterministically across Python processes.
+    top_keywords = {kw for kw, _ in sorted(freq.items(), key=lambda item: (-item[1], item[0]))[:top_n]}
 
     cooc = Counter()
     for doc_kws in all_docs_keywords:
@@ -124,296 +117,49 @@ def _build_cooccurrence_network(df, top_n=40, min_cooccurrence=2):
 
 
 def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
-    """Return (html_string, error_message). error_message is None on success.
+    """Return (HTML, error), using the shared renderer for the Day 1 network.
 
-    Builds a fully self-contained HTML string with vis-network inlined from the
-    local pyvis package — no CDN calls, no external resources.  This is required
-    because Streamlit Community Cloud's Content Security Policy blocks external
-    script/style loads inside components.html iframes.
+    The existing builder defines the keyword selection and counts; as before,
+    the interactive view includes only nodes participating in a retained edge.
     """
-    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
-
+    freq, edges, _ = _build_cooccurrence_network(
+        df, top_n=top_n, min_cooccurrence=min_cooccurrence
+    )
     if not edges:
         return None, (
             "Not enough co-occurring keywords to build a network with the current settings. "
             "Try lowering the minimum co-occurrence threshold or using a larger corpus."
         )
 
-    # ── Louvain community detection (via networkx built-in — no extra package) ──
+    nodes_in_edges = {keyword for a, b, _ in edges for keyword in (a, b)}
+    graph = {
+        "kind": "keywords",
+        "nodes": [
+            {"id": keyword, "label": keyword, "frequency": freq[keyword]}
+            for keyword in sorted(nodes_in_edges)
+        ],
+        "edges": [
+            {"source": a, "target": b, "weight": count}
+            for a, b, count in sorted(edges)
+        ],
+    }
     try:
-        import networkx as nx
-
-        G = nx.Graph()
-        nodes_in_edges = set()
-        for a, b, cnt in edges:
-            nodes_in_edges.add(a)
-            nodes_in_edges.add(b)
-            G.add_edge(a, b, weight=cnt)
-
-        # nx.community.louvain_communities is available in networkx >= 3.0
-        communities = nx.community.louvain_communities(G, weight='weight', seed=42)
-        # Sort communities by size descending so the largest gets colour 0
-        communities = sorted(communities, key=len, reverse=True)
-        partition = {}
-        for i, comm in enumerate(communities):
-            for node in comm:
-                partition[node] = i
-        num_communities = len(communities)
-        PALETTE = [
-            "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
-            "#1abc9c", "#e67e22", "#34495e", "#e91e63", "#00bcd4",
-            "#8bc34a", "#ff5722",
-        ]
-        def community_color(node):
-            return PALETTE[partition.get(node, 0) % len(PALETTE)]
-        louvain_ok = True
-    except Exception:
-        louvain_ok = False
-        nodes_in_edges = set()
-        for a, b, _ in edges:
-            nodes_in_edges.add(a)
-            nodes_in_edges.add(b)
-        # Use only the actually-drawn nodes (nodes_in_edges) for quartile thresholds
-        # so that community colours respond correctly to slider changes.
-        drawn_freqs = sorted([freq[kw] for kw in nodes_in_edges]) if nodes_in_edges else [1]
-        q1 = drawn_freqs[max(0, len(drawn_freqs) // 4)]
-        q2 = drawn_freqs[max(0, len(drawn_freqs) // 2)]
-        q3 = drawn_freqs[max(0, 3 * len(drawn_freqs) // 4)]
-        def _freq_group(node):
-            f = freq.get(node, 1)
-            if f >= q3: return 3
-            if f >= q2: return 2
-            if f >= q1: return 1
-            return 0
-        partition = {n: _freq_group(n) for n in nodes_in_edges}
-        def community_color(node):
-            g = partition.get(node, 0)
-            return ["#95a5a6", "#3498db", "#e67e22", "#e74c3c"][g]
-        num_communities = 4
-
-    # ── Build node / edge data as JSON ────────────────────────────────────────
-    import json as _json
-    import html as _html
-
-    # Pre-compute degree (number of distinct neighbours) for each node
-    _degree: dict = {}
-    for a, b, _ in edges:
-        _degree[a] = _degree.get(a, 0) + 1
-        _degree[b] = _degree.get(b, 0) + 1
-
-    nodes_data = []
-    for kw in nodes_in_edges:
-        f = freq.get(kw, 1)
-        deg = _degree.get(kw, 0)
-        size = max(10, min(45, 8 + f * 2))
-        cid = partition.get(kw, 0)
-        color = community_color(kw)
-        # Always include Community — use Louvain id when available,
-        # otherwise use the frequency-quartile group (1-4) as a proxy.
-        if louvain_ok:
-            community_label = cid + 1
-        else:
-            # frequency-quartile group already encoded in color choice (1-4)
-            community_label = cid + 1  # cid set below via partition fallback
-        tooltip = (
-            f"<b>{_html.escape(kw)}</b><br/>"
-            f"Frequency: {f}<br/>"
-            f"Degree: {deg}<br/>"
-            f"Community: {community_label}"
-        )
-        nodes_data.append({
-            "id": kw, "label": kw, "title": tooltip,
-            "size": size,
-            "color": {"background": color, "border": "#333333",
-                      "highlight": {"background": color, "border": "#000000"}},
-            "font": {"size": 13, "color": "#222222"},
-            "shape": "dot", "borderWidth": 2,
-        })
-
-    max_cooc = max(cnt for _, _, cnt in edges) if edges else 1
-    edges_data = []
-    for idx, (a, b, cnt) in enumerate(edges):
-        width = max(1, min(8, 1 + (cnt / max_cooc) * 7))
-        same_comm = louvain_ok and partition.get(a, -1) == partition.get(b, -2)
-        opacity = 0.65 if same_comm else 0.3
-        edges_data.append({
-            "id": idx, "from": a, "to": b, "value": cnt,
-            "title": f"Co-occurrences: {cnt}",
-            "width": width,
-            "color": {"opacity": opacity},
-        })
-
-    # Data may come from user uploads; prevent a label from ending the script tag.
-    nodes_json = _json.dumps(nodes_data).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
-    edges_json = _json.dumps(edges_data).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
-    legend_note = f" ({num_communities} Louvain communities detected)" if louvain_ok else ""
-
-    # ── Load vis-network JS from the local pyvis package (no CDN) ─────────────
-    import pathlib as _pl
-    import pyvis as _pyvis_mod
-    _vis_js_path = (
-        _pl.Path(_pyvis_mod.__file__).parent
-        / "templates" / "lib" / "vis-9.1.2" / "vis-network.min.js"
-    )
-    if _vis_js_path.exists():
-        _vis_js = _vis_js_path.read_text(encoding="utf-8")
-    else:
-        # Absolute fallback: use CDN (will fail under strict CSP but better than nothing)
-        _vis_js = None
-
-    if _vis_js:
-        vis_script_tag = f'<script type="text/javascript">\n{_vis_js}\n</script>'
-    else:
-        vis_script_tag = (
-            '<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/'
-            'dist/vis-network.min.js" crossorigin="anonymous"></script>'
-        )
-
-    # ── Build fully self-contained HTML ───────────────────────────────────────
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  html, body {{ margin: 0; padding: 0; background: #fafafa; }}
-  #mynetwork {{
-    width: 100%;
-    height: 560px;
-    background-color: #fafafa;
-    border: 1px solid #e0e0e0;
-    position: relative;
-  }}
-</style>
-{vis_script_tag}
-</head>
-<body>
-<div id="mynetwork"></div>
-<div style="position:absolute;bottom:8px;left:12px;font-size:11px;
-     color:#555;font-family:sans-serif;">
-  Node colour = Louvain community{legend_note}. Node size = keyword frequency.
-</div>
-<script type="text/javascript">
-(function() {{
-  // Script runs synchronously at end of <body> — DOM is already ready.
-  // Store tooltip HTML strings in a lookup; leave node.title undefined so
-  // vis.js does NOT attempt its own (broken) tooltip rendering.
-  var nodesRaw = {nodes_json};
-  var edgesRaw = {edges_json};
-
-  var nodeTooltip = {{}};
-  nodesRaw.forEach(function(n) {{
-    if (n.title) {{ nodeTooltip[n.id] = n.title; n.title = undefined; }}
-  }});
-  var edgeTooltip = {{}};
-  edgesRaw.forEach(function(e) {{
-    if (e.title) {{ edgeTooltip[e.id] = e.title; e.title = undefined; }}
-  }});
-
-  var nodes = new vis.DataSet(nodesRaw);
-  var edges = new vis.DataSet(edgesRaw);
-  var container = document.getElementById('mynetwork');
-
-  var options = {{
-    physics: {{
-      forceAtlas2Based: {{
-        gravitationalConstant: -120,
-        centralGravity: 0.015,
-        springLength: 100,
-        springConstant: 0.08,
-        damping: 0.9
-      }},
-      solver: 'forceAtlas2Based',
-      stabilization: {{ iterations: 200, updateInterval: 25 }}
-    }},
-    nodes: {{ font: {{ size: 13, color: '#222222' }}, borderWidth: 2, borderWidthSelected: 3 }},
-    edges: {{ color: {{ opacity: 0.4 }}, smooth: {{ type: 'continuous' }} }},
-    interaction: {{ hover: true, tooltipDelay: 150 }}
-  }};
-
-  var network = new vis.Network(container, {{ nodes: nodes, edges: edges }}, options);
-
-  // Create tooltip div AFTER vis.Network() — vis.js clears container innerHTML on init,
-  // so any div appended before this point would be destroyed.
-  var tip = document.createElement('div');
-  tip.style.cssText = [
-    'position:absolute', 'display:none', 'pointer-events:none',
-    'background:#fff', 'border:1px solid #bbb', 'border-radius:5px',
-    'padding:6px 10px', 'font-size:13px', 'line-height:1.6',
-    'max-width:260px', 'box-shadow:2px 2px 6px rgba(0,0,0,.15)',
-    'z-index:9999', 'font-family:sans-serif'
-  ].join(';');
-  container.appendChild(tip);
-
-  // Use canvas mousemove + getNodeAt/getEdgeAt for reliable tooltip detection.
-  // vis.js hoverNode/blurNode events require pointer events to propagate through
-  // the Streamlit iframe stack; canvas-level mousemove is more reliable.
-  var canvas = container.querySelector('canvas');
-  var lastNodeId = null;
-  var lastEdgeId = null;
-
-  function positionTip(x, y) {{
-    var cx = x + 14;
-    var cy = y - 14;
-    if (cx + 270 > container.offsetWidth) cx = x - 270;
-    if (cy < 0) cy = 4;
-    tip.style.left = cx + 'px';
-    tip.style.top  = cy + 'px';
-  }}
-
-  // Wait for canvas to be ready (network may still be stabilizing)
-  function attachMouseHandlers() {{
-    var c = container.querySelector('canvas');
-    if (!c) {{ setTimeout(attachMouseHandlers, 100); return; }}
-    c.addEventListener('mousemove', function(e) {{
-      var rect = c.getBoundingClientRect();
-      var domPos = {{ x: e.clientX - rect.left, y: e.clientY - rect.top }};
-      var nodeId = network.getNodeAt(domPos);
-      var edgeId = nodeId ? null : network.getEdgeAt(domPos);
-      if (nodeId !== undefined && nodeId !== null) {{
-        var html = nodeTooltip[nodeId];
-        if (html) {{
-          tip.innerHTML = html;
-          tip.style.display = 'block';
-          positionTip(domPos.x, domPos.y);
-        }} else {{
-          tip.style.display = 'none';
-        }}
-        lastNodeId = nodeId; lastEdgeId = null;
-      }} else if (edgeId !== undefined && edgeId !== null) {{
-        var html = edgeTooltip[edgeId];
-        if (html) {{
-          tip.innerHTML = html;
-          tip.style.display = 'block';
-          positionTip(domPos.x, domPos.y);
-        }} else {{
-          tip.style.display = 'none';
-        }}
-        lastEdgeId = edgeId; lastNodeId = null;
-      }} else {{
-        tip.style.display = 'none';
-        lastNodeId = null; lastEdgeId = null;
-      }}
-    }});
-    c.addEventListener('mouseleave', function() {{ tip.style.display = 'none'; }});
-  }}
-  attachMouseHandlers();
-}})();
-</script>
-</body>
-</html>"""
-
-    return html, None
+        return make_network_html(graph), None
+    except (ValueError, OSError, ImportError) as exc:
+        return None, str(exc) or "Unable to display the network."
 
 
 def render_pyvis_network(df, session_key):
     """Render the interactive keyword co-occurrence network section."""
     st.markdown("#### 🕸️ Interactive Keyword Co-occurrence Network")
     st.markdown("""
-This network maps the **most frequent keywords** in the corpus and draws a link between
-any two keywords that appear together in the same paper. **Node colour = Louvain community**
-(nodes of the same colour belong to the same thematic cluster, detected automatically by the
-Louvain algorithm). Larger nodes = more frequent; thicker edges = more papers share both
-keywords. **Drag nodes, scroll to zoom, hover for community and frequency details.**
+This network maps frequent title words and supplied concepts as keywords. A keyword is counted
+at most once per record; only keywords with a link meeting the selected threshold are shown.
+**All nodes have the same size**; colours and C-numbers identify Louvain communities (network
+clusters). Some colours can look similar when there are many communities; use the C-numbers too.
+Hover over a node to see its frequency, the number of records containing it. A link's weight is
+the number of records containing both keywords; thicker links have greater weight, and hovering
+shows the count. Drag nodes or scroll to zoom.
     """)
 
     col_opts, _ = st.columns([2, 1])
@@ -433,7 +179,7 @@ keywords. **Drag nodes, scroll to zoom, hover for community and frequency detail
     if err:
         st.warning(f"⚠️ Network could not be generated: {err}")
     else:
-        components.html(html, height=540, scrolling=False)
+        components.html(html, height=590, scrolling=False)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -540,39 +286,24 @@ def df_to_ris(df):
 
 
 def generate_vosviewer_json(df, top_n=40, min_cooccurrence=2):
-    """Build a VOSviewer-format JSON dict from the corpus keyword co-occurrence network."""
+    """Export the connected keyword network with seeded Louvain community IDs."""
     import math
-    freq, edges, top_keywords = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
+    freq, edges, _ = _build_cooccurrence_network(df, top_n=top_n, min_cooccurrence=min_cooccurrence)
     if not edges:
         return None
 
-    # Assign cluster IDs via simple greedy community detection (connected components)
-    from collections import defaultdict
-    adj = defaultdict(set)
-    for a, b, _ in edges:
-        adj[a].add(b)
-        adj[b].add(a)
+    # Match the actual interactive graph: retain only nodes in qualifying links,
+    # and use the same weighted Louvain algorithm and seed for cluster IDs.
+    kw_list = sorted({node for a, b, _ in edges for node in (a, b)})
+    graph = {
+        "kind": "keywords",
+        "nodes": [{"id": kw, "label": kw, "frequency": int(freq[kw])} for kw in kw_list],
+        "edges": [{"source": a, "target": b, "weight": int(count)}
+                  for a, b, count in sorted(edges)],
+    }
+    cluster_map = community_partition(graph)
 
-    cluster_map = {}
-    cluster_id = 1
-    for kw in top_keywords:
-        if kw not in cluster_map:
-            # BFS
-            queue = [kw]
-            visited = set()
-            while queue:
-                node = queue.pop(0)
-                if node in visited:
-                    continue
-                visited.add(node)
-                cluster_map[node] = cluster_id
-                for nb in adj.get(node, []):
-                    if nb not in visited and nb in top_keywords:
-                        queue.append(nb)
-            cluster_id += 1
-
-    # Lay out nodes on a circle (VOSviewer will re-layout, but needs x/y)
-    kw_list = sorted(top_keywords)
+    # Provide initial coordinates; the user can later change VOSviewer's layout.
     n = len(kw_list)
     items = []
     for i, kw in enumerate(kw_list):
@@ -582,8 +313,9 @@ def generate_vosviewer_json(df, top_n=40, min_cooccurrence=2):
             "label": kw,
             "x": round(math.cos(angle), 4),
             "y": round(math.sin(angle), 4),
-            "cluster": cluster_map.get(kw, 1),
+            "cluster": cluster_map[kw],
             "weights": {"Occurrences": int(freq.get(kw, 1))},
+            "description": f"Records containing this keyword: {int(freq[kw])}",
         })
 
     kw_to_id = {kw: i + 1 for i, kw in enumerate(kw_list)}
@@ -603,9 +335,12 @@ def generate_vosviewer_json(df, top_n=40, min_cooccurrence=2):
         },
         "config": {
             "parameters": {
-                "largest_component": True,
+                "largest_component": False,
                 "attraction": 2,
                 "repulsion": 1,
+                "item_size": 3,
+                "item_size_variation": 0,
+                "item_color": 1,
             },
             "terminology": {
                 "item": "keyword",
@@ -618,7 +353,8 @@ def generate_vosviewer_json(df, top_n=40, min_cooccurrence=2):
         },
         "info": {
             "title": "Keyword Co-occurrence Network",
-            "description": f"Built from {len(df)} records. Nodes = keywords; edges = co-occurrence in titles/abstracts.",
+            "description": (f"Built from {len(df)} records. Nodes combine provided concepts and title words; "
+                            "links count records containing both. Clusters are weighted Louvain (seed 42)."),
         },
     }
     return vos_json
@@ -642,7 +378,11 @@ available in two versions:
     """)
 
     # Do not upload participant research data to a public third-party URL.
-    vos_data = generate_vosviewer_json(df)
+    try:
+        vos_data = generate_vosviewer_json(df)
+    except (ValueError, OSError) as exc:
+        vos_data = None
+        st.warning(f"The VOSviewer network could not be generated: {exc}")
 
     # ── Buttons row ───────────────────────────────────────────────────────────
     col1, col2 = st.columns([3, 1])
@@ -674,8 +414,11 @@ available in two versions:
                 key=f"dl_vos_json_{session_key}",
             )
             st.caption(
-                "This JSON file contains the keyword co-occurrence network in VOSviewer format. "
-                "Load it via the folder icon on app.vosviewer.com or in VOSviewer Desktop."
+                "This separate VOSviewer JSON uses fixed defaults (top 40 keywords, minimum "
+                "co-occurrence 2) and weighted Louvain community IDs. Its initial online view "
+                "uses equal node sizes and cluster colors; hover an item to see its occurrences. "
+                "It does not use the interactive network sliders. The external viewer can change "
+                "these settings or recalculate clusters; load via the folder icon on app.vosviewer.com."
             )
         # Also keep the RIS download for users who want to create maps from scratch
         ris_str = df_to_ris(df)

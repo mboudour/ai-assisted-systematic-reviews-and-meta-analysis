@@ -197,6 +197,13 @@ class GuidedProviderUITests(unittest.TestCase):
                     self.assertEqual(len(app.text_input), 0)
                     self.assertEqual(len(app.text_area), 0)
                     self.assertFalse(app.error)
+                    for i in range(1, 5):
+                        suffix = "" if provider == "Crossref" else "_" + provider.lower().replace(" ", "_")
+                        selector = app.selectbox(key=prefix(i) + suffix + "_network_kind")
+                        self.assertEqual(selector.value, guided._NETWORK_AUTOMATIC)
+                        selector.set_value("Co-authorship")
+                    app.run()
+                    self.assert_ok(app)
                     tables = extraction_tables(app)
                     self.assertEqual(len(tables), 4)
                     decisions = [e.value for e in app.dataframe if guided.SCREEN_DECISION in e.value.columns]
@@ -416,6 +423,11 @@ class GuidedAnonymousUITests(unittest.TestCase):
                     http.assert_not_called()
                     self.assertTrue(all(table["ID"].iloc[0].startswith("SAVED-OpenAlex")
                                         for table in extraction_tables(app)))
+                    for number in range(1, 5):
+                        p = f"guided_{context}_{CASES[number-1]}_{number}_openalex"
+                        app.selectbox(key=p + "_network_kind").set_value("Co-authorship")
+                    app.run()
+                    self.assert_ok(app)
                     warnings = " ".join(item.value for item in app.warning)
                     for text in ("no-key LIVE", "server IP", "one page", "50 works", "change over time"):
                         self.assertIn(text, warnings)

@@ -36,10 +36,9 @@ st.set_page_config(
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
-from day2_networks import build_network
-from day2_network_view import make_network_html
+from network_loader_v1 import build_network, make_network_html, community_partition
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
-from guided_loader_v3 import load_guided_workflow
+from guided_loader_v4 import load_guided_workflow
 
 guided_workflow = load_guided_workflow()
 
@@ -205,6 +204,10 @@ def render_day2_networks(screened_df, included_df, session_key):
         "records containing both items. Bibliographic-coupling nodes are studies and links "
         "count their shared references. These maps are descriptive, not causal."
     )
+    st.caption("All nodes have the same diameter. Node colour identifies the Louvain community, "
+               "computed from the displayed weighted network; hover over a node for its frequency "
+               "and community. For coupling, the node frequency is its number of recognized references. "
+               "Changing the node cap or link threshold can change communities.")
     source_labels = ["Included studies", "All screened records (exploratory)"]
     default_source = 0 if not included_df.empty else 1
     source = st.radio(

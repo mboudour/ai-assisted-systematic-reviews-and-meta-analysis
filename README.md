@@ -32,7 +32,7 @@ To reduce redistribution of copyrighted material, saved Crossref samples retain 
 
 Each saved Crossref example also shows a **precomputed AI extraction illustration for one included record**: its original source, exact fixed prompt, model and extracted quotations. No new AI call is made when a participant opens it. Other providers' results use direct bibliographic extraction and do not reuse the Crossref AI illustration as if it were their own. Exact quotation matching does not establish that a quotation is an appropriate interpretation; check the source and context. The AI illustration is not an extraction of every included record or a full evidence synthesis.
 
-Each case can also display co-authorship and bibliographic-coupling networks when its metadata support them. Missing author or reference information is reported rather than fabricated.
+Each case can display keyword/concept co-occurrence, co-authorship and bibliographic-coupling networks when the selected records contain suitable data. In the automatic keyword/concept view, source-provided concept labels are used when they support a network; otherwise title/abstract terms are extracted and clearly identified as text-derived terms, not provider concepts. Missing author, concept or reference information is reported rather than fabricated. Networks are based on the fixed heuristic-included records, not an exhaustive review.
 
 ## BYOD — your own configurable workflow
 
@@ -79,6 +79,12 @@ All three days provide these network types in both paths:
 - **Bibliographic coupling:** nodes are studies; a link counts distinct shared cited-reference identifiers. This differs from direct citation and co-citation. OpenAlex may supply referenced-work IDs and Crossref may supply DOI reference IDs. Some records or providers do not supply these fields, so a missing link does not prove no common reference exists. DOI, OpenAlex and PMID identifiers are not resolved across namespaces.
 
 For CSV uploads, `References` may contain a JSON array such as `["doi:10.1234/example", "openalex:W123"]`; a semicolon-separated list is also accepted when the identifiers themselves do not contain semicolons. The app's RIS export does not contain cited-reference links for VOSviewer coupling or citation analysis. Displayed node caps and link thresholds can affect the visualized network and downloaded tables.
+
+### Reading the app's network maps
+
+All nodes in the interactive in-app networks have the same diameter. Their colors show communities identified by the weighted Louvain algorithm on the displayed graph. Hover over a node for its frequency and community; frequency means the number of selected records containing a concept, term or author, and the number of recognized reference IDs for a bibliographic-coupling study. Hover over a link for its weight. Changing the record selection, node cap or link threshold can change the partition; colors indicate graph communities, not causal effects. Missing data or insufficient co-occurrences can prevent a particular network from being plotted.
+
+The Day 1 VOSviewer JSON export also carries weighted Louvain cluster IDs and occurrence counts and requests equal node sizes and cluster colors in VOSviewer Online's initial view. It uses fixed export settings rather than the in-app sliders. VOSviewer is a separate tool: its controls can change the appearance or recalculate clusters.
 
 ## Running locally
 

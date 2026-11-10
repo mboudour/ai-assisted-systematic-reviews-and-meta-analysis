@@ -173,6 +173,11 @@ New OpenAlex and Crossref searches retain reference IDs when available. Some rec
 lack reference lists, and missing metadata can leave links absent;
 the app explains this rather than drawing an empty coupling network. Identifier namespaces are
 not automatically mapped, and the network node cap can bias which studies are displayed.
+
+**Network appearance:** In-app networks use equally sized nodes; hover to see frequency and
+the Louvain community. Node colors identify communities computed from the weighted, displayed
+network. Worked cases also offer source-concept or text-derived keyword co-occurrence where
+available; text-derived terms are not presented as provider-assigned concepts.
 """)
 
 st.markdown("---")

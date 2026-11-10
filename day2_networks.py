@@ -30,6 +30,8 @@ from __future__ import annotations
 
 from collections import Counter
 import json
+import math
+from numbers import Real
 import re
 from typing import Any
 from urllib.parse import unquote, urlsplit
@@ -37,6 +39,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS, TfidfVectorizer
 
 
+NETWORK_COMMUNITY_RELEASE = 1
 SUPPORTED_KINDS = {"terms", "authors", "concepts", "coupling"}
 _TERM_LIMIT = 8
 
@@ -277,4 +280,83 @@ def build_network(df: Any, kind: str, top_n: int = 40, min_cooccurrence: int = 1
     }
 
 
-__all__ = ["build_network", "canonical_reference"]
+def community_partition(network: dict[str, Any], seed: int = 42) -> dict[str, int]:
+    """Return a deterministic, 1-based community ID for every displayed node.
+
+    The input uses the same ``nodes``/``edges`` structure as :func:`build_network`.
+    Node IDs must be unique strings; each undirected edge must appear once, have
+    distinct known endpoints, and a finite positive numeric ``weight``. Edge
+    weights are *link* counts (co-occurring records or shared reference IDs), not
+    node frequencies. This also supports other co-occurrence graphs, e.g. legacy
+    keyword networks, without requiring a particular ``kind`` value.
+
+    NetworkX weighted Louvain is run on the displayed graph with resolution 1
+    and the supplied integer seed. Node/edge insertion order is canonicalized,
+    including using integer IDs internally so Python's hash seed cannot change
+    the traversal order. Communities are numbered in lexicographic order of
+    their sorted member IDs. Isolates are singleton communities. An edgeless or
+    empty graph needs no Louvain optimization and returns singletons or {},
+    respectively. IDs are local to this graph and may change when it changes.
+    """
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("seed must be an integer")
+
+    node_ids = [node["id"] for node in network["nodes"]]
+    if any(not isinstance(node_id, str) for node_id in node_ids):
+        raise ValueError("node IDs must be strings")
+    if len(set(node_ids)) != len(node_ids):
+        raise ValueError("node IDs must be unique")
+    node_ids.sort()
+    index_by_id = {node_id: index for index, node_id in enumerate(node_ids)}
+    weighted_edges = []
+    pairs = set()
+    for edge in network["edges"]:
+        source, target, weight = edge["source"], edge["target"], edge["weight"]
+        if source not in index_by_id or target not in index_by_id:
+            raise ValueError("edge endpoints must refer to displayed nodes")
+        if source == target:
+            raise ValueError("self-links are not supported")
+        if isinstance(weight, bool) or not isinstance(weight, Real) or not math.isfinite(weight) or weight <= 0:
+            raise ValueError("edge weights must be finite positive numbers")
+        pair = tuple(sorted((index_by_id[source], index_by_id[target])))
+        if pair in pairs:
+            raise ValueError("each undirected edge must appear only once")
+        pairs.add(pair)
+        weighted_edges.append((*pair, weight))
+
+    if not weighted_edges:
+        return {node_id: index + 1 for index, node_id in enumerate(node_ids)}
+    try:
+        import networkx as nx
+    except ImportError as exc:
+        raise ValueError("NetworkX is required for Louvain community detection.") from exc
+    if not hasattr(nx.community, "louvain_communities"):
+        raise ValueError("NetworkX with Louvain support is required for community detection.")
+    graph = nx.Graph()
+    graph.add_nodes_from(range(len(node_ids)))
+    graph.add_weighted_edges_from(sorted(weighted_edges))
+    communities = nx.community.louvain_communities(graph, weight="weight", seed=seed)
+    ordered = sorted(tuple(sorted(node_ids[index] for index in community)) for community in communities)
+    return {node_id: community_id for community_id, members in enumerate(ordered, 1) for node_id in members}
+
+
+def annotate_communities(network: dict[str, Any], seed: int = 42) -> dict[str, Any]:
+    """Return a copy with node ``community`` IDs and method metadata added.
+
+    Original nodes and the existing builder/export schema are not modified.
+    The returned 1-based IDs are shared by the renderer and export callers.
+    Edges and any other existing top-level values are retained unchanged.
+    ``community_detection.method`` is ``weighted_louvain``, ``isolates``, or
+    ``empty``; no optimization is claimed for graphs without links.
+    """
+    partition = community_partition(network, seed=seed)
+    method = "weighted_louvain" if network["edges"] else "isolates" if network["nodes"] else "empty"
+    return {
+        **network,
+        "nodes": [{**node, "community": partition[node["id"]]} for node in network["nodes"]],
+        "community_detection": {"method": method, "seed": seed, "edge_weight": "weight",
+                                "resolution": 1, "count": len(set(partition.values()))},
+    }
+
+
+__all__ = ["build_network", "canonical_reference", "community_partition", "annotate_communities"]

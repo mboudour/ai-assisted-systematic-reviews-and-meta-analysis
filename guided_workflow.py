@@ -24,7 +24,7 @@ from openaire_notice import OPENAIRE_LIMITATIONS
 # The Streamlit host can retain imported modules while syncing newer page files.
 # Pages require this release marker and reload a stale cached renderer once.
 GUIDED_PROVIDER_RELEASE = 2
-GUIDED_ANONYMOUS_RELEASE = 1
+GUIDED_ANONYMOUS_RELEASE = 2
 
 
 GUIDED_DATA_DIR = Path(__file__).resolve().parent / "data" / "guided_fixed"
@@ -476,12 +476,45 @@ def _render_ai_illustration(case: dict[str, Any], included: pd.DataFrame | None,
                    "The excerpt matches the saved abstract exactly; semantic accuracy still requires review.")
 
 
+_NETWORK_AUTOMATIC = "Keyword / concept co-occurrence (automatic)"
+_NETWORK_CONCEPTS = "Concept co-occurrence (source metadata)"
+_NETWORK_TERMS = "Keyword co-occurrence (title/abstract terms)"
+_NETWORK_CHOICES = (_NETWORK_AUTOMATIC, _NETWORK_CONCEPTS, _NETWORK_TERMS,
+                    "Co-authorship", "Bibliographic coupling")
+
+
+def _build_guided_network(included: pd.DataFrame, choice: str, top_n: int,
+                          minimum: int) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Choose a real metadata graph when it has links, otherwise use text terms.
+
+    Only automatic mode falls back. The second return value is the attempted
+    concept graph in automatic mode, retained so its coverage and any fallback
+    can be explained. Both graphs are computed from the same included subset.
+    """
+    if choice == _NETWORK_AUTOMATIC:
+        concepts = day2_networks.build_network(included, kind="concepts", top_n=top_n,
+                                                min_cooccurrence=minimum)
+        if concepts["edges"]:
+            return concepts, concepts
+        terms = day2_networks.build_network(included, kind="terms", top_n=top_n,
+                                             min_cooccurrence=minimum)
+        return terms, concepts
+    kind = {_NETWORK_CONCEPTS: "concepts", _NETWORK_TERMS: "terms",
+            "Co-authorship": "authors", "Bibliographic coupling": "coupling"}[choice]
+    return day2_networks.build_network(included, kind=kind, top_n=top_n,
+                                       min_cooccurrence=minimum), None
+
+
 def _network_tables(graph: dict[str, Any], kind: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     nodes = {node["id"]: node for node in graph["nodes"]}
+    frequency = {"concepts": "Included records containing concept",
+                 "terms": "Included records with selected term"}.get(kind, "Frequency")
     node_rows = [{"Node ID": node["id"], "Label": node.get("full_label", node["label"]),
-                  "Frequency": node["frequency"], "Record ID": node.get("record_id", ""),
+                  frequency: node["frequency"], "Record ID": node.get("record_id", ""),
                   "DOI": node.get("doi", "")} for node in graph["nodes"]]
-    metric = "Shared studies" if kind == "authors" else "Shared references"
+    metric = {"authors": "Shared studies", "coupling": "Shared references",
+              "concepts": "Included records containing both concepts",
+              "terms": "Included records with both selected terms"}[kind]
     edge_rows = []
     for edge in graph["edges"]:
         source, target = nodes[edge["source"]], nodes[edge["target"]]
@@ -493,27 +526,82 @@ def _network_tables(graph: dict[str, Any], kind: str) -> tuple[pd.DataFrame, pd.
     return pd.DataFrame(node_rows), pd.DataFrame(edge_rows)
 
 
-def _render_network(included: pd.DataFrame, prefix: str) -> None:
+def _render_network(included: pd.DataFrame, prefix: str, provider: str = "") -> None:
     st.markdown("##### Bibliographic networks of the same heuristic-included records")
-    choice = st.selectbox("Network type", ["Co-authorship", "Bibliographic coupling"], key=f"{prefix}_network_kind")
-    kind = "authors" if choice == "Co-authorship" else "coupling"
-    if kind == "authors":
+    choice = st.selectbox("Network type", _NETWORK_CHOICES, key=f"{prefix}_network_kind")
+    control_kind = {_NETWORK_AUTOMATIC: "automatic", _NETWORK_CONCEPTS: "concepts",
+                    _NETWORK_TERMS: "terms", "Co-authorship": "authors",
+                    "Bibliographic coupling": "coupling"}[choice]
+    if choice == _NETWORK_AUTOMATIC:
+        st.caption("Automatic: use the source Concepts metadata when it produces at least one link at the current node cap and minimum weight; otherwise fall back to title/abstract terms from the same included records.")
+    if choice in (_NETWORK_AUTOMATIC, _NETWORK_CONCEPTS):
+        st.caption("Source metadata: labels are copied from the selected records' semicolon-separated Concepts field. Depending on the provider, these may be concepts, subject headings or keywords; they are not inferred from the title or abstract. Case and spacing are normalized, not disambiguated.")
+        provenance = {
+            "OpenAlex": "OpenAlex Concepts contains supplied OpenAlex concept display names; these are not necessarily author keywords.",
+            "OpenAIRE": "OpenAIRE subjects are mapped to Concepts. These heterogeneous labels may include keywords, classifications and other subjects; they are not uniformly author keywords.",
+            "Crossref": "Crossref subjects, when supplied, are mapped to Concepts; they are not necessarily author keywords.",
+            "Europe PMC": "The guided Europe PMC adapter currently does not populate Concepts. If a selected snapshot supplies that field, its recorded labels are used as supplied.",
+        }.get(provider)
+        if provenance:
+            st.caption(provenance)
+    if choice in (_NETWORK_AUTOMATIC, _NETWORK_TERMS):
+        st.caption("Text-derived keywords are not source-assigned concepts. TF-IDF selects up to eight single-word terms per included title/abstract using English and generic research stopwords and at most 5,000 features. No stemming or phrase detection is performed; missing text and non-English language can affect coverage.")
+        total = len(included)
+        title_count = sum(bool(_text(value).strip()) for value in included["Title"]) if "Title" in included else 0
+        abstract_count = sum(bool(_text(value).strip()) for value in included["Abstract"]) if "Abstract" in included else 0
+        if not total or not (title_count or abstract_count):
+            st.caption(f"TF-IDF input: no included title or abstract-field text is available ({total} included records).")
+        elif not abstract_count:
+            st.caption(f"TF-IDF input is title-only: {title_count} of {total} included records have recorded titles; none have recorded abstract-field text.")
+        else:
+            st.caption(f"TF-IDF input is title/abstract: {title_count} of {total} included records have recorded titles and {abstract_count} have recorded abstract-field text. Records without abstracts contribute title text only, if available.")
+        if provider == "OpenAIRE":
+            st.caption("For OpenAIRE, the Abstract field contains a provider description, not necessarily a formal abstract.")
+    if control_kind == "authors":
         st.caption("A link counts included records listing both authors. Author names are semicolon-separated; case and spacing are normalized, but aliases and identities are not disambiguated. Lists can be incomplete. The cap retains the most frequent authors.")
-    else:
+    elif control_kind == "coupling":
         st.caption("A link counts distinct reference identifiers shared by two included records, not direct citations. Only recognized DOI, OpenAlex work ID and explicitly prefixed PMID references count; different namespaces are not cross-linked. Missing reference lists are not inferred. The node cap favors records with the most recognized references and can bias the map.")
-    top_n = st.slider("Maximum network nodes", 1, 100, 25, 1, key=f"{prefix}_{kind}_top")
-    minimum = st.slider("Minimum shared studies per link" if kind == "authors" else "Minimum shared references per link",
-                        1, 20, 1, 1, key=f"{prefix}_{kind}_minimum")
-    graph = day2_networks.build_network(included, kind=kind, top_n=top_n, min_cooccurrence=minimum)
-    st.caption(f"Usable {'author' if kind == 'authors' else 'reference'} data: {graph['records_with_data']} of {graph['total_records']} heuristic-included records. Displayed: {len(graph['nodes'])} nodes and {len(graph['edges'])} links (node cap {top_n}; minimum link weight {minimum}).")
+    top_n = st.slider("Maximum network nodes", 1, 100, 25, 1, key=f"{prefix}_{control_kind}_top")
+    minimum_label = ("Minimum shared references per link" if control_kind == "coupling" else
+                     "Minimum shared studies per link" if control_kind == "authors" else
+                     "Minimum included records per link")
+    minimum = st.slider(minimum_label,
+                        1, 20, 1, 1, key=f"{prefix}_{control_kind}_minimum")
+    graph, concepts = _build_guided_network(included, choice, top_n, minimum)
+    kind = graph["kind"]
+    if concepts is not None:
+        st.caption(f"Usable source Concepts metadata: {concepts['records_with_data']} of {concepts['total_records']} heuristic-included records; {len(concepts['edges'])} concept links at the current node cap and minimum weight.")
+        if kind == "terms":
+            reason = ("no usable Concepts metadata was present" if not concepts["records_with_data"]
+                      else "the available Concepts metadata produced no link at the current node cap and minimum weight")
+            text_input = ("title-only" if title_count and not abstract_count else "title/abstract")
+            st.info(f"Automatic fallback to TF-IDF {text_input} keywords: {reason}. These text-derived keywords are not source-assigned concepts.")
+        else:
+            st.caption("Automatic selection: source Concepts metadata (not text-derived keywords).")
+    data_label = {"authors": "author data", "coupling": "reference data", "concepts": "source Concepts metadata",
+                  "terms": "TF-IDF title/abstract term data"}[kind]
+    if kind == "terms" and title_count and not abstract_count:
+        data_label = "TF-IDF title-only term data"
+    st.caption(f"Usable {data_label}: {graph['records_with_data']} of {graph['total_records']} heuristic-included records. Displayed: {len(graph['nodes'])} nodes and {len(graph['edges'])} links (node cap {top_n}; minimum link weight {minimum}).")
+    if kind == "concepts":
+        st.caption("A link counts included records containing both displayed metadata labels; each record contributes at most once to each node or link. The node cap retains the most frequent labels.")
+    elif kind == "terms":
+        st.caption("A link counts included records for which both terms were selected by TF-IDF; a term merely appearing in a record is not counted if it is not selected for that record. Each record contributes at most once to each node or link. The node cap retains the most frequently selected terms.")
     if graph.get("records_omitted_by_node_limit", 0):
         st.caption(f"{graph['records_omitted_by_node_limit']} records with references were omitted by the node cap.")
     if not graph["total_records"]:
         st.info("There are no heuristic-included records to map.")
     elif not graph["records_with_data"]:
-        st.info("No usable Authors data in the included records; co-authorship cannot be calculated." if kind == "authors" else "No usable References data in the included records; bibliographic coupling cannot be calculated. Missing references are not invented.")
+        st.info({"authors": "No usable Authors data in the included records; co-authorship cannot be calculated.",
+                 "coupling": "No usable References data in the included records; bibliographic coupling cannot be calculated. Missing references are not invented.",
+                 "concepts": "No usable Concepts metadata in the included records; concept co-occurrence cannot be calculated. Metadata are not invented.",
+                 "terms": "No usable title/abstract terms in the included records; keyword co-occurrence cannot be calculated. Text or eligible terms may be absent."}[kind])
     elif not graph["edges"]:
-        st.info("No links meet the current node cap and minimum weight. Records may lack co-authors or shared recognized references; the graph is not shown.")
+        detail = {"authors": "Records may lack co-authors.",
+                  "coupling": "Records may lack shared recognized references.",
+                  "concepts": "Records may not contain two source Concepts labels together.",
+                  "terms": "Records may not contain two selected title/abstract terms together."}[kind]
+        st.info(f"No links meet the current node cap and minimum weight. {detail} The graph is not shown.")
     else:
         try:
             html = day2_network_view.make_network_html(graph)
@@ -547,7 +635,7 @@ def _render_synthesis(screened: pd.DataFrame | None, included: pd.DataFrame | No
     else:
         st.dataframe(years, use_container_width=True, hide_index=True)
     _download("Download included year counts (CSV)", years, f"{prefix}_years.csv", f"{prefix}_years_csv")
-    _render_network(included, prefix)
+    _render_network(included, prefix, provider)
 
 
 GUIDED_PROVIDERS = ("Crossref", "OpenAlex", "Europe PMC", "OpenAIRE")
