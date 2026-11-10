@@ -828,7 +828,7 @@ GUIDED_EXAMPLES = [
 
 **Research Question (PICO):** Among patients with chronic diseases (diabetes, hypertension, CVD), do patients from lower socioeconomic backgrounds (P) receiving standard care (I) experience worse clinical outcomes and access (O) compared to high-SES patients (C)?
 
-**Corpus & Screening:** 150 records retrieved via OpenAlex (2010–2025). After deduplication (n = 135), Active Learning and LLM screening identified 15 empirical studies that met all inclusion criteria (reporting quantitative disparities by SES). Screening performance: Recall = 0.94, Precision = 0.71.
+**Worked-example input:** This page displays an illustrative 15-row extraction fixture alongside a 150-record/135-after-dedup teaching narrative. Those counts and performance values are not a live retrieval or screening run and are not evidence that the checked-in CSVs came from the stated historical search.
 
 **Key Findings:** The meta-analysis of 15 studies demonstrates a consistent, statistically significant disparity. Patients from lower socioeconomic backgrounds experience worse clinical outcomes and poorer access to specialist care compared to high-SES patients. The pooled Risk Ratio indicates a substantial inequality gap across multiple healthcare systems.
 
@@ -875,7 +875,7 @@ GUIDED_EXAMPLES = [
 
 **Research Question (Thematic Synthesis):** What are the empirically measured outcomes of Universal Basic Income (UBI) programmes and pilots in terms of employment, poverty, and well-being?
 
-**Corpus & Screening:** 150 records retrieved via OpenAlex. 12 empirical evaluations of UBI or guaranteed income pilots were included after excluding opinion pieces and theoretical models. Screening performance: Recall = 0.92, Precision = 0.67.
+**Worked-example input:** This page displays an illustrative 12-row extraction fixture alongside a 150-record teaching narrative. The counts and performance values are not a live retrieval or screening run and are not evidence that the checked-in CSVs came from a particular historical query.
 
 **Key Findings (Thematic Synthesis):** Three cross-cutting themes emerge: (1) *Employment neutrality* — UBI does not produce significant declines in labor market participation; (2) *Well-being gains* — nearly all studies report reductions in psychological distress and income volatility; (3) *Poverty reduction* — material deprivation indicators improve consistently across contexts.
 
@@ -919,7 +919,7 @@ GUIDED_EXAMPLES = [
 
 **Research Question (Custom Schema):** What does the experimental literature report about the concentration, distribution, and detection methods of microplastic pollution across different aquatic environments?
 
-**Corpus & Screening:** 150 records retrieved via Crossref/OpenAlex. 14 empirical studies providing explicit mean concentration measurements in aquatic environments were included. Screening performance: Recall = 0.96, Precision = 0.74.
+**Worked-example input:** This page displays an illustrative 14-row extraction fixture alongside a 150-record teaching narrative. The counts and performance values are not a live retrieval or screening run and are not evidence that the checked-in CSVs came from a particular historical query.
 
 **Key Findings:** The quantitative summary highlights massive variability in reported concentrations, heavily dependent on environment type and detection method. Marine sediments show the highest absolute concentrations (often >400 particles/kg), acting as a sink. Freshwater systems exhibit high variability (0.5 to 3.2 particles/L) often correlated with proximity to urban centers. FTIR and Raman spectroscopy are the dominant detection methods.
 
@@ -965,7 +965,7 @@ GUIDED_EXAMPLES = [
 
 **Research Question (Custom Schema):** What is the empirical evidence on the relationship between Corporate Social Responsibility (CSR) activities and firm financial performance (ROA, ROE, Tobin's Q)?
 
-**Corpus & Screening:** 150 records retrieved via OpenAlex. 16 empirical studies reporting Pearson correlation coefficients (r) between a CSR metric and a financial performance metric were included. Screening performance: Recall = 0.93, Precision = 0.70.
+**Worked-example input:** This page displays an illustrative 16-row extraction fixture alongside a 150-record teaching narrative. The counts and performance values are not a live retrieval or screening run and are not evidence that the checked-in CSVs came from a particular historical query.
 
 **Key Findings:** The meta-analysis demonstrates a positive, statistically significant relationship between CSR and firm financial performance. The pooled correlation coefficient (r ≈ 0.168) indicates a small-to-medium effect size, supporting the "doing well by doing good" hypothesis. Environmental and Governance scores tend to drive the strongest financial correlations.
 
@@ -1140,7 +1140,7 @@ def compute_prisma(n_id, n_dedup, n_screened, n_included):
     n_excluded_fulltext = n_fulltext - n_included
 
     main_boxes = [
-        f"Records identified\nvia API search\n(n = {n_id})",
+        f"Records supplied\nto this pipeline\n(n = {n_id})",
         f"Records after\ndeduplication\n(n = {n_dedup})",
         f"Records screened\n(title & abstract)\n(n = {n_screened})",
         f"Full-text articles\nassessed for eligibility\n(n = {n_fulltext})",
@@ -1203,8 +1203,25 @@ def render_guided_example(ex):
     sk  = ex["session_key"]
     df  = ex["extraction_df"].copy()
 
+    # These tables are defined in this page as worked teaching fixtures. They are
+    # intentionally not presented as an empirical extraction run or as proof of a
+    # historical Day 1/Day 2 search and screening process.
+    day1_file = f"day1_{sk}_corpus.csv"
+    day2_file = f"day2_{sk}_screened.csv"
+    st.warning(
+        "**Worked example / synthetic teaching output — not an empirical run.** The extraction "
+        f"table ({len(df)} rows), temporal series, synthesis inputs, and PRISMA counts are "
+        "defined in this page for demonstration. They are not generated live from the "
+        "Day 2 CSV, and the visible results must not be cited as a completed review. "
+        f"For the repository handoff, Day 2's matching screened input is "
+        f"`data/cache/{day2_file}` and the corresponding Day 1 corpus reference is "
+        f"`data/cache/{day1_file}`. Checked-in CSVs do not prove the historical Day 1 "
+        "query string, search date, filters, or API response. For your own pipeline, use "
+        "Day 2's included-studies CSV download, then upload it in the Day 3 BYOD section."
+    )
+
     # ── Overview ───────────────────────────────────────────────────────────────
-    st.markdown(ex["overview_text"])
+    st.markdown(ex["overview_text"].replace("**Key Findings", "**Illustrative teaching narrative (not empirical findings)"))
 
     # ── Extraction Schema badge ────────────────────────────────────────────────
     schema_colors = {
@@ -1353,6 +1370,11 @@ types and studies, highlighting the variance between marine, freshwater, and sed
 Record flow: **{n_id}** identified → **{n_dedup}** after deduplication →
 **{n_screened}** screened → **{n_included}** included in synthesis.
     """)
+    st.caption(
+        "Illustrative PRISMA only: this teaching fixture uses a synthetic 60% full-text "
+        "assessment rule inside the diagram generator. It is not a measured workflow count "
+        "and must be replaced with documented counts for a real review."
+    )
     prisma_key = f"day3_{sk}_prisma_png"
     if prisma_key not in st.session_state:
         st.session_state[prisma_key] = compute_prisma(n_id, n_dedup, n_screened, n_included)
@@ -1459,11 +1481,12 @@ Use the sidebar to navigate to **📌 Guided Examples**, **📊 Reporting Standa
 elif section == "📌 Guided Examples":
     st.title("📌 Day 3 — Guided Examples")
     st.markdown("""
-Each example below walks through the full Day 3 pipeline for one case study:
+Each example below walks through a **worked teaching version** of the Day 3 pipeline for one case study:
 **structured data extraction** (with schema badge and failure-mode warning),
 **Temporal Analysis**, **synthesis** (meta-analysis, Thematic Synthesis, or quantitative
-summary), and a **PRISMA 2020 flow diagram**. All outputs are pre-rendered and persist
-on screen. Expand any example to explore it.
+summary), and a **PRISMA 2020 flow diagram**. The tables and chart inputs are embedded
+illustrative fixtures, not empirical extractions from the checked-in Day 2 CSVs; review and
+replace them with user-supplied data through **BYOD**. Expand any example to explore it.
     """)
 
     for ex in GUIDED_EXAMPLES:
@@ -1475,7 +1498,7 @@ on screen. Expand any example to explore it.
             period_str = f"{yr_from}\u2013{yr_to}" if yr_from and yr_to else "All years"
             types_str = ", ".join(pub_types) if pub_types else "All types"
             st.markdown(
-                f"**Time period:** {period_str} \u00a0|\u00a0 **Publication types:** {types_str}"
+                f"**Illustrative teaching criteria (not verified search filters):** {period_str} \u00a0|\u00a0 **Publication types:** {types_str}"
             )
             render_guided_example(ex)
 
@@ -1513,8 +1536,9 @@ specifically on the documentation of the search strategy. It requires reporting 
 exact search strings used in each database, the date of each search, the filters applied
 (publication year, language, access type), and the number of records retrieved per source.
 
-> The app's **Query Log** (Day 1) records all API queries with timestamps, enabling
-> PRISMA-S compliant search reporting. Participants can download the query log as a CSV.
+> When a live Day 1 BYOD/API session is used, its **Query Log** can record API queries with
+> timestamps for PRISMA-S reporting. The checked-in teaching CSVs do not establish that a
+> historical query log exists or prove the parameters that produced those snapshots.
 
 ---
 
@@ -1948,6 +1972,10 @@ You can then review, correct, and download the result.
 
         png_prisma = compute_prisma(int(n_id), int(n_dedup), int(n_screened), int(n_included_byod))
         st.image(png_prisma, use_container_width=True)
+        st.caption(
+            "The diagram generator applies a synthetic 60% full-text assessment rule; enter "
+            "and report real stage counts for an actual review."
+        )
         st.download_button(
             "⬇️ Download PRISMA diagram (PNG)",
             png_prisma,

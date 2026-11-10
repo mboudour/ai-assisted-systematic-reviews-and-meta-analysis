@@ -16,9 +16,17 @@ This repository is the companion resource for the three-day instats seminar
 [AI-Assisted Systematic Reviews and Meta-Analysis](https://instats.org/seminar/ai-assisted-systematic-reviews-and-meta).
 
 The seminar is a **no-code** research methods workshop: participants are not expected to write or
-modify a single line of code. All operations are performed through a
+modify a single line of code. Operations are performed through a
 [Streamlit application](https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app)
-that guides users through the complete evidence synthesis pipeline.
+that exposes menus for cached teaching examples, live or uploaded Day 1 inputs, screening, and
+Day 3 extraction/synthesis.
+
+The repaired workflow is deliberately explicit about provenance. The checked-in Day 1 and Day 2
+files are cached teaching snapshots. They do not establish the historical query string, search
+date, filters, or API response that produced them. Day 1's clickable practice searches are new
+suggestions that load proposed query/menu settings into the BYOD form; they are useful exercises,
+not claims about the original cached retrieval. Guided Day 3 pages use illustrative/synthetic
+teaching fixtures rather than a live empirical end-to-end run.
 
 ---
 
@@ -26,38 +34,77 @@ that guides users through the complete evidence synthesis pipeline.
 
 | Day | Date | Theme | Main Objective |
 |-----|------|-------|----------------|
-| **Day 1** | June 10, 2026 | From Query to Corpus | Collect bibliographic records via open APIs and deduplicate the corpus |
-| **Day 2** | June 11, 2026 | From Corpus to Included Studies | Screen titles and abstracts using Active Learning and LLM zero-shot classification |
-| **Day 3** | June 12, 2026 | From Studies to Evidence | Extract structured data from full-text PDFs and produce narrative or quantitative synthesis |
+| **Day 1** | June 10, 2026 | From Query to Corpus | Inspect cached examples, try suggested searches, or collect/upload a corpus via the available menus |
+| **Day 2** | June 11, 2026 | From Corpus to Included Studies | Review cached labels or run deterministic keyword screening on a supplied corpus, followed by human verification |
+| **Day 3** | June 12, 2026 | From Studies to Evidence | Explore illustrative teaching outputs or continue a Day 2 BYOD included-studies CSV into extraction and synthesis |
+
+The intended live handoff is **Day 1 BYOD → Day 2 BYOD → Day 3 BYOD**. Save the files and logs
+from each step; the guided path is for teaching and does not reconstruct historical provenance.
 
 ---
 
 ## Four Guided Case Studies
 
-Each day works through four discipline-spanning examples so you can follow the
-full systematic review lifecycle in a domain close to your own:
+The Day 1 **Guided Examples** menu contains four discipline-spanning worked examples. Opening an
+example loads its cached corpus and provides a clickable **practice search** suggestion tied to the
+search menus (query text, years, publication types, and related settings). These practice searches
+are suggestions, not verified historical searches for the cached files.
 
 | # | Discipline | Topic | API Source |
-|---|---|---|---|
-| 1 | Health Sciences | Health Inequalities in Chronic Disease Care | OpenAlex |
-| 2 | Social Sciences | Universal Basic Income (UBI) Policy Outcomes | OpenAlex |
-| 3 | Science / Engineering | Microplastic Pollution in Aquatic Environments | OpenAlex / Crossref |
-| 4 | Management / Business | CSR and Firm Financial Performance | OpenAlex |
+|---|-----------|-------|---|
+| 1 | Health Sciences | Health Inequalities in Chronic Disease Care | OpenAlex teaching snapshot |
+| 2 | Social Sciences | Universal Basic Income (UBI) Policy Outcomes | OpenAlex teaching snapshot |
+| 3 | Science / Engineering | Microplastic Pollution in Aquatic Environments | OpenAlex teaching snapshot |
+| 4 | Management / Business | CSR and Firm Financial Performance | OpenAlex teaching snapshot |
+
+The Day 2 guided pages similarly load checked-in screening snapshots and expose screening-log
+downloads. They do not prove the original Day 1 query, date, filters, or API response. The Day 3
+guided pages display illustrative extraction tables, narratives, charts, and PRISMA-style teaching
+outputs; their counts and performance values are not a live retrieval or screening run.
 
 ---
 
 ## BYOD — Bring Your Own Data
 
-A central feature of the seminar is the **BYOD (Bring Your Own Data)** extension, which allows participants to apply the pipeline directly to their own research questions. The BYOD modules are integrated into every day of the workshop:
+A central feature of the seminar is the **BYOD (Bring Your Own Data)** extension, which lets
+participants apply the pipeline to their own research questions. The intended path is a real file
+handoff from Day 1 to Day 2 to Day 3.
 
 ### Day 1: Build Your Own Corpus
-Participants formulate their own search queries (using Boolean logic and PICO/SPIDER frameworks) and run them against the OpenAlex, Crossref, or Europe PMC APIs directly within the app. (Semantic Scholar is not available for live queries due to strict public API rate limits; OpenAlex is recommended for STEM and biomedical topics.) The module automatically fetches the records, flattens nested metadata, performs DOI and title-based deduplication, and exports a clean CSV corpus ready for screening. A detailed query log is also generated to ensure methodological reproducibility.
+
+Use the search menus to choose OpenAlex, Crossref, or Europe PMC where supported, enter a query,
+and set the available scope, year, publication-type, and abstract filters. OpenAlex is retrieved
+with bounded pagination: page size and maximum pages impose a retrieval cap, so a large result set
+may be truncated. The query log records the actual query, filters, provider, retrieval metadata,
+and timestamp; download and retain it for reproducibility. Provider syntax, indexing, coverage,
+metadata, and filters differ. Semantic Scholar is not available for live queries in this app due
+to strict public API rate limits. Alternatively, upload RIS or use the Zotero path.
+
+**OpenAlex participant credentials:** each participant uses their own email-verified OpenAlex key.
+The app collects the key and email in masked, session-specific inputs. The key is sent to OpenAlex
+only over HTTPS in an `Authorization: Bearer` header; the email is not sent with searches. The key
+and email are not written to query logs or error metadata. This is not a promise of complete
+privacy from the operator or hosting environment: participants must assess operator/hosting trust
+and use credentials they are comfortable entering.
 
 ### Day 2: Screen Your Own Corpus
-Participants upload their Day 1 corpus (or any existing CSV containing titles and abstracts) and define their own inclusion and exclusion criteria in plain language. They first use the Active Learning module to prioritise the most relevant papers by seeding the model with keywords. They then use the LLM zero-shot screening module (powered seamlessly by the Hugging Face Inference API) to automatically classify their abstracts. The app generates a full Transparency Log containing the AI's decision and justification for every record.
+
+Upload the Day 1 corpus CSV (or another CSV containing titles and abstracts), enter inclusion and
+exclusion terms, and run the current BYOD screening path. The implementation is a deterministic,
+case-insensitive substring heuristic over Title + Abstract. It does **not** require or use an
+actual LLM for this BYOD run. The output includes an included-studies CSV and a full screening log,
+but the decisions are first-pass triage and need human eligibility verification. Any displayed
+recall, precision, F1, or WSS-style values are descriptive diagnostics, not validated metrics
+without an independently adjudicated reference set.
 
 ### Day 3: Synthesize Your Own Evidence
-Participants upload their screened, included studies and define a custom extraction schema (e.g., PICO elements, methodology, sample size, or specific effect sizes). The LLM extracts the structured data into a tabular format. Depending on the data, participants can then generate a narrative synthesis table, or — if quantitative effect sizes and confidence intervals are extracted — a forest plot with a pooled inverse-variance estimate. The module also automatically generates a PRISMA 2020 flow diagram mapping the exact record counts from their personal pipeline.
+
+Upload or carry forward the Day 2 included-studies CSV, choose a PICO, Thematic Synthesis, or
+custom schema, and use the available NLP route or optional AI extraction route. Generate structured
+tables, temporal/network views, and narrative or quantitative charts when the data support them.
+Check extracted values, effect sizes, denominators, and flow counts against the source studies.
+The guided Day 3 route is illustrative/synthetic; the BYOD route is the route for participant-
+supplied inputs and outputs.
 
 ---
 
@@ -67,21 +114,23 @@ The live Streamlit app is available at:
 **https://ai-assisted-systematic-reviews-and-meta-analysis.streamlit.app**
 
 No installation is required to use the app. Participants interact with menus, upload files,
-and export results entirely through the browser interface.
+run bounded searches or local heuristics, and export results through the browser interface.
 
 ---
 
 ## LLM Architecture
 
-The Streamlit app uses the **Hugging Face Serverless Inference API** (via `st.secrets`) for
-the BYOD (Bring Your Own Data) extension — participants do not need to provide any API key
-to use the live application during the seminar.
+The current repaired BYOD Day 2 screening implementation is **not an actual LLM call**: it uses a
+simple deterministic keyword heuristic and requires human verification. Day 3 offers an optional
+AI extraction route when configured, alongside a no-key NLP route; the guided examples remain
+illustrative teaching fixtures. Do not infer that every workflow stage uses an LLM or that any
+output is validated without review.
 
 ---
 
 ## Manuscript about the Workshop
 
-A manuscript describing the workshope is available here:
+A manuscript describing the workshop is available here:
 
 [AI-Assisted Systematic Reviews and Meta-Analysis Manuscript](./ai_systematic_review_paper.pdf)
 

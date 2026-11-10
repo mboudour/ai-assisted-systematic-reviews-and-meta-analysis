@@ -7,7 +7,7 @@ No coding required.
 
 APIs covered: OpenAlex, Crossref, Europe PMC
 (Semantic Scholar removed due to strict public API rate limits; OpenAlex recommended for STEM/CS)
-BYOD inputs: Boolean query (3 APIs), RIS/BibTeX file upload, Zotero connection
+BYOD inputs: Boolean query (3 APIs), RIS file upload, Zotero connection
 Outputs: CSV download, RIS export, Query Log, VOSviewer bibliometric network link,
          pyvis interactive keyword co-occurrence network
 """
@@ -18,6 +18,8 @@ import re
 import json
 import time
 import pathlib
+import sys
+import hashlib
 import requests
 import pandas as pd
 import streamlit as st
@@ -47,6 +49,9 @@ st.set_page_config(
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
 CACHE_DIR = _repo_root / "data" / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from openalex_client import OpenAlexError, fetch_works
 
 # ── Guided example definitions ─────────────────────────────────────────────────
 GUIDED_EXAMPLES = [
@@ -159,6 +164,50 @@ your personal User ID and API Key (available from your Zotero account settings).
         """,
     },
 ]
+
+# These are new practice searches, not verified historical retrieval queries.
+PRACTICE_SEARCHES = {
+    "ex1_health": '("health inequality" OR "health inequalities" OR socioeconomic) AND (diabetes OR "chronic disease")',
+    "ex2_ubi": '("universal basic income" OR "basic income") AND (employment OR poverty OR wellbeing)',
+    "ex3_microplastics": '(microplastic OR microplastics) AND (aquatic OR marine)',
+    "ex4_csr": '("corporate social responsibility" OR CSR) AND ("financial performance" OR profitability)',
+}
+
+def load_practice_search(example):
+    """Put the example's suggested settings into the actual BYOD widgets."""
+    st.session_state["day1_section"] = "🔎 BYOD — Your Own Query"
+    st.session_state["byod_api_widget"] = "OpenAlex (recommended for most disciplines)"
+    st.session_state["byod_query_widget"] = PRACTICE_SEARCHES[example["session_key"]]
+    st.session_state["byod_scope_widget"] = "Title and abstract (no stemming)"
+    st.session_state["byod_abstract_widget"] = True
+    st.session_state["byod_use_year"] = True
+    st.session_state["byod_yr_slider"] = (example["year_from"], example["year_to"])
+    st.session_state["byod_type_widget"] = [
+        "article" if value == "journal-article" else value
+        for value in example["pub_types"]
+    ]
+
+def send_snapshot_to_day2(df, example):
+    """Carry the exact cached file forward without inventing its provenance."""
+    st.session_state["byod_df"] = df.copy()
+    st.session_state["byod_api"] = "Cached teaching snapshot (historical retrieval not documented)"
+    st.session_state["byod_query"] = "Historical search not recorded"
+    st.session_state["byod_year_from"] = None
+    st.session_state["byod_year_to"] = None
+    st.session_state["byod_pub_types"] = []
+    snapshot = CACHE_DIR / example["cache_file"]
+    st.session_state["byod_log"] = {
+        "source": "cached teaching snapshot",
+        "snapshot_file": example["cache_file"],
+        "snapshot_sha256": hashlib.sha256(snapshot.read_bytes()).hexdigest(),
+        "records": len(df),
+        "historical_query_and_filters": "not recorded in the repository",
+    }
+
+def forget_openalex_credentials():
+    """Clear only this browser session's masked credential widgets."""
+    st.session_state.pop("openalex_email_widget", None)
+    st.session_state.pop("openalex_key_widget", None)
 
 # ── Stopwords for keyword extraction ──────────────────────────────────────────
 _STOPWORDS = {
@@ -288,6 +337,7 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
 
     # ── Build node / edge data as JSON ────────────────────────────────────────
     import json as _json
+    import html as _html
 
     # Pre-compute degree (number of distinct neighbours) for each node
     _degree: dict = {}
@@ -310,7 +360,7 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
             # frequency-quartile group already encoded in color choice (1-4)
             community_label = cid + 1  # cid set below via partition fallback
         tooltip = (
-            f"<b>{kw}</b><br/>"
+            f"<b>{_html.escape(kw)}</b><br/>"
             f"Frequency: {f}<br/>"
             f"Degree: {deg}<br/>"
             f"Community: {community_label}"
@@ -337,8 +387,9 @@ def generate_pyvis_html(df, top_n=40, min_cooccurrence=2):
             "color": {"opacity": opacity},
         })
 
-    nodes_json = _json.dumps(nodes_data)
-    edges_json = _json.dumps(edges_data)
+    # Data may come from user uploads; prevent a label from ending the script tag.
+    nodes_json = _json.dumps(nodes_data).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    edges_json = _json.dumps(edges_data).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     legend_note = f" ({num_communities} Louvain communities detected)" if louvain_ok else ""
 
     # ── Load vis-network JS from the local pyvis package (no CDN) ─────────────
@@ -727,10 +778,9 @@ def generate_vosviewer_json(df, top_n=40, min_cooccurrence=2):
 
 def render_vosviewer_section(df, session_key):
     """Render the VOSviewer bibliometric network section.
-    Generates a valid VOSviewer JSON, uploads it to a public URL, and provides
-    a one-click link to open the map directly in VOSviewer Online.
+    Generate a downloadable JSON without publishing participant data online.
     """
-    import subprocess, tempfile, os, json as _json
+    import json as _json
 
     st.markdown("#### 🔬 Bibliometric Network Map — VOSviewer")
     st.markdown("""
@@ -741,51 +791,19 @@ from a corpus of literature. It is free and available in two versions:
 - **VOSviewer Desktop** — full application (Windows / Mac / Linux), for larger corpora and offline use.
     """)
 
-    # ── Generate VOSviewer JSON ────────────────────────────────────────────────
+    # Do not upload participant research data to a public third-party URL.
     vos_data = generate_vosviewer_json(df)
-    vos_url = None
-
-    if vos_data is not None:
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".json", delete=False, prefix=f"{session_key}_vos_"
-            ) as tmp:
-                _json.dump(vos_data, tmp, ensure_ascii=False)
-                tmp_path = tmp.name
-
-            result = subprocess.run(
-                ["manus-upload-file", tmp_path],
-                capture_output=True, text=True, timeout=30
-            )
-            os.unlink(tmp_path)
-
-            for line in result.stdout.strip().splitlines():
-                line = line.strip()
-                if line.startswith("http"):
-                    vos_url = line
-                    break
-        except Exception:
-            vos_url = None
 
     # ── Buttons row ───────────────────────────────────────────────────────────
     col1, col2 = st.columns([3, 1])
 
     with col2:
-        if vos_url:
-            online_link = f"https://app.vosviewer.com/?json={vos_url}"
-            st.link_button(
-                "🌐 Open in VOSviewer Online",
-                online_link,
-                use_container_width=True,
-            )
-            st.caption("Click to open the keyword co-occurrence map directly in your browser — no installation needed.")
-        else:
-            st.link_button(
-                "🌐 Open VOSviewer Online",
-                "https://app.vosviewer.com",
-                use_container_width=True,
-            )
-            st.caption("Load the downloaded JSON file via the folder icon on the site.")
+        st.link_button(
+            "🌐 Open VOSviewer Online",
+            "https://app.vosviewer.com",
+            use_container_width=True,
+        )
+        st.caption("Load the downloaded JSON file via the folder icon on the site. The app does not publish it automatically.")
         st.markdown("")
         st.link_button(
             "⬇️ VOSviewer Desktop",
@@ -880,52 +898,10 @@ def display_corpus(df, source_label, session_key):
             key=f"dl_ris_{session_key}",
         )
 
-    st.info("✅ This corpus is pre-loaded for Day 2 screening. Go to **Day 2 → From Corpus to Included Studies** when ready.")
+    st.info("For Day 2, carry your live BYOD results forward in this session, or download the CSV and upload it in Day 2. For a guided snapshot, use its Day 2 handoff button above.")
 
 
 # ── Live API helpers (BYOD only) ───────────────────────────────────────────────
-
-def _sanitise_for_openalex(query: str) -> str:
-    """Strip Boolean operators, parentheses, and quoted phrases from a query string
-    so it is safe to pass to OpenAlex's `search` parameter, which only accepts
-    plain keyword terms (no AND/OR/NOT/parentheses).
-    """
-    import re as _re
-    # Remove parentheses
-    q = query.replace('(', ' ').replace(')', ' ')
-    # Remove quoted phrases — keep the words inside the quotes
-    q = _re.sub(r'"([^"]+)"', r'\1', q)
-    # Remove Boolean operators (case-insensitive, whole word)
-    q = _re.sub(r'\b(AND|OR|NOT)\b', ' ', q, flags=_re.IGNORECASE)
-    # Collapse whitespace
-    q = ' '.join(q.split())
-    return q
-
-
-def query_openalex_live(search_query, per_page=50, max_pages=2):
-    base = "https://api.openalex.org/works"
-    clean_query = _sanitise_for_openalex(search_query)
-    params = {
-        "search": clean_query,
-        "filter": "has_abstract:true",
-        "per_page": per_page,
-        "select": "id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count,concepts",
-        "cursor": "*",
-    }
-    records = []
-    for _ in range(max_pages):
-        r = requests.get(base, params=params, timeout=30)
-        r.raise_for_status()
-        data = r.json()
-        batch = data.get("results", [])
-        records.extend(batch)
-        cursor = data.get("meta", {}).get("next_cursor")
-        if not cursor:
-            break
-        params["cursor"] = cursor
-        time.sleep(0.3)
-    return records
-
 
 def query_crossref_live(search_query, per_page=50):
     base = "https://api.crossref.org/works"
@@ -1032,12 +1008,14 @@ def openalex_to_df(records):
     rows = []
     for r in records:
         raw_aii = r.get("abstract_inverted_index") or {}
-        if raw_aii:
-            max_pos = max(pos for positions in raw_aii.values() for pos in positions)
+        positions_all = [pos for positions in raw_aii.values() for pos in positions if isinstance(pos, int) and pos >= 0]
+        if positions_all:
+            max_pos = max(positions_all)
             words = [""] * (max_pos + 1)
             for word, positions in raw_aii.items():
                 for pos in positions:
-                    words[pos] = word
+                    if isinstance(pos, int) and 0 <= pos <= max_pos:
+                        words[pos] = word
             abstract = " ".join(words)
         else:
             abstract = ""
@@ -1061,6 +1039,7 @@ def openalex_to_df(records):
             "Abstract": abstract,
             "Citations": r.get("cited_by_count", 0),
             "Concepts": concepts,
+            "Publication Type": r.get("type", ""),
         })
     return pd.DataFrame(rows)
 
@@ -1118,6 +1097,7 @@ st.sidebar.title("Day 1 Navigation")
 section = st.sidebar.radio(
     "Select section",
     ["Overview", "📌 Guided Examples", "🔎 BYOD — Your Own Query"],
+    key="day1_section",
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1167,7 +1147,7 @@ Participants do not need to start from a Boolean query. The BYOD section accepts
 | Input Type | When to Use |
 |------------|-------------|
 | **Boolean Query** | Starting a review from scratch |
-| **RIS / BibTeX File** | Already searched traditional databases (PubMed, Scopus, Web of Science) |
+| **RIS File** | Already searched traditional databases (PubMed, Scopus, Web of Science) |
 | **Zotero Integration** | Already using a reference manager — connect your cloud or self-hosted library |
 
 ### Two Visualisation Tools for Every Corpus
@@ -1199,42 +1179,42 @@ Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Your Own Qu
 
 elif section == "📌 Guided Examples":
     st.title("📌 Day 1 — Guided Examples")
-    st.markdown("""
-Each example below loads a pre-built corpus from a cached dataset.
-**Expand any example** to see the corpus preview, year distribution chart,
-an **interactive keyword co-occurrence network** (pyvis), VOSviewer export
-instructions, and download buttons (CSV and RIS).
-No button click required — everything renders immediately.
+    st.markdown("""These examples display **saved teaching snapshots**, not live searches.
+The first four contain OpenAlex identifiers. The fifth is a Zotero-style teaching fixture.
+Expand an example to inspect the records, visualisations and downloads.
 
-**Five examples are provided:**
-- 🏥 Health Sciences (OpenAlex)
-- 🏛️ Social Sciences (OpenAlex)
-- ⚗️ Science / Engineering (OpenAlex)
-- 💼 Management / Business (OpenAlex)
-- 🗂️ Zotero Library (researcher's existing reference collection)
-    """)
+**Important provenance limitation:** the repository does not contain the original
+search logs, retrieval dates or filters for these snapshots. Earlier labels for dates
+and publication types do not always match the files. We cannot reconstruct or verify
+the historical searches. The practice queries below are new suggestions, not claims
+about how the existing snapshots were created.""")
 
     for ex in GUIDED_EXAMPLES:
         st.markdown("---")
         with st.expander(ex["label"], expanded=False):
-            st.markdown(ex["description"])
-            if ex["source"] == "Zotero":
-                st.markdown(f"**Source:** {ex['source']} &nbsp;|&nbsp; **Collection:** `{ex['query']}`")
-            else:
-                yr_from = ex.get("year_from")
-                yr_to = ex.get("year_to")
-                pub_types = ex.get("pub_types", [])
-                period_str = f"{yr_from}–{yr_to}" if yr_from and yr_to else "All years"
-                types_str = ", ".join(pub_types) if pub_types else "All types"
-                st.markdown(
-                    f"**API source:** {ex['source']} &nbsp;|&nbsp; **Query:** `{ex['query']}`  \n"
-                    f"**Time period:** {period_str} &nbsp;|&nbsp; **Publication types:** {types_str}"
+            st.caption(f"Saved input file: data/cache/{ex['cache_file']}")
+            if ex["source"] != "Zotero":
+                st.markdown("**New suggested practice search:**")
+                st.code(PRACTICE_SEARCHES[ex["session_key"]])
+                st.caption(
+                    f"Suggested BYOD settings: title and abstract, abstract required, "
+                    f"{ex['year_from']}–{ex['year_to']}; types: "
+                    f"{', '.join('article' if p == 'journal-article' else p for p in ex['pub_types'])}. "
+                    "These are practice settings, not verified settings for the snapshot."
                 )
+                st.button("Use this practice search in BYOD", key=f"practice_{ex['session_key']}",
+                          on_click=load_practice_search, args=(ex,))
+                st.caption("The button fills the same BYOD search menus used for your own research; run it with your key. Live results may differ from this snapshot.")
+            else:
+                st.info("This is a Zotero-style illustrative fixture, not a verified export from a named user's live library. There is no OpenAlex search for it.")
 
             df, err = load_cached_corpus(ex["cache_file"])
             if err:
                 st.error(f"❌ {err}")
             else:
+                if st.button("Use this exact snapshot in Day 2 BYOD", key=f"send_{ex['session_key']}"):
+                    send_snapshot_to_day2(df, ex)
+                    st.success("Snapshot copied to this browser session. Open Day 2 → BYOD to screen it; the historical query is marked as unknown.")
                 display_corpus(df, ex["label"], ex["session_key"])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1256,7 +1236,7 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         "How would you like to provide your literature?",
         [
             "🔍 Boolean Query (search open APIs live)",
-            "📄 Upload RIS / BibTeX file",
+            "📄 Upload RIS file",
             "🗂️ Zotero Integration",
         ],
         horizontal=True,
@@ -1272,42 +1252,87 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                 "Crossref (DOI-centric, all disciplines)",
                 "Europe PMC (Life sciences, health)",
             ],
+            key="byod_api_widget",
         )
-        st.caption("ℹ️ Semantic Scholar is not available for live queries due to strict rate limits on their public API. Use OpenAlex for STEM and biomedical topics — it covers the same literature without rate restrictions.")
+        is_openalex = api_choice.startswith("OpenAlex")
+        st.caption("Each provider has its own search syntax and usage limits. OpenAlex supports uppercase AND, OR and NOT, parentheses and quoted phrases.")
         query_input = st.text_input(
-            "Enter your search query (e.g. 'machine learning clinical diagnosis')",
-            placeholder="e.g. telemedicine chronic disease management outcomes",
+            "Search query",
+            placeholder='e.g. (creativity OR creative) AND "artificial intelligence"',
+            key="byod_query_widget",
         )
         per_page = st.slider("Records per page", min_value=10, max_value=100, value=50, step=10)
-        max_pages = st.slider("Number of pages to retrieve", min_value=1, max_value=5, value=2)
-
-        use_year_filter = st.checkbox("Filter by publication year range", value=False, key="byod_use_year")
-        if use_year_filter:
-            yr_range = st.slider("Publication year range", min_value=1990, max_value=2026, value=(2010, 2026), step=1, key="byod_yr_slider")
-            byod_year_from, byod_year_to = yr_range
+        if is_openalex:
+            scope_label = st.selectbox(
+                "Search scope",
+                ["Title and abstract (no stemming)", "Broad: title, abstract, full text and keywords"],
+                key="byod_scope_widget",
+            )
+            st.caption("Quoted phrases are retained. OpenAlex's broad search may match full text or keywords not visible in a title/abstract. Unquoted words default to AND.")
+            require_abstract = st.checkbox("Only include works with an abstract", value=True, key="byod_abstract_widget")
+            max_pages = st.slider("Maximum number of pages to retrieve", min_value=1, max_value=5, value=2)
+            st.caption("The app retrieves at most records per page × maximum pages. A larger search may have more matches than are downloaded.")
+            use_year_filter = st.checkbox("Filter by publication year range", value=False, key="byod_use_year")
+            if use_year_filter:
+                current_year = time.gmtime().tm_year
+                byod_year_from, byod_year_to = st.slider(
+                    "Publication year range", min_value=1900, max_value=current_year,
+                    value=(2010, current_year), step=1, key="byod_yr_slider",
+                )
+            else:
+                byod_year_from, byod_year_to = None, None
+            byod_pub_types = st.multiselect(
+                "OpenAlex publication types (leave empty for all types)",
+                ["article", "book-chapter", "conference-paper", "preprint", "review", "report"],
+                default=[], key="byod_type_widget",
+            )
+            st.caption("OpenAlex calls journal articles ‘article’. Year, type and abstract filters are applied to the API request before records are returned.")
+            st.markdown("#### Your OpenAlex credentials")
+            st.markdown("Create a free account at [OpenAlex](https://openalex.org/signup), verify your email, and copy your key from [API settings](https://openalex.org/settings/api-key). A key is required for this app's OpenAlex searches and later cursor pages.")
+            st.caption("Both fields are masked and held in this browser session's Streamlit state; they are not included in downloads or query logs. The app sends the key to OpenAlex over HTTPS in an authorization header. Your email is not sent with searches. The app/server operator can potentially access session data; use a trusted HTTPS deployment and a private browser session.")
+            with st.form("openalex_private_credentials"):
+                openalex_email = st.text_input("Verified OpenAlex account email", type="password", key="openalex_email_widget")
+                openalex_key = st.text_input("OpenAlex API key", type="password", key="openalex_key_widget")
+                run_query = st.form_submit_button("▶ Run My Query")
+            st.button("Forget my OpenAlex credentials", on_click=forget_openalex_credentials, key="forget_openalex")
         else:
+            st.info("This provider currently retrieves one page. Year and publication-type filters are not available here. Query interpretation is provider-specific; Boolean syntax is not guaranteed.")
+            max_pages = 1
             byod_year_from, byod_year_to = None, None
-        byod_pub_types = st.multiselect(
-            "Publication types (leave empty for all types)",
-            ["journal-article", "book-chapter", "conference-paper", "preprint", "review", "report"],
-            default=[],
-        )
-        if st.button("▶ Run My Query", key="run_byod"):
+            byod_pub_types = []
+            run_query = st.button("▶ Run My Query", key="run_byod_other")
+
+        if run_query:
             if not query_input.strip():
                 st.warning("Please enter a search query above.")
+            elif is_openalex and (not openalex_key.strip() or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", openalex_email.strip())):
+                st.warning("Enter your OpenAlex API key and a valid account email. OpenAlex must have verified the email associated with the key.")
             else:
+                # Avoid presenting an earlier successful corpus as the result of a failed new query.
+                for state_key in ("byod_df", "byod_log", "byod_query", "byod_api", "byod_year_from", "byod_year_to", "byod_pub_types"):
+                    st.session_state.pop(state_key, None)
                 with st.spinner(f"Querying {api_choice.split('(')[0].strip()}…"):
                     try:
                         api_name = api_choice.split("(")[0].strip()
-                        if "OpenAlex" in api_choice:
-                            records = query_openalex_live(query_input.strip(), per_page=per_page, max_pages=max_pages)
+                        if is_openalex:
+                            records, request_log = fetch_works(
+                                query_input.strip(), openalex_key.strip(),
+                                per_page=per_page, max_pages=max_pages,
+                                year_from=byod_year_from, year_to=byod_year_to,
+                                publication_types=byod_pub_types,
+                                search_scope="title_abstract_exact" if scope_label.startswith("Title") else "broad",
+                                require_abstract=require_abstract,
+                            )
                             df = openalex_to_df(records)
                         elif "Crossref" in api_choice:
                             df = query_crossref_live(query_input.strip(), per_page=per_page)
+                            request_log = {"endpoint": "https://api.crossref.org/works", "pages_fetched": 1, "scope": "provider-specific keyword search", "filters": []}
                         elif "Europe PMC" in api_choice:
                             df = query_europepmc_live(query_input.strip(), per_page=per_page)
+                            request_log = {"endpoint": "https://www.ebi.ac.uk/europepmc/webservices/rest/search", "pages_fetched": 1, "scope": "provider-specific search", "filters": []}
                         else:
                             df = pd.DataFrame()
+                            request_log = {}
 
                         before = len(df)
                         df = deduplicate_df(df)
@@ -1324,31 +1349,43 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                             "query": query_input.strip(),
                             "api": api_name,
                             "per_page": per_page,
-                            "max_pages": max_pages if "OpenAlex" in api_choice else 1,
+                            "max_pages": max_pages,
                             "records_retrieved": before,
                             "records_after_dedup": after,
-                            "year_from": int(byod_year_from) if byod_year_from else "all",
-                            "year_to": int(byod_year_to) if byod_year_to else "all",
-                            "publication_types": byod_pub_types if byod_pub_types else "all",
+                            "year_from": int(byod_year_from) if byod_year_from else None,
+                            "year_to": int(byod_year_to) if byod_year_to else None,
+                            "publication_types": byod_pub_types,
+                            "request": request_log,
+                            "deduplication": "Same DOI, or same lowercased title for records without DOI; first retained.",
+                            "corpus_csv_sha256": hashlib.sha256(df.to_csv(index=False).encode("utf-8")).hexdigest(),
                             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
                         }
                         st.session_state["byod_log"] = log
-                    except Exception as e:
-                        st.error(f"Error retrieving data: {e}")
+                        if request_log.get("possibly_truncated"):
+                            st.warning("More records may be available. The selected maximum number of pages was reached; the saved corpus is not the complete result set.")
+                    except OpenAlexError as exc:
+                        st.error(f"{exc}. For authentication errors, check the key and verify its account email. For rate limits, wait before retrying.")
+                    except Exception:
+                        st.error("Unable to retrieve or process the results. Check the selected provider and query, then try again. No credentials are included in this message.")
 
         if "byod_df" in st.session_state and st.session_state["byod_df"] is not None:
             df = st.session_state["byod_df"]
             _yr_from = st.session_state.get("byod_year_from")
             _yr_to = st.session_state.get("byod_year_to")
             _ptypes = st.session_state.get("byod_pub_types", [])
-            _period = f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years"))
-            _types_disp = ", ".join(_ptypes) if _ptypes else "All types"
+            _snapshot = st.session_state.get("byod_log", {}).get("source") == "cached teaching snapshot"
+            _period = "Not recorded" if _snapshot else (f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years")))
+            _types_disp = "Not recorded" if _snapshot else (", ".join(_ptypes) if _ptypes else "All types")
             st.markdown(
                 f"**API source:** {st.session_state.get('byod_api', '')} &nbsp;|&nbsp; "
                 f"**Query:** `{st.session_state.get('byod_query', '')}`  \n"
                 f"**Time period:** {_period} &nbsp;|&nbsp; **Publication types:** {_types_disp}"
             )
-            display_corpus(df, f"Custom query: '{st.session_state.get('byod_query', '')}'", "byod")
+            st.caption("Results below are from the last successfully completed search or selected snapshot, not from unsubmitted changes to the menus.")
+            if df.empty:
+                st.warning("The search returned no records with these settings. Consider a broader query, different search scope, or removing a filter.")
+            else:
+                display_corpus(df, f"Custom query: '{st.session_state.get('byod_query', '')}'", "byod")
             if "byod_log" in st.session_state:
                 st.markdown("#### Query Log (for reproducibility)")
                 st.json(st.session_state["byod_log"])
@@ -1359,20 +1396,20 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                     key="dl_log",
                 )
 
-    # ── Option 2: RIS / BibTeX Upload ─────────────────────────────────────────
-    elif input_method == "📄 Upload RIS / BibTeX file":
+    # ── Option 2: RIS Upload ──────────────────────────────────────────────────
+    elif input_method == "📄 Upload RIS file":
         st.markdown("""
-#### Upload an Existing RIS or BibTeX File
+#### Upload an Existing RIS File
 
 If you have already searched traditional databases (PubMed, Scopus, Web of Science,
-CINAHL, PsycINFO, etc.) and exported the results as a **RIS** or **BibTeX** file,
+CINAHL, PsycINFO, etc.) and exported the results as a **RIS** file,
 upload it here. The app will parse the file, deduplicate the records, and produce
 the same corpus preview, year chart, interactive keyword co-occurrence network,
 VOSviewer bibliometric network export, and download options as the guided examples.
         """)
         uploaded_file = st.file_uploader(
-            "Upload your RIS or BibTeX file",
-            type=["ris", "bib", "txt"],
+            "Upload your RIS file",
+            type=["ris", "txt"],
             key="ris_upload",
         )
         if uploaded_file is not None:

@@ -2,7 +2,9 @@
 Day 2 — From Corpus to Included Studies
 Four guided examples (Health, Social Science, Engineering, Business) + BYOD extension.
 Guided examples load exclusively from pre-cached screening CSVs.
-No live API calls, no session state dependency from Day 1.
+These are illustrative/cached teaching inputs, not evidence that a historical Day 1
+query produced them. No live API calls are made by the guided examples; BYOD can use
+the live Day 1 session or a user-supplied download.
 No coding required.
 
 Covers: PICO/SPIDER criteria, Active Learning (TF-IDF + Logistic Regression),
@@ -518,6 +520,39 @@ def load_screened(screened_file):
     return None, f"Screened file not found: {screened_file}"
 
 
+def render_guided_provenance(ex, df):
+    """Explain the checked-in handoff without implying a reproducible historical search."""
+    day1_file = ex["screened_file"].replace("day2_", "day1_").replace("_screened", "_corpus")
+    day1_path = CACHE_DIR / day1_file
+    id_check = "not available"
+    day1_count = "not available"
+    if day1_path.exists():
+        try:
+            day1_df = pd.read_csv(day1_path)
+            day1_count = len(day1_df)
+            if "ID" in day1_df.columns and "ID" in df.columns:
+                day1_ids = set(day1_df["ID"].dropna().astype(str))
+                day2_ids = set(df["ID"].dropna().astype(str))
+                id_check = "match" if day1_ids == day2_ids else (
+                    f"do not match ({len(day1_ids - day2_ids)} only in Day 1; "
+                    f"{len(day2_ids - day1_ids)} only in Day 2)"
+                )
+        except Exception as e:
+            id_check = f"unavailable ({e})"
+    st.info(
+        f"**Teaching-input provenance:** this screen is loaded from the checked-in "
+        f"`data/cache/{ex['screened_file']}` ({len(df)} rows). The corresponding Day 1 "
+        f"corpus file is `data/cache/{day1_file}` "
+        f"({'present' if day1_path.exists() else 'not present'}). These files are "
+        f"visible as **Day 1 rows = {day1_count}; Day 2 rows = {len(df)}; ID-set check = {id_check}** "
+        "(row order may differ). Both are cached teaching snapshots; the repository "
+        "does not establish the historical Day 1 search parameters, date, or API response "
+        "that produced them. Day 2 displays existing screening labels and criteria and "
+        "offers the included-study CSV and full "
+        "screening-log downloads below."
+    )
+
+
 def render_recall_chart(df, session_key):
     """Render a simulated recall curve showing how Active Learning surfaces relevant papers."""
     if "Relevance_Score" not in df.columns or "AL_Decision" not in df.columns:
@@ -566,7 +601,8 @@ def display_screening_results(df, session_key, ex):
     period_str = f"{yr_from}\u2013{yr_to}" if yr_from and yr_to else "All years"
     types_str = ", ".join(pub_types) if pub_types else "All types"
     st.markdown(
-        f"**Time period:** {period_str} \u00a0|\u00a0 **Publication types:** {types_str}"
+        f"**Illustrative teaching criteria (not verified search filters):** {period_str} "
+        f"\u00a0|\u00a0 **Publication types:** {types_str}"
     )
     # ── PICO / SPIDER criteria ─────────────────────────────────────────────────
     st.markdown("#### Screening Framework — " + ex["framework"])
@@ -591,6 +627,11 @@ def display_screening_results(df, session_key, ex):
 
     # Recall-oriented metrics
     st.markdown("#### Recall-Oriented Evaluation Metrics")
+    st.caption(
+        "These values are descriptive diagnostics computed from the cached labels or the "
+        "current BYOD heuristic output; they are not validated recall, precision, F1, or "
+        "WSS estimates without an independently adjudicated reference set."
+    )
     precision = n_include / max(n_include + n_exclude, 1)
     recall_est = min(1.0, n_include / max(n_include + n_uncertain, 1))
     f1 = 2 * precision * recall_est / max(precision + recall_est, 1e-9)
@@ -703,6 +744,17 @@ thousands of titles and abstracts against pre-specified inclusion and exclusion 
 You will be introduced to two complementary AI-assisted approaches and will see them
 applied to all four guided case studies.
 
+### Where Day 2 Fits in the Pipeline
+
+**Day 1 → Day 2 → Day 3:** Day 1 supplies a corpus CSV; Day 2 screens that corpus and
+offers an **included-studies CSV** plus a **full screening-log CSV**; Day 3 extracts fields
+and synthesizes evidence. The guided path uses checked-in teaching snapshots so it can
+render without a live search. It is not a reconstruction of the historical Day 1 search:
+the checked-in CSVs do not prove the original query string, search date, filters, or API
+response. Use **Day 1 → Guided Examples** to inspect/download the example corpus, or
+**Day 1 → BYOD** to run or upload your own corpus and download its CSV before using it
+here. In a reproducible review, retain the Day 1 query log and search metadata separately.
+
 ### Screening Frameworks: PICO and SPIDER
 
 Before any screening can begin, the review question must be formalised using a structured
@@ -761,9 +813,10 @@ how much screening effort is saved while retaining 95% of relevant studies.
 
 In any systematic review, at least two independent reviewers should screen a random
 sample of abstracts to assess agreement. The **Cohen's κ** statistic is the standard
-measure: κ ≥ 0.61 is considered substantial agreement. In this app, the AL model and
-the LLM serve as two independent screeners, and their agreement rate is reported in
-the Transparency Log.
+measure: κ ≥ 0.61 is considered substantial agreement. In the guided teaching snapshots,
+the AL/LLM decision columns are displayed for audit practice; their agreement is
+descriptive and does not establish two independently run validated screeners. In BYOD,
+both columns are produced by the deterministic heuristic described above.
 
 ### Session Structure
 
@@ -791,10 +844,13 @@ Use the sidebar to go to **📌 Guided Examples** or **🔎 BYOD — Screen Your
 elif section == "📌 Guided Examples":
     st.title("📌 Day 2 — Guided Examples")
     st.markdown("""
-Each example below loads **pre-computed screening results** for the four case study corpora
-from Day 1. **Expand any example** to see the PICO/SPIDER criteria, Active Learning
+Each example below loads **cached screening-result labels** from checked-in teaching CSVs.
+The matching Day 1 corpus CSV is shown as a reference input, but these files do not prove
+that a particular historical query created the snapshot. **Expand any example** to see the PICO/SPIDER criteria, Active Learning
 rankings, recall curve, recall-oriented metrics, LLM decisions, and Transparency Log.
-No button click required — results render immediately.
+No button click required — results render immediately. Download the included-study CSV or
+full screening log at the bottom of each example, then open Day 3 and upload the included
+CSV if session carry-over is unavailable.
     """)
 
     for ex in GUIDED_EXAMPLES:
@@ -805,6 +861,7 @@ No button click required — results render immediately.
                 st.error(f"❌ {err}")
             else:
                 st.success(f"✅ Screening results loaded: {len(df)} records.")
+                render_guided_provenance(ex, df)
                 display_screening_results(df, ex["session_key"], ex)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -814,10 +871,14 @@ No button click required — results render immediately.
 elif section == "🔎 BYOD — Screen Your Own Corpus":
     st.title("🔎 Day 2 — Bring Your Own Data")
     st.markdown("""
-Use this section to screen **your own corpus** from Day 1. Upload the CSV you downloaded
-from Day 1 (or use the corpus saved in the session), define your PICO/SPIDER criteria
-as inclusion and exclusion terms, and the app will rank and screen your records automatically.
-No coding required.
+Use this section to screen **your own corpus** from Day 1. In Day 1, use the **Download
+corpus as CSV** control in a guided example or BYOD result, then upload that file here (or
+use the corpus saved in the current session). Define your PICO/SPIDER criteria as inclusion
+and exclusion terms, and the app will rank and screen your records automatically using a
+deterministic case-insensitive substring heuristic over Title + Abstract (not a live LLM or
+independent Active Learning model). The
+resulting **included studies CSV** and **full screening log CSV** appear after screening;
+download the included file and upload it in Day 3 → **BYOD — Your Own Synthesis**. No coding required.
     """)
 
     uploaded = st.file_uploader("Upload your Day 1 corpus CSV", type=["csv"])
@@ -828,8 +889,9 @@ No coding required.
         _yr_from = st.session_state.get("byod_year_from")
         _yr_to = st.session_state.get("byod_year_to")
         _ptypes = st.session_state.get("byod_pub_types", [])
-        _period = f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years"))
-        _types_disp = ", ".join(_ptypes) if _ptypes else "All types"
+        _snapshot = st.session_state.get("byod_log", {}).get("source") == "cached teaching snapshot"
+        _period = "Not recorded" if _snapshot else (f"{_yr_from}–{_yr_to}" if _yr_from and _yr_to else ("from " + str(_yr_from) if _yr_from else ("up to " + str(_yr_to) if _yr_to else "All years")))
+        _types_disp = "Not recorded" if _snapshot else (", ".join(_ptypes) if _ptypes else "All types")
         st.markdown(
             f"**Query:** `{st.session_state.get('byod_query', '')}` &nbsp;|&nbsp; "
             f"**API:** {st.session_state.get('byod_api', '')}  \n"
@@ -877,6 +939,11 @@ No coding required.
         )
 
         if st.button("▶ Run Screening", key="byod_screen"):
+            st.caption(
+                "BYOD implementation note: this run uses deterministic substring counts and "
+                "the same resulting heuristic decision in both displayed decision columns; "
+                "it is not a validated AL-versus-LLM comparison."
+            )
             include_terms = [t.strip() for t in include_input.splitlines() if t.strip()]
             exclude_terms = [t.strip() for t in exclude_input.splitlines() if t.strip()]
 

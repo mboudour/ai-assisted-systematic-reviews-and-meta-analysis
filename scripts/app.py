@@ -1,6 +1,6 @@
 """
 AI-Assisted Systematic Reviews and Meta-Analysis — Workshop
-Landing page: seminar overview, 5-module architecture, input flexibility, case studies.
+Landing page: seminar overview, workflow architecture, worked examples, and BYOD limits.
 """
 
 import streamlit as st
@@ -32,19 +32,18 @@ st.markdown("""
 This seminar is conceived as a **no-code** research methods workshop: participants are not
 expected to write or modify a single line of code. It is designed for early-career academic
 professionals, advanced doctoral students, and researchers across a wide range of disciplines
-— from the health and life sciences to the social sciences, humanities, and engineering.
+—from the health and life sciences to the social sciences, humanities, and engineering.
 
-Participants work through a guided workflow via this Streamlit application, through which
-they upload, process, screen, extract, and synthesize literature through a guided, no-code
-interface. A parallel code repository containing scripts in both **Python** and **R** is
-provided for transparency and reproducibility, but interacting with it is entirely optional.
+Participants work through a guided workflow via this Streamlit application. The app provides
+menus for cached teaching examples, live or uploaded Day 1 inputs, deterministic Day 2 practice
+screening, and Day 3 extraction/synthesis options. A parallel code repository containing scripts
+in **Python** and **R** is provided for transparency; interacting with it is optional.
 
-The seminar focuses on how the overwhelming volume of academic literature can be
-navigated, screened, and synthesized using **Artificial Intelligence (AI)**. Participants
-learn how to collect bibliographic data via open APIs, use **Active Learning** and
-**Large Language Models (LLMs)** to screen abstracts, extract structured data from
-full-text PDFs, and conduct an initial narrative or quantitative synthesis — all within this
-no-code environment, with explicit validation and human verification at each stage.
+The seminar focuses on how academic literature can be navigated, screened, and synthesized with
+explicit validation and human verification. Some workshop material demonstrates AI-assisted
+methods, but the current BYOD Day 2 screening path is a simple deterministic keyword heuristic,
+not a live LLM: its decisions require human review. Provider coverage, metadata quality, and
+retrieval caps also affect every result.
 """)
 
 st.markdown("---")
@@ -52,14 +51,15 @@ st.markdown("---")
 # ── Navigation ─────────────────────────────────────────────────────────────────
 st.markdown("### How to Navigate")
 st.markdown("""
-Use the **sidebar** to select a day. Each day covers one major stage of the systematic
-review pipeline and includes four guided case studies plus a BYOD extension.
+Use the **sidebar** to select a day. Each day has guided examples plus a BYOD extension. The
+worked examples are connected by menus, but their checked-in inputs are teaching snapshots—not
+a verified historical end-to-end search.
 
 | Day | Date | Theme | Main Objective |
 |-----|------|-------|----------------|
-| **Day 1** | June 10 | From Query to Corpus | Programmatic literature collection via open APIs and automated deduplication |
-| **Day 2** | June 11 | From Corpus to Included Studies | AI-assisted abstract screening with Active Learning and LLM zero-shot classification |
-| **Day 3** | June 12 | From Studies to Evidence | LLM-assisted data extraction from PDFs and narrative or quantitative synthesis |
+| **Day 1** | June 10 | From Query to Corpus | Use search menus to inspect cached examples, try suggested searches, or retrieve/upload a corpus |
+| **Day 2** | June 11 | From Corpus to Included Studies | Review cached screening examples or run deterministic keyword screening on a supplied corpus |
+| **Day 3** | June 12 | From Studies to Evidence | Use illustrative teaching fixtures or carry a Day 2 BYOD included-studies CSV into extraction and synthesis |
 """)
 
 st.info("👈 Select a day from the sidebar to begin.")
@@ -69,19 +69,16 @@ st.markdown("---")
 # ── 5-Module Architecture ──────────────────────────────────────────────────────
 st.markdown("### App Architecture: Five Workflow Modules")
 st.markdown("""
-The app is built around a **modular workflow** in which participants enter at different
-points depending on what they already have. A participant beginning a new project starts
-in **Search & Collect**. A participant who already has a deduplicated Zotero library
-skips directly to **Screen**. A participant who has already screened their papers manually
-enters only in **Extract**.
+The app is modular: participants can start with a search, upload an existing corpus, or enter
+with already included studies. The menus make those entry points visible without requiring code.
 
 | Module | Function | What Participants Can Do |
 |--------|----------|--------------------------|
-| **1. Search & Collect** | Retrieve metadata via open APIs | Enter Boolean queries, ping OpenAlex / Crossref / Europe PMC, and retrieve records |
-| **2. Deduplicate** | Clean the corpus | Upload RIS/CSV files or process API results to remove duplicates |
-| **3. Screen** | Active Learning & LLM screening | Connect to Zotero or upload data, iteratively label training sets, and apply exclusion prompts |
-| **4. Extract** | Pull data from full texts | Upload PDFs, select a discipline-specific schema (PICO, Thematic Synthesis, or custom), and generate a structured table |
-| **5. Synthesize & Map** | Visualise and export | Produce PRISMA flow diagrams, summary plots, a Temporal Analysis chart, an Interactive Bibliometric Map, and download final datasets |
+| **1. Search & Collect** | Retrieve or load metadata | Open a Day 1 guided example, click its suggested practice search, run a bounded OpenAlex BYOD query, use Crossref/Europe PMC where available, or upload RIS |
+| **2. Deduplicate** | Clean the corpus | Inspect API results or uploaded records and download a corpus CSV/RIS; provider fields and coverage differ |
+| **3. Screen** | Triage and verify records | Upload a Day 1 CSV, enter inclusion/exclusion terms, run the deterministic heuristic, inspect the full screening log, and verify decisions manually |
+| **4. Extract** | Pull structured fields from study inputs | Upload included studies, choose a schema, and use the available NLP/AI extraction options; extracted values are drafts for verification |
+| **5. Synthesize & Map** | Visualise and export | Produce teaching or BYOD charts, PRISMA-style diagrams, networks, tables, and downloadable outputs; interpret counts according to their provenance |
 """)
 
 st.markdown("---")
@@ -89,16 +86,14 @@ st.markdown("---")
 # ── Input Flexibility ──────────────────────────────────────────────────────────
 st.markdown("### Input Flexibility: Multiple Entry Points")
 st.markdown("""
-The app accepts multiple input types rather than forcing everyone into one narrow workflow.
-This makes the seminar credible for participants from all fields whose research materials
-and progress stages are likely to vary widely.
+The app accepts several input types rather than forcing everyone into one narrow workflow.
 
 | Input Type | Use Case | App Behaviour |
 |------------|----------|---------------|
-| **Boolean Query** | Starting a review from scratch | The app queries open APIs and builds a new corpus |
-| **RIS / BibTeX File** | Already searched traditional databases | The app parses the file and moves to deduplication or screening |
-| **Zotero Integration** | Uses a reference manager | The app syncs directly with the user's cloud or self-hosted library |
-| **PDF Documents** | Already completed screening | The app parses the PDFs and opens the data extraction module |
+| **Boolean Query** | Starting a review from scratch | Day 1 presents API and filter menus. OpenAlex BYOD accepts a per-user key and bounded retrieval; the query log records search metadata, not credentials |
+| **RIS / CSV File** | Already searched databases or a previous app step | Upload and continue to deduplication, screening, or synthesis |
+| **Zotero Integration** | Uses a reference manager | Use the Day 1 Zotero path or an exported library as an alternative starting corpus |
+| **PDF Documents / Included CSV** | Already completed screening | Continue to Day 3 extraction and synthesis; outputs still require checking |
 """)
 
 st.markdown("---")
@@ -106,16 +101,23 @@ st.markdown("---")
 # ── Four Guided Case Studies ───────────────────────────────────────────────────
 st.markdown("### Four Guided Case Studies")
 st.markdown("""
-Each day demonstrates the full pipeline across four discipline-spanning case studies.
-Every case study is carried through all three days — from corpus construction on Day 1,
-through screening on Day 2, to extraction and synthesis on Day 3.
+The Day 1 guided menu shows four discipline-spanning examples. Opening an example loads its
+cached teaching corpus and offers a **clickable practice search** that suggests query text,
+years, publication types, and other menu settings in the BYOD search form. These suggestions are
+new practice inputs, not the original provenance of the cached file.
 
-| # | Discipline | Topic | Day 3 Synthesis |
-|---|-----------|-------|-----------------|
-| 1 | 🏥 **Health Sciences** | Health Inequalities in Chronic Disease Care | Meta-analysis: pooled Risk Ratio with I² heterogeneity |
-| 2 | 🏛️ **Social Sciences** | Universal Basic Income (UBI) Policy Outcomes | Narrative synthesis table |
-| 3 | ⚗️ **Science / Engineering** | Microplastic Pollution in Aquatic Environments | Quantitative concentration summary & chart |
-| 4 | 💼 **Management / Business** | Corporate Social Responsibility & Firm Financial Performance | Meta-analysis: pooled correlation coefficient |
+The cached Day 1/Day 2 snapshots do **not** establish a verified historical query string, search
+date, filters, or API response. Day 3 guided pages likewise use illustrative/synthetic teaching
+fixtures and narratives; they are not a live retrieval, screening, or empirical synthesis run.
+For a reproducible review, run your own search, retain its log, and carry the resulting files
+through the BYOD path.
+
+| # | Discipline | Topic | Worked teaching emphasis |
+|---|-----------|-------|---------------------------|
+| 1 | 🏥 **Health Sciences** | Health Inequalities in Chronic Disease Care | PICO framing and Risk Ratio illustration |
+| 2 | 🏛️ **Social Sciences** | Universal Basic Income (UBI) Policy Outcomes | SPIDER framing and narrative synthesis illustration |
+| 3 | ⚗️ **Science / Engineering** | Microplastic Pollution in Aquatic Environments | Concentration summary and chart illustration |
+| 4 | 💼 **Management / Business** | Corporate Social Responsibility & Firm Financial Performance | Correlation/meta-analysis illustration |
 """)
 
 st.markdown("---")
@@ -123,25 +125,36 @@ st.markdown("---")
 # ── BYOD Highlights ────────────────────────────────────────────────────────────
 st.markdown("### Bring Your Own Data (BYOD)")
 st.markdown("""
-Each day includes a dedicated **BYOD extension** so participants can apply the workflow
-to their own research question in real time.
+Each day includes a BYOD extension so participants can apply the workflow to their own research
+question. The live handoff is **Day 1 → Day 2 → Day 3**: download a Day 1 corpus, screen it on
+Day 2, then upload the included-studies CSV to Day 3.
 
-**Day 1 BYOD:** Enter any Boolean query, select from OpenAlex, Crossref, or Europe PMC,
-retrieve and deduplicate your own corpus, and download a timestamped query log for
-reproducibility. (Semantic Scholar is not available for live queries due to strict public
-API rate limits; OpenAlex is recommended for STEM and CS topics.) Alternatively, upload
-an existing **RIS/BibTeX file** from your reference manager or connect your **Zotero**
-library directly.
+**Day 1 BYOD:** Choose a provider from the search menu (OpenAlex, Crossref, or Europe PMC where
+supported), enter a query, choose scope/year/publication-type/abstract filters, and retrieve a
+bounded corpus. OpenAlex retrieval is capped by the configured page size and maximum pages, so a
+large result set may be truncated; the query log reports retrieval metadata and should be saved.
+Provider syntax, indexing, coverage, and available filters differ. Semantic Scholar is not
+available for live queries in this app because of public API rate limits. You may instead upload
+RIS or use Zotero.
 
-**Day 2 BYOD:** Upload the CSV from Day 1 (or a RIS/BibTeX file), enter your own
-inclusion and exclusion criteria, and screen your corpus using **Active Learning**,
-**LLM-based zero-shot classification**, or a combination of both. The Transparency Log
-records every AI decision for your audit trail.
+**OpenAlex credentials:** each participant supplies their own email-verified OpenAlex key and
+email in masked, session-specific inputs. The app sends the key to OpenAlex only as an HTTPS
+`Authorization: Bearer` header; the email is not sent with searches. Credentials are not placed
+in query logs or error metadata, and the app does not promise complete privacy from the operator
+or hosting environment. Participants should use a key they control and consider operator/hosting
+trust before entering it.
 
-**Day 3 BYOD:** Upload your included study **PDFs**, choose a discipline-specific
-extraction schema (**PICO**, **Thematic Synthesis**, or define your own custom variables),
-extract structured data, and generate a **PRISMA 2020 flow diagram**, a **Temporal
-Analysis chart**, and synthesis visualisations for your own review.
+**Day 2 BYOD:** Upload the Day 1 CSV (or another CSV with titles/abstracts), enter inclusion and
+exclusion terms, and run the current deterministic, case-insensitive substring heuristic over
+Title + Abstract. It is **not an actual LLM** and does not provide validated recall, precision,
+F1, or WSS estimates. Reviewers must inspect the included file and full screening log and make
+human eligibility decisions; the log is an audit aid, not proof of correctness.
+
+**Day 3 BYOD:** Carry forward the Day 2 included-studies CSV, choose the extraction schema, and
+use the available NLP or optional AI extraction route. Generate tables, charts, networks, and
+PRISMA-style outputs as appropriate. These are analysis aids: confirm extracted fields, effect
+sizes, denominators, and flow counts against the source studies. The guided Day 3 route is
+illustrative/synthetic; only the BYOD route represents a participant-supplied pipeline.
 """)
 
 st.markdown("---")
@@ -149,16 +162,16 @@ st.markdown("---")
 # ── Adjustment Mechanisms ──────────────────────────────────────────────────────
 st.markdown("### How Participants Adjust the App to Their Own Data")
 st.markdown("""
-Participants are not expected to alter code, but they can configure the workflow
-meaningfully through the interface. The key principle is that the app lets them express,
-in plain language or simple selections, what the underlying Python and R scripts should do.
+Participants configure the workflow through menus and uploads rather than editing code. The
+settings below affect the live or uploaded run, but do not retroactively describe cached examples.
 
 | Adjustment Area | What the Participant Controls | Why It Matters |
 |-----------------|-------------------------------|----------------|
-| **API Filters** | Databases, years, open access status | Ensures the search is tailored to the research scope |
-| **Screening Method** | Active Learning vs. LLM prompts (or both) | Allows control over the human-in-the-loop balance |
-| **Extraction Schema** | Template (PICO, Thematic Synthesis) or custom variables | Supports heterogeneous research questions across disciplines |
-| **Visualisations** | Which variables to plot or summarise | Lets participants tailor outputs to their specific findings |
+| **Search menu** | Provider, query, search scope, years, publication types, abstract requirement | Records the actual live request and exposes provider differences and retrieval caps |
+| **Search log** | Download the query/filter/retrieval metadata produced by a BYOD run | Preserves provenance for that run; it contains no OpenAlex key or email |
+| **Screening method** | Inclusion/exclusion terms and human verification of heuristic output | Makes the current Day 2 implementation transparent and prevents treating it as a validated LLM screener |
+| **Extraction schema** | PICO, Thematic Synthesis, custom variables, and NLP/optional AI route | Supports heterogeneous questions while requiring source-level checking |
+| **Visualisations** | Variables and included records used for plots or maps | Helps tailor outputs without implying that illustrative counts are empirical |
 """)
 
 st.markdown("---")
