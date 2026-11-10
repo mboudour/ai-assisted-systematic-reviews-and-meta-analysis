@@ -92,7 +92,7 @@ The app accepts several input types rather than forcing everyone into one narrow
 
 | Input Type | Use Case | App Behaviour |
 |------------|----------|---------------|
-| **API Search** | Starting a review from scratch | Day 1 presents provider-specific search menus. OpenAlex accepts a per-user key and bounded retrieval; the query log records search metadata, not credentials |
+| **API Search** | Starting a review from scratch | Day 1 presents provider-specific search menus. OpenAlex offers a limited first page without credentials or bounded retrieval with a per-user key; the query log records search metadata, not credentials |
 | **RIS / CSV File** | Already searched databases or a previous app step | Upload and continue to deduplication, screening, or synthesis |
 | **Zotero Integration** | Uses a reference manager | Use the Day 1 Zotero path or an exported library as an alternative starting corpus |
 | **PDF Documents / Included CSV** | Already completed screening | Continue to Day 3 extraction and synthesis; outputs still require checking |
@@ -144,7 +144,9 @@ metadata and abstracts may be missing, and publication results can include non-p
 The search covers broad metadata, not just titles and abstracts. Verify records and acknowledge
 OpenAIRE as the data source. The app repeats these caveats when OpenAIRE is used.
 
-**OpenAlex credentials:** participants can choose a credentials file kept on their own computer.
+**OpenAlex access:** participants can search without a key or email, limited to one page and
+a shared server allowance that may be rate-limited. For more pages and an individual allowance,
+participants can choose a credentials file kept on their own computer.
 The browser reads the file and sends the key directly to OpenAlex over HTTPS; it sends the returned
 records, not the key, to the app. This assumes the app's code and browser are trusted. The optional
 masked manual-entry route sends the key to the app server. Search logs do not contain credentials.

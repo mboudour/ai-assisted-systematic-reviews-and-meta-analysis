@@ -92,10 +92,10 @@ def fake_browser(query, **kwargs):
                      "api_key": SECRET, "authorization": SECRET}
 
 
-def app_for(directory):
+def app_for(directory, context="providers"):
     source = (f"import sys\nsys.path.insert(0, {str(ROOT)!r})\n"
               "from guided_workflow import render_guided_examples\n"
-              f"render_guided_examples('providers', data_dir={str(directory)!r})\n")
+              f"render_guided_examples({context!r}, data_dir={str(directory)!r})\n")
     return AppTest.from_string(source, default_timeout=90)
 
 
@@ -357,6 +357,198 @@ class GuidedProviderUITests(unittest.TestCase):
                 guided._prepare_live_result(case, provider, query, params, source, changed)
         with self.assertRaises(ValueError):
             guided._prepare_live_result(case, provider, query, params, source.assign(Source="Crossref"), metadata)
+
+
+class _OpenAlexResponse:
+    def __init__(self, status=200, payload=None, invalid_json=False):
+        self.status_code = status
+        self.payload = payload
+        self.invalid_json = invalid_json
+
+    def json(self):
+        if self.invalid_json:
+            raise ValueError("invalid body " + SECRET)
+        return self.payload
+
+
+def _anonymous_http(endpoint, **kwargs):
+    """Exercise the shared client, without sending any real request."""
+    assert endpoint == "https://api.openalex.org/works"
+    params = kwargs["params"]
+    query = params["search.title_and_abstract.exact"]
+    assert query in [search.guided_query(case, "OpenAlex") for case in CASES]
+    assert params == {"search.title_and_abstract.exact": query, "per-page": 50,
+                      "cursor": "*", "select": search.OPENALEX_SELECT}
+    headers = kwargs.get("headers") or {}
+    assert not any(name.lower() == "authorization" for name in headers)
+    assert "email" not in str(params).lower() and "mailto" not in str(params).lower()
+    records, _ = fake_browser(query, per_page=50, max_pages=1, year_from=None, year_to=None,
+                              publication_types=(), search_scope="title_abstract_exact", require_abstract=False)
+    records[0]["api_key"] = SECRET  # Unexpected response fields must not enter state or logs.
+    return _OpenAlexResponse(payload={"results": records, "meta": {"count": 100, "next_cursor": "next",
+                                                                     "api_key": SECRET}})
+
+
+class GuidedAnonymousUITests(unittest.TestCase):
+    def assert_ok(self, app):
+        self.assertEqual([item.message for item in app.exception], [])
+
+    def test_explicit_no_key_search_all_days_and_cases_stays_isolated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            fixture_cases(directory)
+            sentinel = pd.DataFrame([{"Title": "Private BYOD sentinel"}])
+            # Four different cases, spanning all guided day contexts.
+            for context, numbers in (("day1", (1, 4)), ("day2", (2,)), ("day3", (3,))):
+                with self.subTest(context=context), \
+                     patch("requests.Session.get", side_effect=_anonymous_http) as http, \
+                     patch("browser_openalex.render_browser_openalex") as browser, \
+                     patch.object(search, "fetch_guided") as other_fetch:
+                    app = app_for(directory, context)
+                    app.session_state["byod_df"] = sentinel.copy(deep=True)
+                    app.session_state["byod_log"] = {"sentinel": "untouched"}
+                    app.run()
+                    for number in range(1, 5):
+                        p = f"guided_{context}_{CASES[number-1]}_{number}"
+                        app.selectbox(key=p + "_provider").set_value("OpenAlex")
+                    app.run()
+                    self.assert_ok(app)
+                    http.assert_not_called()
+                    self.assertTrue(all(table["ID"].iloc[0].startswith("SAVED-OpenAlex")
+                                        for table in extraction_tables(app)))
+                    warnings = " ".join(item.value for item in app.warning)
+                    for text in ("no-key LIVE", "server IP", "one page", "50 works", "change over time"):
+                        self.assertIn(text, warnings)
+                    for number in numbers:
+                        case = CASES[number - 1]
+                        p = f"guided_{context}_{case}_{number}"
+                        app.button(key=p + "_openalex_anonymous_run").click().run()
+                        self.assert_ok(app)
+                        live = extraction_tables(app)[number - 1]
+                        self.assertEqual(live["ID"].tolist(), [f"LIVE-OpenAlex-{case}-1", f"LIVE-OpenAlex-{case}-2"])
+                        self.assertEqual(live["Source"].tolist(), ["OpenAlex", "OpenAlex"])
+                        self.assertEqual(live["Candidate finding excerpt"].tolist(), ["Results increased."] * 2)
+                        decisions = [e.value for e in app.dataframe if guided.SCREEN_DECISION in e.value.columns]
+                        self.assertEqual(decisions[number - 1][guided.SCREEN_DECISION].tolist(), ["Include", "Include", "Exclude"])
+                        years = [e.value for e in app.dataframe if list(e.value.columns) == ["Year", "Included records"]]
+                        links = [e.value for e in app.dataframe if "Shared studies" in e.value.columns]
+                        self.assertEqual(years[number - 1]["Included records"].sum(), 2)
+                        self.assertEqual(links[number - 1]["Shared studies"].tolist(), [2])
+                        self.assertEqual(set(links[number - 1]["Source label"]) | set(links[number - 1]["Target label"]),
+                                         {f"LIVE-OpenAlex-{case} Alice", f"LIVE-OpenAlex-{case} Bob"})
+                        result = app.session_state[p + "_provider_openalex_result"]
+                        self.assertEqual(result["log"]["query"], search.guided_query(case, "OpenAlex"))
+                        self.assertEqual(result["log"]["parameters"]["per-page"], 50)
+                        self.assertEqual(result["log"]["pages_fetched"], 1)
+                        self.assertEqual(result["log"]["total_matches"], 100)
+                        self.assertTrue(result["log"]["possibly_truncated"])
+                        self.assertIn("no API key or email", result["log"]["access_mode"])
+                        self.assertNotIn(SECRET, json.dumps(result["log"]))
+                        self.assertNotIn(SECRET, result["corpus"].to_string())
+                    for index, table in enumerate(extraction_tables(app), 1):
+                        self.assertTrue(table["ID"].iloc[0].startswith("LIVE-" if index in numbers else "SAVED-"))
+                    self.assertEqual(http.call_count, len(numbers))
+                    browser.assert_not_called()
+                    other_fetch.assert_not_called()
+                    assert_frame_equal(app.session_state["byod_df"], sentinel)
+                    self.assertEqual(app.session_state["byod_log"], {"sentinel": "untouched"})
+                    self.assertNotIn(SECRET, str(app.session_state._state.filtered_state))
+
+    def test_same_session_different_days_never_share_a_live_result(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            cases = fixture_cases(directory)
+            source = (f"import sys\nsys.path.insert(0, {str(ROOT)!r})\n"
+                      "from guided_workflow import render_guided_examples\n"
+                      f"render_guided_examples('day1', data_dir={str(directory)!r})\n"
+                      f"render_guided_examples('day2', data_dir={str(directory)!r})\n")
+            day1 = f"guided_day1_{CASES[0]}_1"
+            day2 = f"guided_day2_{CASES[0]}_1"
+
+            def day2_response(*args, **kwargs):
+                response = _anonymous_http(*args, **kwargs)
+                for record in response.payload["results"]:
+                    record["id"] += "-day2"
+                return response
+
+            # Rendering one representative case per day keeps this isolation
+            # test small while both day namespaces share a single session.
+            with patch.object(guided, "load_guided_cases", return_value=cases[:1]):
+                app = AppTest.from_string(source, default_timeout=90).run()
+                app.selectbox(key=day1 + "_provider").set_value("OpenAlex")
+                app.selectbox(key=day2 + "_provider").set_value("OpenAlex")
+                app.run()
+                with patch("requests.Session.get", side_effect=_anonymous_http):
+                    app.button(key=day1 + "_openalex_anonymous_run").click().run()
+                self.assert_ok(app)
+                first, second = extraction_tables(app)
+                self.assertTrue(first["ID"].iloc[0].startswith("LIVE-"))
+                self.assertTrue(second["ID"].iloc[0].startswith("SAVED-"))
+                with patch("requests.Session.get", side_effect=day2_response):
+                    app.button(key=day2 + "_openalex_anonymous_run").click().run()
+                self.assert_ok(app)
+                first, second = extraction_tables(app)
+                self.assertFalse(first["ID"].iloc[0].endswith("-day2"))
+                self.assertTrue(second["ID"].iloc[0].endswith("-day2"))
+                app.button(key=day2 + "_openalex_use_saved").click().run()
+                self.assert_ok(app)
+                first, second = extraction_tables(app)
+                self.assertTrue(first["ID"].iloc[0].startswith("LIVE-"))
+                self.assertTrue(second["ID"].iloc[0].startswith("SAVED-"))
+
+    def test_anonymous_failure_empty_and_browser_pending_all_use_correct_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            fixture_cases(directory)
+            app = app_for(directory).run()
+            p = prefix(1)
+            app.selectbox(key=p + "_provider").set_value("OpenAlex").run()
+            # An anonymous search must unmount a pending browser component.
+            with patch("browser_openalex.render_browser_openalex", return_value=None):
+                app.button(key=p + "_openalex_start").click().run()
+            self.assertTrue(app.session_state[p + "_openalex_active"])
+            with patch("requests.Session.get", side_effect=_anonymous_http), \
+                 patch("browser_openalex.render_browser_openalex") as browser:
+                app.button(key=p + "_openalex_anonymous_run").click().run()
+                browser.assert_not_called()
+            self.assert_ok(app)
+            self.assertFalse(app.session_state[p + "_openalex_active"])
+            self.assertTrue(extraction_tables(app)[0]["ID"].iloc[0].startswith("LIVE-"))
+
+            for status in (401, 429):
+                # Establish a fresh live sample before each failed retry.
+                with patch("requests.Session.get", side_effect=_anonymous_http):
+                    app.button(key=p + "_openalex_anonymous_run").click().run()
+                with patch("requests.Session.get", return_value=_OpenAlexResponse(status, {"error": SECRET})):
+                    app.button(key=p + "_openalex_anonymous_run").click().run()
+                self.assert_ok(app)
+                self.assertTrue(any(f"HTTP {status}" in item.value and "saved sample" in item.value
+                                    for item in app.warning))
+                self.assertEqual(app.session_state[p + "_provider_openalex_result"], {"status": "error", "reason": str(status)})
+                self.assertTrue(extraction_tables(app)[0]["ID"].iloc[0].startswith("SAVED-"))
+                self.assertFalse(any("LIVE-OpenAlex-ex1_health" in str(e.value) for e in app.dataframe))
+
+            empty = _OpenAlexResponse(payload={"results": [], "meta": {"count": 0, "next_cursor": None}})
+            with patch("requests.Session.get", return_value=empty):
+                app.button(key=p + "_openalex_anonymous_run").click().run()
+            self.assert_ok(app)
+            self.assertTrue(any("returned no records" in item.value for item in app.info))
+            self.assertTrue(extraction_tables(app)[0]["ID"].iloc[0].startswith("SAVED-"))
+            self.assertIsNone(app.session_state[p + "_provider_openalex_result"]["log"]["total_matches"])
+            with patch("requests.Session.get", return_value=_OpenAlexResponse(invalid_json=True)):
+                app.button(key=p + "_openalex_anonymous_run").click().run()
+            self.assert_ok(app)
+            self.assertTrue(extraction_tables(app)[0]["ID"].iloc[0].startswith("SAVED-"))
+            self.assertNotIn(SECRET, str(app.session_state._state.filtered_state))
+            self.assertNotIn(SECRET, " ".join(item.value for item in app.warning))
+
+            # No saved file means no fabricated or substituted corpus on error.
+            (directory / "guided_provider_snapshots" / "ex1_health__openalex.csv").unlink()
+            app.run()
+            self.assert_ok(app)
+            self.assertTrue(any("no successful live result" in item.value for item in app.error))
+            self.assertEqual(len(extraction_tables(app)), 3)
+            self.assertFalse(any("ex1_health" in str(element.value) for element in app.dataframe))
 
 
 if __name__ == "__main__":

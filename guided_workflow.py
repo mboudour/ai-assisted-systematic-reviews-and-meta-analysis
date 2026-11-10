@@ -24,6 +24,7 @@ from openaire_notice import OPENAIRE_LIMITATIONS
 # The Streamlit host can retain imported modules while syncing newer page files.
 # Pages require this release marker and reload a stale cached renderer once.
 GUIDED_PROVIDER_RELEASE = 2
+GUIDED_ANONYMOUS_RELEASE = 1
 
 
 GUIDED_DATA_DIR = Path(__file__).resolve().parent / "data" / "guided_fixed"
@@ -739,6 +740,54 @@ def _prepare_live_result(case_key: str, provider: str, query: str,
     return {"status": "ok", "corpus": clean, "log": log}
 
 
+def _anonymous_openalex_result(case_key: str, query: str,
+                               params: dict[str, Any]) -> dict[str, Any]:
+    """Fetch only the disclosed fixed OpenAlex page, without credentials."""
+    import guided_provider_search as search
+    from openalex_client_loader_v2 import fetch_works
+
+    records, metadata = fetch_works(
+        query, None, anonymous=True, per_page=50, max_pages=1,
+        year_from=None, year_to=None, publication_types=(),
+        search_scope="title_abstract_exact", require_abstract=False,
+    )
+    if not isinstance(records, list) or len(records) > 50 or not isinstance(metadata, dict):
+        raise ValueError("Invalid OpenAlex response")
+    pages = _nonnegative_int(_first(metadata, "pages_fetched", "pages"))
+    if pages is not None and pages != 1:
+        raise ValueError("Invalid OpenAlex page count")
+    corpus = search.openalex_records_to_frame(records)
+
+    # The shared client's zero count can also mean a missing meta.count. Do not
+    # claim it is a recorded zero, or that discarded/unknown records are complete.
+    safe_metadata = metadata.copy()
+    total = _nonnegative_int(_first(metadata, "total_matches", "returned_total"))
+    if total == 0:
+        total = None
+        safe_metadata["total_matches"] = None
+        safe_metadata["returned_total"] = None
+    if len(records) != len(corpus) or (total is not None and total != len(corpus)):
+        safe_metadata["possibly_truncated"] = True
+    elif total is None and records:
+        safe_metadata["possibly_truncated"] = True
+    result = _prepare_live_result(case_key, "OpenAlex", query, params, corpus, safe_metadata)
+    result["log"]["access_mode"] = "Anonymous server request (no API key or email)"
+    return result
+
+
+def _anonymous_openalex_error_reason(error: Exception) -> str:
+    """Map known client statuses to a safe code; never display exception text."""
+    try:
+        from openalex_client_loader_v2 import OpenAlexError
+    except Exception:
+        return "other"
+    if isinstance(error, OpenAlexError):
+        match = re.search(r"\bHTTP\s+(401|429)\b", str(error))
+        if match:
+            return match.group(1)
+    return "other"
+
+
 def _render_live_retrieval(case_key: str, provider: str, prefix: str
                            ) -> tuple[pd.DataFrame | None, dict[str, Any] | None, str]:
     st.markdown("##### Optional: run a new fixed live search")
@@ -754,7 +803,8 @@ def _render_live_retrieval(case_key: str, provider: str, prefix: str
     st.write("Planned live request parameters (one page only; no editable search):")
     st.json(params, expanded=True)
     if provider == "OpenAlex":
-        st.caption("The browser reads your local JSON credential file and calls OpenAlex directly. The key is not uploaded to the Streamlit server, session state, or logs. The fixed search uses title_abstract_exact, no year/type filter, and does not require an abstract.")
+        st.warning("Optional no-key LIVE search: clicking below sends this fixed query from the server to OpenAlex without an API key or email. All users share the server IP's request budget, so OpenAlex may reject or rate-limit requests. It is limited to one page of up to 50 works, is not comprehensive, and results may change over time.")
+        st.caption("Alternatively, the browser reads your local JSON credential file and calls OpenAlex directly. The key is not uploaded to the Streamlit server, session state, or logs. Both paths use title_abstract_exact, no year/type filter, and do not require an abstract.")
     state_key = f"{prefix}_provider_{provider.lower().replace(' ', '_')}_result"
     active_key = f"{prefix}_openalex_active"
     attempt_key = f"{prefix}_openalex_attempt"
@@ -762,6 +812,16 @@ def _render_live_retrieval(case_key: str, provider: str, prefix: str
         st.session_state.pop(state_key, None)
         st.session_state[active_key] = False
     if provider == "OpenAlex":
+        if st.button("Run no-key LIVE OpenAlex search (server)", key=f"{prefix}_openalex_anonymous_run"):
+            # A new attempt replaces any prior result, including a pending browser
+            # component, so failure cannot silently reuse stale live records.
+            st.session_state.pop(state_key, None)
+            st.session_state[active_key] = False
+            try:
+                with st.spinner("Searching OpenAlex without a key…"):
+                    st.session_state[state_key] = _anonymous_openalex_result(case_key, query, params)
+            except Exception as exc:
+                st.session_state[state_key] = {"status": "error", "reason": _anonymous_openalex_error_reason(exc)}
         if st.button("Start a new OpenAlex browser search", key=f"{prefix}_openalex_start"):
             # Clear first: a failed or abandoned retry must never show stale results.
             st.session_state.pop(state_key, None)
@@ -817,6 +877,12 @@ def _render_live_retrieval(case_key: str, provider: str, prefix: str
         st.info(f"No optional {provider} live search has completed for this case; the saved sample is used when verified.")
         return None, None, "pending"
     if result.get("status") != "ok":
+        if provider == "OpenAlex" and result.get("reason") == "401":
+            st.warning("OpenAlex rejected this anonymous request (HTTP 401). Try the browser-key search or another provider. The verified saved sample is used if available; no previous live result is used.")
+            return None, None, "error"
+        if provider == "OpenAlex" and result.get("reason") == "429":
+            st.warning("OpenAlex rate-limited this anonymous request (HTTP 429). Wait and retry, or use the browser-key search or another provider. The verified saved sample is used if available; no previous live result is used.")
+            return None, None, "error"
         st.warning(f"The optional {provider} live search failed or its response was invalid. No previous live result is used; the verified saved sample is used if available.")
         return None, None, "error"
     corpus, log = result["corpus"], result["log"]

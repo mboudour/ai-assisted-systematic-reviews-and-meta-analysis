@@ -47,12 +47,12 @@ st.set_page_config(
 _repo_root = pathlib.Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
-from openalex_client import OpenAlexError, fetch_works
+from openalex_client_loader_v2 import OpenAlexError, fetch_works
 from openaire_client import OpenAIREError, fetch_openaire
 from openaire_notice import OPENAIRE_LIMITATIONS, source_column_mentions_openaire
 from day2_networks import build_network
 from day2_network_view import make_network_html
-from guided_loader_v2 import load_guided_workflow
+from guided_loader_v3 import load_guided_workflow
 
 guided_workflow = load_guided_workflow()
 
@@ -1270,6 +1270,7 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         is_openaire = api_choice.startswith("OpenAIRE")
         browser_result = None
         browser_mode = False
+        anonymous_mode = False
         st.caption("Each provider has its own search syntax and usage limits. OpenAlex and OpenAIRE support uppercase AND, OR and NOT, parentheses and quoted phrases, but search different fields.")
         query_input = st.text_input(
             "Search query",
@@ -1278,6 +1279,15 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         )
         per_page = st.slider("Records per page", min_value=10, max_value=100, value=50, step=10)
         if is_openalex:
+            st.markdown("#### OpenAlex access")
+            credential_method = st.radio(
+                "How would you like to provide your OpenAlex credentials?",
+                ["Local JSON file (browser only)", "Masked manual entry (app server)",
+                 "No API key or email (limited)"],
+                key="byod_openalex_credential_method",
+            )
+            browser_mode = credential_method.startswith("Local JSON")
+            anonymous_mode = credential_method.startswith("No API key")
             scope_label = st.selectbox(
                 "Search scope",
                 ["Title and abstract (no stemming)", "Broad: title, abstract, full text and keywords"],
@@ -1285,7 +1295,11 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
             )
             st.caption("Quoted phrases are retained. OpenAlex's broad search may match full text or keywords not visible in a title/abstract. Unquoted words default to AND.")
             require_abstract = st.checkbox("Only include works with an abstract", value=True, key="byod_abstract_widget")
-            max_pages = st.slider("Maximum number of pages to retrieve", min_value=1, max_value=5, value=2)
+            if anonymous_mode:
+                max_pages = 1
+                st.info("No key or email is needed. Only the first page is retrieved (up to 100 records). Anonymous searches share the app server's OpenAlex allowance and may be rate-limited, especially during a seminar. A key supports more pages and a larger allowance.")
+            else:
+                max_pages = st.slider("Maximum number of pages to retrieve", min_value=1, max_value=5, value=2)
             st.caption("The app retrieves at most records per page × maximum pages. A larger search may have more matches than are downloaded.")
             use_year_filter = st.checkbox("Filter by publication year range", value=False, key="byod_use_year")
             if use_year_filter:
@@ -1302,14 +1316,8 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                 default=[], key="byod_type_widget",
             )
             st.caption("OpenAlex calls journal articles ‘article’. Year, type and abstract filters are applied to the API request before records are returned.")
-            st.markdown("#### Your OpenAlex credentials")
-            st.markdown("Create a free account at [OpenAlex](https://openalex.org/signup), verify your email, and copy your key from [API settings](https://openalex.org/settings/api-key). This app uses a key for OpenAlex searches.")
-            credential_method = st.radio(
-                "How would you like to provide your OpenAlex credentials?",
-                ["Local JSON file (browser only)", "Masked manual entry (app server)"],
-                key="byod_openalex_credential_method",
-            )
-            browser_mode = credential_method.startswith("Local JSON")
+            if not anonymous_mode:
+                st.markdown("For key-based access, create a free account at [OpenAlex](https://openalex.org/signup), verify your email, and copy your key from [API settings](https://openalex.org/settings/api-key).")
             if browser_mode:
                 st.caption("The browser reads your local file and sends the key directly to OpenAlex over HTTPS. The app receives the returned records, not your credentials. This depends on trusting the app's supplied code, your browser and its extensions.")
                 run_query = False
@@ -1328,6 +1336,9 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                         run_query = request_id != st.session_state.get("byod_browser_last_request_id")
                 else:
                     st.info("Enter your search query above to show the browser-local file picker.")
+            elif anonymous_mode:
+                st.caption("The app sends your query to OpenAlex without a key or email. Results and the query log stay in this session; the app server can see the query and records.")
+                run_query = st.button("▶ Run My Query", key="run_byod_openalex_anonymous")
             else:
                 st.caption("Both fields are masked and held in this session's Streamlit state. The app server receives the key, and its operator may be able to access it. The key is sent to OpenAlex over HTTPS; the email is not sent with searches. Neither is included in downloads or query logs.")
                 with st.form("openalex_private_credentials"):
@@ -1355,7 +1366,7 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
         if run_query:
             if not query_input.strip():
                 st.warning("Please enter a search query above.")
-            elif is_openalex and not browser_mode and (not openalex_key.strip() or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", openalex_email.strip())):
+            elif is_openalex and not browser_mode and not anonymous_mode and (not openalex_key.strip() or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", openalex_email.strip())):
                 st.warning("Enter your OpenAlex API key and a valid account email. OpenAlex must have verified the email associated with the key.")
             else:
                 # Avoid presenting an earlier successful corpus as the result of a failed new query.
@@ -1370,12 +1381,13 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                                 st.session_state["byod_browser_last_request_id"] = request_log["request_id"]
                             else:
                                 records, request_log = fetch_works(
-                                    query_input.strip(), openalex_key.strip(),
+                                    query_input.strip(), None if anonymous_mode else openalex_key.strip(),
                                     per_page=per_page, max_pages=max_pages,
                                     year_from=byod_year_from, year_to=byod_year_to,
                                     publication_types=byod_pub_types,
                                     search_scope="title_abstract_exact" if scope_label.startswith("Title") else "broad",
                                     require_abstract=require_abstract,
+                                    anonymous=anonymous_mode,
                                 )
                             df = openalex_to_df(records)
                         elif "Crossref" in api_choice:
@@ -1422,7 +1434,10 @@ a RIS export for Zotero, and a RIS file ready for **VOSviewer** bibliometric net
                         if request_log.get("possibly_truncated"):
                             st.warning("More records may be available; this saved corpus may not be the complete result set. See the query log for how retrieval ended.")
                     except OpenAlexError as exc:
-                        st.error(f"{exc}. For authentication errors, check the key and verify its account email. For rate limits, wait before retrying.")
+                        if anonymous_mode:
+                            st.error(f"{exc}. The shared no-key allowance may be exhausted or unavailable; wait before retrying, use an individual key, or select another provider.")
+                        else:
+                            st.error(f"{exc}. For authentication errors, check the key and verify its account email. For rate limits, wait before retrying.")
                     except OpenAIREError as exc:
                         st.error(str(exc))
                     except CrossrefError as exc:
